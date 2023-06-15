@@ -1,0 +1,692 @@
+! ============================================================
+!GRAPHICS PAUSE ;
+! ============================================================
+HEADER AUTHOR       "0" ; ! ... put your name here
+HEADER ORGANIZATION "0" ;
+HEADER DEVICE       "RBWO" ;
+HEADER REMARKS      "0" ;
+! ============================================================
+
+SYSTEM CYLINDRICAL ; ! 
+
+! ============================================================
+ON  = 1 ;
+OFF = 0 ;
+! ============================================================
+Impulse_TESTON   = off; 
+PIMODE_TESTON    =OFF;       
+EmissionOn       = ON ;
+! ============================================================
+E_THERMIONIC     =OFF;
+E_HIGH_FIELD     =ON;
+E_Explosive     =OFF;
+! ============================================================
+!  geo parameters input
+
+!SWS(DISK-LOADED WAVEGUIDE)
+Z_DRIFT = 0 MM ;
+Z_PERIOD = 11.3 MM ;
+Z_D = 6.1 MM ;
+! R_B = 7.4 MM;
+R_B = 18mm;
+R_A = 20 MM;! Should be >= R_B
+N_PERIOD =8;
+
+! PRE-BUNCHING
+Z_DRIFT1 =  20 MM ;
+Z_PERIOD1 = 0*10 MM ;
+Z_D1 = 6 MM ;
+R_B1 = R_B ;
+
+R_A1 =%djdjddj% MM ;
+R_A1 =22 MM ;
+! R_A1 = 17 MM ;
+N_PERIOD1 =0;!3;
+R_BEAM_TUNNEL=R_B1 ;
+
+!E-GUN
+Vinput = -500e3 VOLT;
+W_EMIT = 1 MM ;
+! R_CATHODE = 16 MM ;
+R_CATHODE = R_B-1mm;
+dZ_CATHODE = 10 MM ;
+! Z_BEAM_GAP = 7MM ;
+! THETA_FOCUSING = (PI/2 - PI/4 + PI/10) *1RAD ;
+
+THETA_FOCUSING = 90deg - PI/8.5;! 80deg ;
+dZ_FOCUSING  = 2.5mm;!4mm;
+dr_focusing = 0*2mm;
+dz_beam_gap = -1mm;
+
+
+! f_ref = 12.5e9;
+! z_premodulation_cav1 = 3mm;
+! dz_premodulation_cav1 = 3mm;
+! z_premodulation_cav2 = z_premodulation_cav1+8.83mm;
+! dz_premodulation_cav2 = dz_premodulation_cav1+2mm;
+! dR_premodulation_cav1 = 3mm;
+! dR_premodulation_cav2 = dR_premodulation_cav1;
+
+
+
+
+!REFLECTION CAVITY
+
+!SOLENOID
+B_Z0 = 0.03/4.36*5 /5.64*5/0.5*0.74 / 0.7*0.5 / 738 * 500 *1Tesla ; !CENTER MAGNETIC FIELD
+DZ_COIL = 3 MM ; !single length
+!N_COIL = 20 ;
+
+!OUTPUT
+THETA_OUTPUT = PI/2*0.88 RAD ;
+R_OUTPUT_0 = R_CATHODE*1.2 ;
+
+!GRID SIZE
+DZ= 0.3 MM ;
+DR= 0.2 MM ;
+
+! ============================================================
+! geometry objects
+
+W_SHELL = 5* DR ;
+R_EMIT = R_CATHODE-W_EMIT ;
+R_INPUT = MAX (R_A,R_A1);
+R_OUTPUT = R_INPUT ;
+R_SHELL =R_INPUT+W_SHELL ;
+! dZ_FOCUSING= TAN(THETA_FOCUSING)*(R_INPUT-R_BEAM_TUNNEL) ;
+Z_OUTPUT = TAN(THETA_OUTPUT)*(R_SHELL-R_BEAM_TUNNEL);
+Z_LEFT = -(dZ_FOCUSING+dZ_BEAM_GAP+dZ_CATHODE+W_SHELL );
+Z_RIGHT = N_PERIOD1*Z_PERIOD1+N_PERIOD*Z_PERIOD+Z_DRIFT1+Z_DRIFT+Z_OUTPUT ;
+Z_WINDOW = Z_RIGHT-W_SHELL ;
+
+
+Area gap00 conformal 5e-3 0 10e-3 11e-3;
+
+
+ZEND=Z_RIGHT-Z_OUTPUT;
+ZBEGIN=-dZ_BEAM_GAP-dZ_FOCUSING;
+
+!FOCUSING_ELECTRODE
+
+! AREA FOCUSING_ELECTRODE POLYGONAL 
+!    -Z_LEFT,R_INPUT 
+!    -Z_LEFT,R_SHELL 
+!    0,R_SHELL 
+!    0,R_BEAM_TUNNEL 
+!    -Z_BEAM_GAP,R_BEAM_TUNNEL 
+!    -15e-3,R_INPUT 
+!    -Z_LEFT,R_INPUT;
+! AREA FOCUSING_ELECTRODE POLYGONAL 
+!    -Z_LEFT,R_INPUT 
+!    -Z_LEFT,R_SHELL 
+!    0,R_SHELL 
+!    0,R_BEAM_TUNNEL 
+!    -Z_BEAM_GAP,R_BEAM_TUNNEL 
+!    ZBEGIN,R_INPUT 
+!    -Z_LEFT,R_INPUT;
+dZ_FOCUSING2 = 0mm;
+temp_r1 = min(+(dZ_FOCUSING-dZ_FOCUSING2)*TAN(THETA_FOCUSING)
+   +R_BEAM_TUNNEL-dr_focusing , R_INPUT);
+AREA FOCUSING_ELECTRODE POLYGONAL 
+   -dZ_FOCUSING R_INPUT
+   -dZ_FOCUSING R_SHELL
+   0,R_SHELL 
+   0,+R_BEAM_TUNNEL-dr_focusing 
+   -dZ_FOCUSING2,+R_BEAM_TUNNEL-dr_focusing 
+   -dZ_FOCUSING,temp_r1
+   -dZ_FOCUSING R_INPUT;
+
+
+
+! LINE PORT_SHELL_NEAR_CATHODE conformal Z_LEFT R_SHELL -dZ_FOCUSING R_SHELL;
+! LINE PORT_SHELL_NEAR_CATHODE conformal Z_LEFT R_SHELL 0 R_SHELL;
+Area LEFT_PORT_CONDUCTOR conformal Z_LEFT R_CATHODE +Z_LEFT+W_SHELL R_SHELL;
+! CONDUCTOR LEFT_PORT_CONDUCTOR;
+
+! AREA FOCUSING_ELECTRODE POLYGONAL 
+!    Z_LEFT,R_INPUT 
+!    Z_LEFT,R_SHELL 
+!    0,R_SHELL 
+!    0,+R_BEAM_TUNNEL-dr_focusing 
+!    -dZ_FOCUSING2,+R_BEAM_TUNNEL-dr_focusing 
+!    -dZ_FOCUSING,temp_r1
+!    -dZ_FOCUSING R_INPUT
+!    Z_LEFT,R_INPUT;
+!SHELL+WINDOW
+! AREA SHELL POLYGONAL 0,R_BEAM_TUNNEL 0,R_SHELL Z_RIGHT,R_SHELL Z_RIGHT,R_OUTPUT 
+! ZEND,R_BEAM_TUNNEL 0,R_BEAM_TUNNEL ;
+
+
+!EGUN
+! AREA CATHODE CONFORMAL -Z_LEFT,R_CATHODE -20e-3 0;!-dZ_FOCUSING-Z_BEAM_GAP,0 ;
+! AREA CA_NO_BEAM CONFORMAL -Z_LEFT+W_SHELL,R_EMIT 0,0 ;
+! AREA EMIT_ZONE CONFORMAL -20e-3,R_CATHODE -21e-3,R_EMIT;
+AREA CATHODE CONFORMAL Z_LEFT,R_CATHODE -dZ_FOCUSING-dZ_BEAM_GAP,0 ;
+!!! Modelling commands here !!!
+
+! AREA SHELL_NEAR_CATHODE CONFORMAL swCATHODE.x1mn +swCATHODE.x2mx-W_SHELL swANODE.x1mn swANODE.x2mx;
+! AREA SHELL_NEAR_CATHODE CONFORMAL Z_LEFT R_INPUT -dZ_FOCUSING R_SHELL;
+! DIELECTRIC SHELL_NEAR_CATHODE 8.5;!ceramics
+
+! area shell conformal 0 R_INPUT Z_RIGHT R_SHELL;
+! AREA OUTPUT_WINDOW CONFORMAL 
+!    +swANODE.x1mx-W_SHELL,0 swANODE.x1mx,swANODE.x2mx;
+
+
+do i = 0,swCATHODE.N_facet-1;
+   CONDUCTOR swCATHODE.'i' MATERIAL COPPER;
+enddo;
+do i = 0,swANODE.N_facet-1;
+   CONDUCTOR swANODE.'i' MATERIAL COPPER;
+enddo;
+do i = 0,swEMITTER.N_facet-1;
+   CONDUCTOR swEMITTER.'i' MATERIAL GOLD;
+enddo;
+do i = 0,swRefl.N_facet-1;
+   CONDUCTOR swRefl.'i' MATERIAL COPPER;
+enddo;
+
+! do i = 0,swOutBarrier.N_facet-1;
+!    CONDUCTOR swOutBarrier.'i' MATERIAL COPPER;
+! enddo;
+
+
+AREA CA_NO_BEAM CONFORMAL +Z_LEFT+W_SHELL,R_EMIT -dZ_FOCUSING-dZ_BEAM_GAP,0 ;
+! AREA EMIT_ZONE CONFORMAL -dZ_FOCUSING-Z_BEAM_GAP,R_CATHODE -dZ_FOCUSING-Z_BEAM_GAP-DR*2,R_EMIT;
+
+AREA guard_electrode conformal +ZBEGIN-2e-3,R_EMIT 
+   +ZBEGIN-1e-3,+R_CATHODE+5e-3;
+! CONDUCTOR guard_electrode;
+
+
+AREA EMIT_ZONE CONFORMAL -dZ_FOCUSING-dZ_BEAM_GAP,R_CATHODE -dZ_FOCUSING-dZ_BEAM_GAP-DR*2,R_EMIT;
+
+!SOLENOID (anode)
+R_COIL = +swCATHODE.x2mx+20mm;
+Z_COIL_START = (swCATHODE.x1mx+20mm);
+! N_COIL = (swANODE.x1mx-Z_COIL_START+30mm)/DZ_COIL;
+N_COIL = (swANODE.x1mx-Z_COIL_START-0mm)/DZ_COIL;
+
+
+
+COIL_CURRENT =2*R_COIL *B_Z0/ 1.2566e-6 ; !*N_COIL;
+DO I=0,N_COIL-1 ;
+   ZCOIL.'I' =Z_COIL_START+ I*DZ_COIL ;
+   ! ZCOIL.'I' = ZBEGIN + I*DZ_COIL ;
+
+   POINT LOOP.'I'  ZCOIL.'I' 0.0 ; 
+   COILS AXIS X1 LOOP.'I' R_COIL COIL_CURRENT ;
+ENDDO ;
+
+
+!SOLENOID (near cathode)
+DZ_COIL.cathode = DZ_COIL;
+R_COIL.cathode = +swANODE.x2mx+1mm;
+Z_COIL_START.cathode = swCATHODE.x1mn-30mm;
+N_COIL.cathode = (Z_COIL_START-Z_COIL_START.cathode)/DZ_COIL.cathode;
+! N_COIL = (-ZBEGIN+Z_RIGHT-Z_OUTPUT)/DZ_COIL;
+
+COIL_CURRENT.cathode =2*R_COIL.cathode*B_Z0/ 1.2566e-6 ; !*N_COIL;
+DO I=0,N_COIL.cathode-1 ;
+   ZCOIL.cathode.'I' =Z_COIL_START.cathode + I*DZ_COIL.cathode ;
+   ! ZCOIL.'I' = ZBEGIN + I*DZ_COIL ;
+   POINT LOOP.cathode.'I'  ZCOIL.cathode.'I' 0.0 ; 
+   COILS AXIS X1 LOOP.cathode.'I' R_COIL.cathode COIL_CURRENT.cathode ;
+ENDDO ;
+
+! POINT COIL_NEAR_CATHODE swEMITTER.x1mn 0.0;
+! COILS AXIS X1 COIL_NEAR_CATHODE +R_COIL+10*dr COIL_CURRENT;
+
+!DISK-LOAD WAVEGUIDE
+! Do I=1,N_PERIOD ;
+!    Z_SLOW1.'I'=Z_RIGHT -Z_OUTPUT -I*Z_PERIOD;
+!    Z_SLOW2.'I'=Z_SLOW1.'I'+Z_D;
+!    Z_SLOW0.'I'=0.5*(Z_SLOW1.'I'+Z_SLOW2.'I');
+!    AREA SLOT.'I' RECTANGULAR Z_SLOW1.'I',R_B Z_SLOW2.'I',R_A ;
+!   ! LINE SLOT_LINE.'I' CONFORMAL Z_SLOW1.'I',R_INNER Z_SLOW2.'I',R_INNER ;
+!   ! POINT SLOT_POINT1.'I' Z_SLOW0.'I',R_INNER ;
+!   ! POINT SLOT_POINT2.'I' Z_SLOW0.'I',R_OUTER ;
+! ENDDO ;
+
+!PRE-MODULATION CAVITIES
+! Do I=1,N_PERIOD1 ;
+!    Z_SLOW11.'I'=Z_DRIFT1+ (I-1)*Z_PERIOD1;
+!    Z_SLOW12.'I'=Z_SLOW11.'I'+Z_D1;
+!    Z_SLOW10.'I'=0.5*(Z_SLOW11.'I'+Z_SLOW12.'I');
+!    AREA SLOT1.'I' RECTANGULAR Z_SLOW11.'I',R_B1 Z_SLOW12.'I',R_A1 ;
+!   ! LINE SLOT_LINE.'I' CONFORMAL Z_SLOW1.'I',R_INNER Z_SLOW2.'I',R_INNER ;
+!   ! POINT SLOT_POINT1.'I' Z_SLOW0.'I',R_INNER ;
+!   ! POINT SLOT_POINT2.'I' Z_SLOW0.'I',R_OUTER ;
+! ENDDO ;
+
+! ============================================================
+! ============================================================
+! ... computed grid sizes
+
+! ============================================================
+
+! ============================================================
+! ... gridding
+simulation_area.zmn = swCATHODE.x1mn;
+simulation_area.zmx = swANODE.x1mx;
+simulation_area.rmx = swANODE.x2mx;
+AREA simulation_area conformal 
+   simulation_area.zmn 0 simulation_area.zmx 
+   simulation_area.rmx;
+mark simulation_area x1 size dz;
+mark simulation_area x2 size dr;
+
+
+! MARK EMIT_ZONE X1 SIZE DZ ;
+! MARK EMIT_ZONE X2 SIZE DR ;
+! MARK SHELL X1 SIZE DZ ;
+! MARK SHELL X2 SIZE DR ;
+! MARK CATHODE X1 SIZE DZ ;
+! MARK CATHODE X2 SIZE DR ;
+! MARK OUTPUT_WINDOW X1 SIZE DR ;
+! MARK OUTPUT_WINDOW X2 SIZE DR ;
+AUTOGRID ;
+
+! grid_z1= swEMITTER.x1mn;
+! grid_z2 =4mm;
+! grid origin x1 simulation_area.zmn;
+! grid uniform x1 distance +grid_z1-simulation_area.zmn first dz;
+! grid uniform x1 distance +grid_z2-grid_z1 first +dz/1.1;
+! grid uniform x1 distance +simulation_area.zmx-grid_z2 first dz;
+
+
+! grid_r1 = 15mm; ! Refine start
+! grid_r2 = 20mm; ! Refine end
+! grid origin x2 0;
+! grid uniform x2 distance grid_r1 first dr;
+! grid uniform x2 distance +grid_r2-grid_r1 first +dr/1.1;
+! grid uniform x2 distance +simulation_area.rmx-grid_r2 first dr;
+
+
+
+
+! ============================================================
+! ... construction
+
+DIELECTRIC swPORT_RIGHT 3;
+DIELECTRIC swPORT_LEFT 8;
+! CONDUCTOR SHELL MATERIAL COPPER;
+! CONDUCTOR CATHODE MATERIAL COPPER ;
+! CONDUCTOR FOCUSING_ELECTRODE MATERIAL COPPER;
+! CONDUCTOR EMIT_ZONE MATERIAL GOLD;
+!CONDUCTOR OUTPUT_CORE;! MATERIAL COPPER;
+
+
+! VOID CA_NO_BEAM ;
+! void gap00;
+
+! temp_z_cav1 =  +z_premodulation_cav1+dz_premodulation_cav1;
+! temp_r_cav1 =  +R_BEAM_TUNNEL+dR_premodulation_cav1;
+! temp_z_cav2 = +z_premodulation_cav2+dz_premodulation_cav2;
+! temp_r_cav2 =  +R_BEAM_TUNNEL+dR_premodulation_cav2;
+
+! area gap_premodulation_cav1 conformal 
+!    z_premodulation_cav1 R_BEAM_TUNNEL  
+!    temp_z_cav1,    temp_r_cav1;
+! area gap_premodulation_cav2 conformal 
+!    z_premodulation_cav2 R_BEAM_TUNNEL  
+!    temp_z_cav2,    temp_r_cav2;
+
+! void gap_premodulation_cav1;
+! void gap_premodulation_cav2;
+
+! area tunnel_void_area conformal z_premodulation_cav1 R_EMIT +sys$x1mx-10mm +R_BEAM_TUNNEL+1mm;
+! void tunnel_void_area;
+
+! DO I=1,N_PERIOD ;
+!    VOID SLOT.'I';
+!   ! DIELECTRIC DIELETRIC.'I' SILICA_FUSED;
+! ENDDO ;
+
+! DO I=1,N_PERIOD1 ;
+!    VOID SLOT1.'I';
+! !   DIELECTRIC DIELETRIC.'I' SILICA_FUSED;
+! ENDDO ;
+
+! ============================================================
+! ... GENERATE PORTS
+
+LINE PORT_LEFT CONFORMAL swPORT_LEFT.x1mn,swPORT_LEFT.x2mn swPORT_LEFT.x1mn,+swPORT_LEFT.x2mx;
+LINE PORT_RIGHT CONFORMAL swPORT_RIGHT.x1mx,swPORT_RIGHT.x2mn swPORT_RIGHT.x1mx,swPORT_RIGHT.x2mx ;
+! LINE LINE_PN CONFORMAL -18mm 20mm 4mm 20mm;
+
+!LINE PORT_RADIO CONFORMAL Z_FRONT,R_OUTER Z_LENGTH,R_OUTER ;
+
+ 
+
+
+! PORT PORT_LEFT POSITIVE ;!INCOMING 500e3 LAPLACIAN 2 swCATHODE.0 -500e3 swANODE.0 0;
+PORT PORT_RIGHT NEGATIVE;
+
+
+  ! LINE gap CONFORMAL R_cathode,0,Z  R_anode,0,Z ;  
+
+   ! AREA inlet CONFORMAL R_cathode,0,Z  R_anode,TwoPi,Z ;
+
+   FUNCTION g1(x1,x2,x3) = 1 / x2;
+
+   FUNCTION g2(x1,x2,x3) = 0 ;
+   trise = 0.1e-12;
+   FUNCTION f(t) =+abs(Vinput)*(1- exp(-t/trise)) ;
+   
+
+   ! PORT PORT_LEFT POSITIVE INCOMING f   
+   !   FUNCTION E2 g1 E3 g2
+   !   NORMALIZATION VOLTAGE PORT_LEFT ;
+
+
+
+!   TvoltageRise = 1*rf.PERIOD;
+!   Time_constant = TvoltageRise/2 ;
+!   Voltage_Max = 40KiloVolts ;
+!   Function ShapeEradial(r,phi,z) = 1/R ;
+!   Function ShapeEphi(r,phi,z) = 0. ;
+!   Function DesiredVoltage(t) = Voltage_Max * Smooth_Ramp(T/TvoltageRise) ;
+!   Function DCDriver(t) = 0.70*Voltage_Max * Smooth_Ramp(T/TvoltageRise) ;
+
+observe FIELD_INTEGRAL E.DL PORT_LEFT suffix InputVoltage;
+
+
+!   Port RightPort Negative ;
+Port PORT_LEFT  Positive 
+   Incoming f Function E2 g1 E3 g2
+   NORMALIZATION VOLTAGE  PORT_LEFT
+   CIRCUIT .1e-9 f OBS$InputVoltage ;
+
+! PORT PORT_SHELL_NEAR_CATHODE NEGATIVE;
+
+!PORT PORT_RADIO NEGATIVE;
+!FREESPACE PORT_RIGHT NEGATIVE X1 CONDUCTIVITY 1E-3 ;
+! ============================================================
+!!!!Observe Smith Purcell!!!!
+
+R_OBSP0=0.0e-3M;
+R_OBSP1=2e-3M;
+R_OBSP2=4e-3M;
+R_OBSP3=6e-3M;
+
+Z_OBSP0=-3.4e-3M;
+D=20e-3M;
+DO I=1,11;
+    Z_OBSP.'I'=I*D+Z_OBSP0;
+    POINT OBSP0.'I' Z_OBSP.'I',R_OBSP0;
+    POINT OBSP1.'I' Z_OBSP.'I',R_OBSP1;
+    POINT OBSP2.'I' Z_OBSP.'I',R_OBSP2;
+    POINT OBSP3.'I' Z_OBSP.'I',R_OBSP3;
+ENDDO;
+
+POINT OBSP_INNER1 Z_OBSP.2,0;
+
+
+! ===========================================================
+! ================ E.T.C. PARAMETERS ========================
+Statistics 100 ;
+MODE TM;
+MAXWELL BIASED ;!CENTER;!HIGH_Q;!BIASED ;
+!TIME_STEP=500/SQRT(3.7);
+RUNTIME = 200_NANOSECONDS ;
+DURATION RUNTIME ;
+
+FUNCTION bb=0.6;
+!PRESET b1st function bb ;
+
+! POISSON  poisson1 2 CATHODE,Vinput FOCUSING_ELECTRODE,0;
+! POISSON  poisson1 2 swCATHODE.0,Vinput swANODE.0,0;
+! PRESET E1 POISSON poisson1 ;
+! PRESET E2 POISSON poisson1 ;
+
+! ============================================================
+
+! ... look at geometry
+
+DISPLAY_2D;
+
+
+! ============================================================
+! ============================================================
+! ============================================================
+!!! Insert Emission Controls.
+
+
+!If (EmissionOn.eq.1) then ;
+!BEAM_VOLTAGE=65KILOVOLTAGES;
+!FUNCTION EMIT_CURRENT_DENSITY(X1,X2,T)=30E4*THETA(0.1E-12-T);!*THETA(SYS$DTIME-T);
+! BEAM_CURRENT=EMIT_CURRENT_DENSITY*PI*R_EMITTER**2;
+
+! EMIT_CURRENT_DENSITY = 20e3 / (PI *((R_EMIT + W_EMIT)**2 - R_EMIT**2));
+! EMISSION BEAM  EMIT_CURRENT_DENSITY 250e3 MODEL EBEAM ;
+temp_z2 = ZBEGIN-0.2e-3;
+temp_z3 = ZBEGIN+0.2e-3;
+temp_r1 = R_CATHODE-W_EMIT+0.1e-3;
+temp_r2 = R_CATHODE-0.1e-3;
+AREA emit_zone_of_emit_zone conformal 
+   temp_z2 temp_r1
+   temp_z3 temp_r2;
+! EMIT eBEAM EMIT_ZONE EXCLUDE OSYS$AREA INCLUDE emit_zone_of_emit_zone;
+
+
+! A = 1.5414E-6 ;
+! B = 6.8308E+9 ;
+! PHI = 5.0 ;
+A= 3.6e-9;
+B=4e6;
+PHI = 2.0;
+
+
+
+! EMISSION HIGH_FIELD a b phi MODEL fea;! CNT 4.44 eV
+! emit fea emit_zone;
+
+! EMIT eBEAM EMIT_ZONE EXCLUDE OSYS$AREA INCLUDE EMIT_ZONE;
+
+
+!f0=430e9/6;
+EMISSION EXPLOSIVE ;
+! EMIT EXPLOSIVE emit_zone ;
+do i=0,swEMITTER.N_facet-1;
+   EMIT EXPLOSIVE swEMITTER.'i';
+enddo;
+!EMIT_CURRENT_DENSITY=2e4;
+!BEAM_CURRENT=EMIT_CURRENT_DENSITY*PI*R_EMITTER**2-EMIT_CURRENT_DENSITY*PI*R_EMITTER00**2;
+! function Beamvoltage(t,x1,x2) = 200e3; 
+!Do j=0,19 ;
+!Te=0.5/f0;
+!Tp=Te;
+!function Beamcurrent_'j'(t,x1,x2) = 100.e4*THETA(j*(Tp+Te)+Te-T)*THETA(T-j*(Tp+Te));
+!function Beamcurrent_'j'(t,x1,x2) =EMIT_CURRENT_DENSITY;
+!Emission Beam EMIT_CURRENT_DENSITY Beamvoltage model beam_'j'; 
+!Emit beam_'j' EMITTER exclude Osys$AREA INCLUDE EMIT_ZONE;
+!Enddo ;
+
+!Emission Beam EMIT_CURRENT_DENSITY Beamvoltage model beam0;
+
+!FUNCTION BEAMCURRENT1(t,
+!EMISSION EXPLOSIVE EMIT_CURRENT_DENSITY Beamvoltage model beam0;
+!WALL_TEMPERATURE_J  
+!Emit beam0 EMITTER exclude Osys$AREA INCLUDE EMIT_ZONE;
+
+! OBSERVE Emitted emit_zone Electron Current ;
+OBSERVE Emitted swEMITTER Electron Current ;
+
+! observe FIELD_INTEGRAL E.dl PORT_SHELL_NEAR_CATHODE;
+! observe FIELD_INTEGRAL E.dl LINE_PN;
+
+LINE line_near_absorber conformal +swPORT_RIGHT.x1mn-20mm 0 
+   +swPORT_RIGHT.x1mn-20mm sys$x2mx;
+observe FIELD_INTEGRAL J.DA line_near_absorber;
+
+LINE line_near_cathode conformal +swEMITTER.x1mx+20e-3 0 
+   +swEMITTER.x1mx+20e-3 sys$x2mx;
+observe FIELD_INTEGRAL J.DA line_near_cathode;
+
+! LINE line_left_slots -10e-3, ;
+
+! observe COLLECTED SHELL ALL CHARGE;
+! observe COLLECTED SHELL ALL Current;
+! observe COLLECTED FOCUSING_ELECTRODE ALL Current;
+! observe COLLECTED CATHODE ALL Current;
+! observe COLLECTED emit_zone ALL Current;
+tempz = +(swProbeReflCav.x1mn+swProbeReflCav.x1mx)/2;
+tempr = +(swProbeReflCav.x2mn+swProbeReflCav.x2mx)/2;
+POINT pt_reflection_cav 
+   tempz tempr;
+observe field e1 pt_reflection_cav fft magnitude;
+
+POINT pt_reflection_cav2 swProbeReflCav2.x1mn swProbeReflCav2.x2mn;
+observe field e1 pt_reflection_cav2 fft magnitude;
+
+
+tempz = +(swProbeReflCav.x1mn+swProbeReflCav.x1mx)/2;
+tempr = +(swProbeReflCav.x2mn+swProbeReflCav.x2mx)/2;
+POINT pt_premod 
+   tempz tempr;
+observe field e1 pt_premod fft magnitude;
+
+tempz = +(swProbeReflCav.x1mn+swProbeReflCav.x1mx)/2;
+tempr = +(swProbeReflCav.x2mn+swProbeReflCav.x2mx)/2;
+POINT pt_sws.0 
+   tempz tempr;
+observe field e1 pt_sws.0 fft magnitude;
+
+tempz = +(swProbeReflCav.x1mn+swProbeReflCav.x1mx)/2;
+tempr = +(swProbeReflCav.x2mn+swProbeReflCav.x2mx)/2;
+POINT pt_extr.0 
+   tempz tempr;
+observe field e1 pt_extr.0 fft magnitude;
+observe field e2 pt_extr.0 fft magnitude;
+observe field b3 pt_extr.0 fft magnitude;
+
+r_particles = (swEMITTER.x2mx+swEMITTER.x2mn)/2;
+
+
+POINT pt_out +sys$x1mx-5mm r_particles;
+! observe field e1 pt_out fft magnitude;
+observe field e2 pt_out fft magnitude;
+observe field b1 pt_out fft magnitude;
+observe field b2 pt_out fft magnitude;
+observe field b3 pt_out fft magnitude;
+
+
+
+
+
+
+
+
+
+! ======== OUTPUT GRAPHICS ==================================================
+
+! TIMER FOR_ELECTRIC PERIODIC 50 100100 400 ;
+! TIMER FOR_CONTOUR PERIODIC 50 100100 400 ;
+! TIMER FOR_STATIC PERIODIC 50 100100 4000;
+
+
+TIMER FOR_ELECTRIC PERIODIC REAL 0 RUNTIME .5e-9;
+TIMER FOR_CONTOUR PERIODIC REAL 0 RUNTIME .5e-9;
+TIMER FOR_STATIC PERIODIC REAL 0 RUNTIME 10e-9;
+
+! PHASESPACE  AXES  X1 P1 FOR_ELECTRIC ;! SPECIES ELECTRON;! MOVIE PNG;
+! PHASESPACE  AXES  X2 P1 FOR_ELECTRIC  SPECIES ELECTRON;! MOVIE PNG;
+
+PHASESPACE  AXES  X1 X2 FOR_ELECTRIC;!  SPECIES ELECTRON MOVIE PNG;
+PHASESPACE  AXES  X1 KE FOR_ELECTRIC ;! SPECIES ELECTRON MOVIE PNG;
+! PHASESPACE  AXES  X2 KE FOR_ELECTRIC  SPECIES ELECTRON MOVIE PNG;
+
+LINE centerline conformal sys$x1mn 0 sys$x1mx 0;
+! LINE hcenterline conformal sys$x1mn 0.5*R_SHELL sys$x1mx 0.5*R_SHELL;
+! LINE closeline conformal sys$x1mn swEMITTER.x2mn sys$x1mx swEMITTER.x2mn;
+!range 
+LINE line_particle_moving conformal sys$x1mn r_particles sys$x1mx r_particles;
+
+RANGE FIELD B1st centerline FOR_STATIC ;!FFT magnitude;
+RANGE FIELD B1st line_particle_moving FOR_STATIC;! FFT magnitude;
+RANGE FIELD B2st line_particle_moving FOR_STATIC;! FFT magnitude;
+range field E1 line_particle_moving FOR_ELECTRIC FFT magnitude;
+range FIELD_INTEGRAL J.DA X1 osys$area FOR_ELECTRIC FFT magnitude;;
+range FIELD_POWER S.DA x1 osys$area FOR_ELECTRIC FFT magnitude;
+range FIELD_POWER E.J_PARTICLE  x1 osys$area FOR_ELECTRIC;! FFT magnitude;
+range particle power ALL X1 FOR_ELECTRIC;
+
+
+
+
+! RANGE FIELD E1 centerline FOR_ELECTRIC FFT magnitude; 
+! RANGE FIELD E1 hcenterline FOR_ELECTRIC FFT magnitude; 
+! RANGE FIELD E1 closeline FOR_ELECTRIC FFT magnitude; 
+
+
+!!! Use the CONTOUR command to examine the PseudoPotential Contours. 
+ Contour Field B1st Osys$area FOR_STATIC Shade;!  MOVIE PNG;
+ Contour Field E1 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+ Contour Field E2 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+ Contour Field |E| Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+!   Contour field E1 Osys$area FOR_CONTOUR Shade INTegrate X POSITIVE;
+!  Contour field E2 Osys$area FOR_CONTOUR Shade INTegrate Y POSITIVE;
+!  VECTOR FIELD E1,E2 Osys$area FOR_STATIC ;
+
+! VECTOR FIELD E1st E2st  Osys$area FOR_STATIC;
+
+!!! Use the CONTOUR command to examine the Electric Field Strength. 
+ ! Contour Field |E|  Osys$area FOR_CONTOUR Shade MOVIE PNG;
+ ! Contour Field |B|  Osys$area FOR_CONTOUR Shade MOVIE PNG;
+ 
+DO I=10,11;
+   ! observe field e1 SLOT_point1.'I' fft magnitude;! window time 3e-11 6e-11;
+   ! observe field B3 SLOT_point1.'I' fft magnitude;! window time 3e-11 6e-11;
+ENDDO;
+
+! DO I=1,3;
+!    observe field e1 obsp0.'I' fft magnitude;! window time 2e-11 6e-11;
+!    observe field B3 obsp0.'I' fft magnitude;! window time 2e-11 6e-11;
+
+! ENDDO;
+! DO J=1,3;
+!    DO I=1,11;
+!       observe field e1 obsp'J'.'I' fft magnitude;! window time 0.01e-11 4e-11;
+!       observe field E2 obsp'J'.'I' fft magnitude;! window time 0.01e-11 4e-11;
+!       observe field B3 obsp'J'.'I' fft magnitude;! window time 0.01e-11 4e-11;
+!    ENDDO;
+! enddo;
+
+
+
+
+z_extractor = swProbeExtractionCav.x1mn;
+POINT obsp.extractor z_extractor r_particles;
+LINE line_near_extractor conformal z_extractor 0 z_extractor sys$x2mx;
+
+observe field E1 line_particle_moving fft magnitude;
+
+observe Field E1 obsp.extractor  fft magnitude;
+observe FIELD_INTEGRAL J.DA line_near_extractor fft magnitude;
+
+observe FIELD_POWER s.da line_near_extractor fft magnitude;
+LINE line_after_extractor conformal z_extractor 0 z_extractor sys$x2mx;
+observe FIELD_POWER s.da line_after_extractor fft magnitude;
+
+z_line_near_port_right = (swPORT_RIGHT.x1mn+z_extractor)/2;
+LINE line_near_port_right conformal z_line_near_port_right 0 
+   z_line_near_port_right sys$x2mx;
+observe FIELD_POWER s.da line_near_port_right fft magnitude;
+
+
+
+
+OBSERVE  FIELD_POWER   S.DA PORT_LEFT fft magnitude; 
+OBSERVE  FIELD_POWER   S.DA PORT_RIGHT fft magnitude; 
+
+
+LINE window_in conformal swPORT_RIGHT.x1mn 0 swPORT_RIGHT.x1mn SYS$x2mx;
+OBSERVE  FIELD_POWER   S.DA window_in fft magnitude; 
+
+! ==================================================================
+   START ;
+   STOP ;
+!ENDIF ;
+
+! ============================================================
