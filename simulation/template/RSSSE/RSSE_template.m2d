@@ -606,7 +606,9 @@ AREA EMIT_ZONE CONFORMAL -dZ_FOCUSING-dZ_BEAM_GAP,R_CATHODE -dZ_FOCUSING-dZ_BEAM
 R_COIL = +swANODE.x2mx+1mm;
 Z_COIL_START = (swCATHODE.x1mn-30mm);
 ! N_COIL = (swANODE.x1mx-Z_COIL_START+30mm)/DZ_COIL;
-N_COIL = (simulation_area.zmx-Z_COIL_START-0mm)/DZ_COIL;
+Z_COIL_end = simulation_area.zmx - 0mm;
+N_COIL = min(199,(Z_COIL_end-Z_COIL_START)/DZ_COIL);
+DZ_COIL = (Z_COIL_end-Z_COIL_START)/N_COIL;
 
 
 
@@ -967,7 +969,7 @@ observe field e1 pt_sws2 fft magnitude;
 tempz = sws3.z0+sws3.N*sws3.p/2;
 POINT pt_sws3
    tempz r_particles;
-observe field e1 pt_sws2 fft magnitude;
+observe field e1 pt_sws3 fft magnitude;
 
 POINT pt_extr 
    z_extractor r_particles;

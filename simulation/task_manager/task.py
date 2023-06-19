@@ -14,12 +14,12 @@ import shutil
 import time
 from abc import abstractmethod
 from collections import OrderedDict
+from threading import Lock
 
 import matplotlib.pyplot as plt
 import pandas
 import sw_to_MAGIC_commands
 from _logging import logger
-from threading import Lock
 
 # import simulation.task_manager.manual_task
 CSV_ENCODING = 'gbk'
@@ -28,7 +28,7 @@ CSV_ENCODING = 'gbk'
 class MagicTemplate:
     VARIABLE_PATTERN = r"%[\w.]+%"
 
-    def __init__(self, filename, working_dir: str,lock=Lock()):
+    def __init__(self, filename, working_dir: str, lock=Lock()):
         self.filename = filename
         self.working_dir = working_dir
         self.output_prefix = os.path.join(self.working_dir,
@@ -61,7 +61,7 @@ class MagicTemplate:
         timestamp_ns = time.time_ns()
         time.sleep(0.1)
         self.lock.release()
-        return self.output_prefix + datetime.datetime.fromtimestamp(timestamp_ns/1e9).strftime(
+        return self.output_prefix + datetime.datetime.fromtimestamp(timestamp_ns / 1e9).strftime(
             "_%Y%m%d_%H%M%S_") + ("%09d.m2d" % (timestamp_ns % 1e9))[1:]
 
     def to_m2d(self, replace_rules: dict):
@@ -119,6 +119,7 @@ class TaskBase:
         :return:
         """
         newdata = params.copy()
+
         res = self.get_res(m2d_path)
         res[self.colname_timestamp] = time.time()
         res[self.colname_score] = self.evaluate(res)
@@ -132,10 +133,13 @@ class TaskBase:
         #     if key not in self.log_df.columns:
         #         self.log_df[key] = numpy.nan
         #     self.log_df[key][len(self.log_df) - 1] = newdata[key]
+        logger.info("====")
         self.lock.acquire()
 
         self.save_log_csv()
         self.lock.release()
+        logger.info("===+=")
+
         return self.log_df
 
     def load_log(self) -> pandas.DataFrame:
@@ -152,27 +156,53 @@ class TaskBase:
         """
         return True
 
-    def update(self, param_set: dict):
+    def find_old_res(self, params: dict) -> str:
+        if os.path.exists(self.log_file_name):
+            df = self.load_log()
+            condition = pandas.Series([True] * len(df))
+            for key in params:
+                condition = condition & (df[key] == params[key])
+            old_res_line = df[condition]
+            if len(old_res_line):
+                logger.info(old_res_line)
+                old_m2d_path = old_res_line[self.colname_path].values[len(old_res_line) - 1]
+                logger.info("找到了之前的记录：%s" % old_m2d_path)
+                return old_m2d_path
+        return ""  # means not found
+
+    def log_and_info(self, param_set, m2d_path):
+        try:
+            log_df = self.log(param_set, m2d_path)
+            last_logged_data = log_df.iloc[len(log_df) - 1]
+            logger.info(str(last_logged_data))
+            return last_logged_data[self.colname_score]
+        except (
+                KeyError, FileNotFoundError, TypeError, IndexError, pandas.errors.ParserError, PermissionError) as e:
+            logger.warning("记录结果时报错，已忽略：\n%s" % e)
+            return 0.
+
+    def update(self, param_set: dict, comment: str = ''):
         """
         按照给定的参数运行模拟，自动获取结果，更新log
         :param param_set:
         :return: 评分
         """
+        param_set['comment'] = comment
         params_check_status = self.params_check(param_set)
         if not params_check_status:
-            logger.info("无效参数：%s" % (param_set))
+            logger.warning("无效参数：%s" % (param_set))
             return 0.
+        old_m2d_path = self.find_old_res(param_set)
+
+        if old_m2d_path:
+            return self.log_and_info(param_set, old_m2d_path)
+
         logger.info("当前参数：%s" % param_set)
         m2d_path = self.template.to_m2d({key: str(param_set[key]) for key in param_set})
         cmd = '"%s" %s' % (self.MAGIC_SOLVER_PATH, m2d_path)
         logger.info("Run command:\n%s" % cmd)
         os.system(cmd)
-
-        log_df = self.log(param_set, m2d_path)
-        last_logged_data = log_df.iloc[len(log_df) - 1]
-        logger.info(str(last_logged_data))
-
-        return last_logged_data[self.colname_score]
+        return self.log_and_info(param_set, m2d_path)
 
     @abstractmethod
     def get_res(self, m2d_path: str) -> dict:
