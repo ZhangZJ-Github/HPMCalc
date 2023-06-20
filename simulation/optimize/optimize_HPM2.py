@@ -62,6 +62,10 @@ class HPMSim(TaskBase):
         params["%sws1.N%"] = int(params["%sws1.N%"])
         params["%sws2.N%"] = int(params["%sws2.N%"])
         params["%sws3.N%"] = int(params["%sws3.N%"])
+
+        params['%refcav.rin_right_offset%'] = min(params['%refcav.rin_right_offset%'],
+                                                  params['%refcav.rout%'] - rmin_cathode)
+
         params['%sws1.a%'] = max(params['%sws1.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
         params['%sws2.a%'] = max(params['%sws2.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
         params['%sws3.a%'] = max(params['%sws3.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
@@ -76,7 +80,7 @@ class HPMSim(TaskBase):
         """
         logger.info("evaluate of SOOptimizer")
         # 以下各项得分最高为1
-        weights = {self.colname_avg_power_score: 2,
+        weights = {self.colname_avg_power_score: 3,  # TODO: 目前应为奇数
                    self.colname_freq_accuracy_score: 2,  # 频率准确度，如，12.5 GHz的设备输出两个主峰应为0和25 GHz，且幅值接近1:1
                    self.colname_freq_purity_score: 1  # 频率纯度，如，12.5 GHz的设备除了上述两个主峰外，其他频率成分应趋于0
                    }
@@ -179,26 +183,26 @@ if __name__ == '__main__':
         initial_data.columns[i]: i for i in range(len(initial_data.columns))
     }
 
-    # <=0
-    constraint_ueq = (
-        lambda params_array: params_array[
-                                 param_name_to_index['%sws1.dz_out%']] - params_array[
-                                 param_name_to_index['%sws1.dz_in%']],
-        lambda params_array: params_array[
-                                 param_name_to_index['%sws2.dz_out%']] - params_array[
-                                 param_name_to_index['%sws2.dz_in%']],
-        lambda params_array: params_array[
-                                 param_name_to_index['%sws3.dz_out%']] - params_array[
-                                 param_name_to_index['%sws3.dz_in%']],
-        lambda params_array: params_array[param_name_to_index['%sws1.dz_in%']] - params_array[
-            param_name_to_index['%sws1.p%']],
-        lambda params_array: params_array[param_name_to_index['%sws2.dz_in%']] - params_array[
-            param_name_to_index['%sws2.p%']],
-        lambda params_array: params_array[param_name_to_index['%sws3.dz_in%']] - params_array[
-            param_name_to_index['%sws3.p%']],
 
-    )
-
+    # # <=0
+    # constraint_ueq = (
+    #     lambda params_array: params_array[
+    #                              param_name_to_index['%sws1.dz_out%']] - params_array[
+    #                              param_name_to_index['%sws1.dz_in%']],
+    #     lambda params_array: params_array[
+    #                              param_name_to_index['%sws2.dz_out%']] - params_array[
+    #                              param_name_to_index['%sws2.dz_in%']],
+    #     lambda params_array: params_array[
+    #                              param_name_to_index['%sws3.dz_out%']] - params_array[
+    #                              param_name_to_index['%sws3.dz_in%']],
+    #     lambda params_array: params_array[param_name_to_index['%sws1.dz_in%']] - params_array[
+    #         param_name_to_index['%sws1.p%']],
+    #     lambda params_array: params_array[param_name_to_index['%sws2.dz_in%']] - params_array[
+    #         param_name_to_index['%sws2.p%']],
+    #     lambda params_array: params_array[param_name_to_index['%sws3.dz_in%']] - params_array[
+    #         param_name_to_index['%sws3.p%']],
+    #
+    # )
 
     def get_hpsim():
         return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
@@ -210,14 +214,33 @@ if __name__ == '__main__':
             {initial_data.columns[i]: params[i] for i in range(len(params))}, comment)
 
 
-    # # score = obj_func(initial_data.loc[0].values) # 用初始值测试
-    # set_run_mode(obj_func, 'multithreading')
-    # pso = PSO(func=obj_func,
-    #           n_dim=len(initial_data.columns), pop=30,
-    #           lb=[initial_data[col][1] for col in initial_data.columns],
-    #           ub=[initial_data[col][2] for col in initial_data.columns],
-    #           constraint_ueq=constraint_ueq)
-    # pso.run()
+    # score = obj_func(initial_data.loc[0].values)  # 用初始值测试
+    from pymoo.algorithms.moo.nsga3 import NSGA3
+    from pymoo.problems import get_problem
+    from pymoo.optimize import minimize
+
+    res = minimize(obj_func,
+                   algorithm,
+                   ('n_gen', 10),
+                   seed=1,
+                   verbose=True)
+
+    # calculate a hash to show that all executions end with the same result
+    print("hash", res.F.sum())
+
+    from sko.tools import set_run_mode
+    from sko.PSO import PSO
+
+    obj_func_with_comment = lambda x: obj_func(x, 'PSO')
+    set_run_mode(obj_func_with_comment, 'multithreading')
+    pso = PSO(func=obj_func_with_comment,
+              n_dim=len(initial_data.columns), pop=30,
+              lb=[initial_data[col][1] for col in initial_data.columns],
+              ub=[initial_data[col][2] for col in initial_data.columns],
+              # constraint_ueq=constraint_ueq
+              )
+    pso.run(precision=1e-4)
+    # aaaaaaaaaa
 
     # from scipy.optimize import minimize
     #
@@ -246,11 +269,9 @@ if __name__ == '__main__':
     from concurrent.futures import ThreadPoolExecutor
 
 
-
     def parallel_get_grad(params: numpy.ndarray, old_score):
         grad = numpy.zeros(params.shape)
         pool = ThreadPoolExecutor(max_workers=7)
-
 
         # old_score = obj_func(params)
 
@@ -279,6 +300,7 @@ if __name__ == '__main__':
     def parallel_get_partial_func(params: numpy.ndarray, dx_for_get_partial_diff):
         partial_func = numpy.zeros(params.shape)  # 目标函数的偏微分
         pool = ThreadPoolExecutor(max_workers=7)
+
         # old_score = obj_func(params)
 
         def set_partial_func(future: concurrent.futures.Future):

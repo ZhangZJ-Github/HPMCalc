@@ -26,6 +26,7 @@ from threading import Lock
 
 
 class HPMSim(TaskBase):
+    rmin_cathode = 18e-3
     # 评分明细
     EVAL_COLUMNS = colname_avg_power_score, colname_freq_accuracy_score, colname_freq_purity_score = [
         "avg_power_score",
@@ -52,7 +53,7 @@ class HPMSim(TaskBase):
         :param params:
         :return:
         """
-        rmin_cathode = 18e-3
+        rmin_cathode = self.rmin_cathode
         params['%sws1.dz_in%'] = max(params['%sws1.dz_in%'], params['%sws1.dz_out%'])
         params['%sws2.dz_in%'] = max(params['%sws2.dz_in%'], params['%sws2.dz_out%'])
         params['%sws3.dz_in%'] = max(params['%sws3.dz_in%'], params['%sws3.dz_out%'])

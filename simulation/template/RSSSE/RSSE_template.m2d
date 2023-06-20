@@ -832,7 +832,7 @@ Statistics 100 ;
 MODE TM;
 MAXWELL BIASED ;!CENTER;!HIGH_Q;!BIASED ;
 !TIME_STEP=500/SQRT(3.7);
-RUNTIME = 50_NANOSECONDS ;
+RUNTIME = 15_NANOSECONDS ;
 DURATION RUNTIME ;
 
 FUNCTION bb=0.6;
@@ -979,7 +979,8 @@ observe field e1 pt_extr fft magnitude;
 
 
 tempz = +(sys$x1mx+out_waveguide.z0)/2;
-POINT pt_out tempz r_particles;
+tempr = max(1e-3,out_waveguide.r-1e-3);
+POINT pt_out tempz tempr;
 ! observe field e1 pt_out fft magnitude;
 observe field e2 pt_out fft magnitude;
 ! observe field b1 pt_out fft magnitude;
