@@ -102,6 +102,9 @@ class TaskBase:
             df = pandas.concat([self.load_log(), self.log_df], axis=0)
         else:
             df = self.log_df
+        self.rewrite_log_csv(df)
+
+    def rewrite_log_csv(self, df):
         df.to_csv(self.log_file_name, encoding=CSV_ENCODING, index=False)
 
     # def load_log_csv(self):
@@ -212,6 +215,47 @@ class TaskBase:
         :return:
         """
         return dict()
+
+    def re_evaluate(self):
+        """
+        对log.csv中的每条记录重新打分
+        :return:
+        """
+        log_df = self.load_log()
+        for i in range(len(log_df)):
+            path = log_df[self.colname_path][i]
+
+            res = self.get_res(path)
+            score = self.evaluate(res)
+            # log_df[self.colname_score] [i]= score
+            res[self.colname_score] = score
+            for key in res:
+                log_df[key][i] = res[key]
+
+        self.rewrite_log_csv(log_df)
+
+    def clean_folder(self, score_threshold):
+        """
+        删除文件夹中不必要的（低分）结果
+        :return:
+        """
+        log_df = self.load_log()
+        # index_to_delete = [log_df[self.colname_score] < score_threshold ]
+        m2d_paths_to_delete = log_df[self.colname_path][log_df[self.colname_score] < score_threshold]  # .tolist()
+        big_files_to_delete = []
+        from total_parser import ExtTool
+        import os
+
+        for m2d_path in m2d_paths_to_delete:
+            et = ExtTool(os.path.splitext(m2d_path)[0])
+            for filetype in [ExtTool.FileType.grd, ExtTool.FileType.par, ExtTool.FileType.fld, ExtTool.FileType.toc]:
+                filename = et.get_name_with_ext(filetype)
+                if os.path.exists(filename):
+                    os.remove(filename)
+                big_files_to_delete.append(filename)
+        # log_df.info(log_df[self.colname_score][index_to_delete])
+        logger.info("已经删除的文件：\n%s" %
+                    big_files_to_delete)
 
 
 class ManualTask:

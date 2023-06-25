@@ -440,28 +440,28 @@ refcav.rin_left = swANODE.x2mn;
 refcav.rin_right = swANODE.x2mn + (%refcav.rin_right_offset%);
 
 
-sws1.N = %sws1.N%;
-sws1.z0 = refcav.z0 + refcav.dz +( %sws1.z0_offset%);
-sws1.dz_in = %sws1.dz_in%;
-sws1.dz_out = %sws1.dz_out%;
-sws1.p = %sws1.p%;
-sws1.a = %sws1.a%;
+sws1.N = 3.0;
+sws1.z0 = refcav.z0 + refcav.dz +(%sws1.z0_offset%);
+sws1.dz_in = 0.003;
+sws1.dz_out = 0.003;
+sws1.p = 0.01;
+sws1.a = 0.022;
 sws1.b =refcav.rin_right;
 
-sws2.N = %sws2.N%;
+sws2.N = 2.0;
 sws2.z0 = sws1.z0 + sws1.N * sws1.p + (%sws2.z0_offset%);
-sws2.dz_in = %sws2.dz_in%;
-sws2.dz_out = %sws2.dz_out%;
-sws2.p = %sws2.p%;
-sws2.a = %sws2.a%;
+sws2.dz_in = 0.003;
+sws2.dz_out = 0.003;
+sws2.p = 0.0098;
+sws2.a = 0.022;
 sws2.b =sws1.b;
 
-sws3.N = %sws3.N%;
+sws3.N = 2.0;
 sws3.z0 = sws2.z0 + sws2.N * sws2.p + (%sws3.z0_offset%);
-sws3.dz_in = %sws3.dz_in%;
-sws3.dz_out = %sws3.dz_out%;
-sws3.p = %sws3.p%;
-sws3.a = %sws3.a%;
+sws3.dz_in = 0.003;
+sws3.dz_out = 0.003;
+sws3.p = 0.0095;
+sws3.a = 0.022;
 sws3.b = sws2.b;
 
 extractor.z0 = sws3.z0 + sws3.N * sws3.p + (%extractor.z0_offset%);
@@ -576,7 +576,7 @@ VOID void_ext_outwg;
 
  
  swPORT_RIGHT.N_facet=1;
- swPORT_RIGHT.x1mn=simulation_area.zmx-10mm;
+ swPORT_RIGHT.x1mn=simulation_area.zmx-1mm;
  swPORT_RIGHT.x1mx=simulation_area.zmx;
  swPORT_RIGHT.x2mn=0;
  swPORT_RIGHT.x2mx=out_waveguide.r;
@@ -705,13 +705,13 @@ AUTOGRID ;
 ! grid uniform x2 distance +grid_r2-grid_r1 first +dr/1.1;
 ! grid uniform x2 distance +simulation_area.rmx-grid_r2 first dr;
 
-FREESPACE swPORT_RIGHT.0 NEGATIVE X1 All;
+
 
 
 ! ============================================================
 ! ... construction
 
-! DIELECTRIC swPORT_RIGHT 3;
+DIELECTRIC swPORT_RIGHT 3;
 DIELECTRIC swPORT_LEFT 8;
 ! CONDUCTOR SHELL MATERIAL COPPER;
 ! CONDUCTOR CATHODE MATERIAL COPPER ;
@@ -755,7 +755,7 @@ DIELECTRIC swPORT_LEFT 8;
 ! ... GENERATE PORTS
 
 LINE PORT_LEFT CONFORMAL swPORT_LEFT.x1mn,swPORT_LEFT.x2mn swPORT_LEFT.x1mn,+swPORT_LEFT.x2mx;
-LINE PORT_RIGHT CONFORMAL swPORT_RIGHT.x1mn,swPORT_RIGHT.x2mn swPORT_RIGHT.x1mn,swPORT_RIGHT.x2mx ;
+LINE PORT_RIGHT CONFORMAL swPORT_RIGHT.x1mx,swPORT_RIGHT.x2mn swPORT_RIGHT.x1mx,swPORT_RIGHT.x2mx ;
 ! LINE LINE_PN CONFORMAL -18mm 20mm 4mm 20mm;
 
 !LINE PORT_RADIO CONFORMAL Z_FRONT,R_OUTER Z_LENGTH,R_OUTER ;
@@ -764,7 +764,7 @@ LINE PORT_RIGHT CONFORMAL swPORT_RIGHT.x1mn,swPORT_RIGHT.x2mn swPORT_RIGHT.x1mn,
 
 
 ! PORT PORT_LEFT POSITIVE ;!INCOMING 500e3 LAPLACIAN 2 swCATHODE.0 -500e3 swANODE.0 0;
-! PORT PORT_RIGHT NEGATIVE;
+PORT PORT_RIGHT NEGATIVE;
 
 
   ! LINE gap CONFORMAL R_cathode,0,Z  R_anode,0,Z ;  

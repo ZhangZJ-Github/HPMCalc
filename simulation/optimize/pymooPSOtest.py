@@ -8,14 +8,12 @@ import matplotlib
 
 matplotlib.use('tkagg')
 from pymoo.optimize import minimize
-from pymoo.util.ref_dirs import get_reference_directions
 from pymoo.visualization.scatter import Scatter
-from pymoo.algorithms.moo.nsga3 import NSGA3
 from pymoo.algorithms.soo.nonconvex.pso import PSO as pymooPSO
 from simulation.optimize.optimize_HPM import *
 import simulation.task_manager.task
 from pymoo.core.problem import ElementwiseProblem
-from concurrent.futures import ThreadPoolExecutor
+
 _1 = pymooPSO
 
 # create the reference directions to be used for the optimization
@@ -58,34 +56,34 @@ if __name__ == '__main__':
 
     # <=0
     constraint_ueq = (
-    #     lambda params_array: params_array[
-    #                              param_name_to_index['%sws1.dz_out%']] - params_array[
-    #                              param_name_to_index['%sws1.dz_in%']],
-    #     lambda params_array: params_array[
-    #                              param_name_to_index['%sws2.dz_out%']] - params_array[
-    #                              param_name_to_index['%sws2.dz_in%']],
-    #     lambda params_array: params_array[
-    #                              param_name_to_index['%sws3.dz_out%']] - params_array[
-    #                              param_name_to_index['%sws3.dz_in%']],
-    #     lambda params_array: params_array[param_name_to_index['%sws1.dz_in%']] - params_array[
-    #         param_name_to_index['%sws1.p%']],
-    #     lambda params_array: params_array[param_name_to_index['%sws2.dz_in%']] - params_array[
-    #         param_name_to_index['%sws2.p%']],
-    #     lambda params_array: params_array[param_name_to_index['%sws3.dz_in%']] - params_array[
-    #         param_name_to_index['%sws3.p%']],
-    #
-        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-        #                      params_array[
-        #                          param_name_to_index['%refcav.rout%']],
-    #
-    #     lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-    #                          params_array[param_name_to_index['%sws1.a%']],
-    #     lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-    #                          params_array[param_name_to_index['%sws2.a%']],
-    #     lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-    #                          params_array[param_name_to_index['%sws3.a%']],
-    lambda params_array: -0.1,
-    lambda params_array: -0.1,
+        lambda params_array: params_array[
+                                 param_name_to_index['%sws1.dz_out%']] - params_array[
+                                 param_name_to_index['%sws1.dz_in%']],
+        lambda params_array: params_array[
+                                 param_name_to_index['%sws2.dz_out%']] - params_array[
+                                 param_name_to_index['%sws2.dz_in%']],
+        lambda params_array: params_array[
+                                 param_name_to_index['%sws3.dz_out%']] - params_array[
+                                 param_name_to_index['%sws3.dz_in%']],
+        lambda params_array: params_array[param_name_to_index['%sws1.dz_in%']] - params_array[
+            param_name_to_index['%sws1.p%']],
+        lambda params_array: params_array[param_name_to_index['%sws2.dz_in%']] - params_array[
+            param_name_to_index['%sws2.p%']],
+        lambda params_array: params_array[param_name_to_index['%sws3.dz_in%']] - params_array[
+            param_name_to_index['%sws3.p%']],
+
+        lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
+                             params_array[
+                                 param_name_to_index['%refcav.rout%']],
+
+        lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
+                             params_array[param_name_to_index['%sws1.a%']],
+        lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
+                             params_array[param_name_to_index['%sws2.a%']],
+        lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
+                             params_array[param_name_to_index['%sws3.a%']],
+        # lambda params_array: -0.1,
+        # lambda params_array: -0.1,
     )
 
 
@@ -97,17 +95,15 @@ if __name__ == '__main__':
     # score = obj_func(initial_data.loc[0].values, "测试初始值")  # 用初始值测试
     # aaaaaaaaaaaaaaaa
 
-
-
     class MyProblem(ElementwiseProblem):
-        BIG_NUM = 1
+        BIG_NUM = 100
 
         def __init__(self, *args, **kwargs):
             super(MyProblem, self, ).__init__(*args, n_var=len(initial_data.columns),
-                                              n_obj=3,
+                                              n_obj=1,
                                               n_constr=len(constraint_ueq),
-                                              xl=initial_data.loc[1],
-                                              xu=initial_data.loc[2], **kwargs)
+                                              xl=initial_data.loc[1].values,
+                                              xu=initial_data.loc[2].values, **kwargs)
             logger.info("===============")
             logger.info(self.elementwise)
             logger.info(self.elementwise_runner)
@@ -124,11 +120,13 @@ if __name__ == '__main__':
             logger.info(
                 hpsim.update({index_to_param_name(i): x[i] for i in range(len(initial_data.columns))}, 'NSGA-III'))
             try:
-                out['F'] = [
-                    -hpsim.log_df[hpsim.colname_avg_power_score].iloc[-1],
-                    -hpsim.log_df[hpsim.colname_freq_accuracy_score].iloc[-1],
-                    -hpsim.log_df[hpsim.colname_freq_purity_score].iloc[-1]
-                ]
+                # out['F'] = [
+                #     -hpsim.log_df[hpsim.colname_avg_power_score].iloc[-1],
+                #     -hpsim.log_df[hpsim.colname_freq_accuracy_score].iloc[-1],
+                #     -hpsim.log_df[hpsim.colname_freq_purity_score].iloc[-1]
+                # ]
+
+                out['F'] = -hpsim.log_df[hpsim.colname_score]
                 logger.info("out['F'] = %s" % out['F'])
 
             except AttributeError as e:
@@ -170,14 +168,17 @@ if __name__ == '__main__':
                 logger.warning("并非全部约束条件都满足：%s" % (out['G']))
                 self.bad_res(out)
                 return
-            logger.info('score = %.2e'%
-                hpsim.update({index_to_param_name(i): x[i] for i in range(len(initial_data.columns))}, 'NSGA-III'))
+            logger.info('score = %.2e' %
+                        hpsim.update({index_to_param_name(i): x[i] for i in range(len(initial_data.columns))},
+                                     'PSO'))
             try:
-                out['F'] = [
-                    -hpsim.log_df[hpsim.colname_avg_power_score].iloc[-1],
-                    -hpsim.log_df[hpsim.colname_freq_accuracy_score].iloc[-1],
-                    -hpsim.log_df[hpsim.colname_freq_purity_score].iloc[-1]
-                ]
+                score = hpsim.log_df[hpsim.colname_score]
+                out['F'] = [-score * 100]
+                #     [
+                #     -hpsim.log_df[hpsim.colname_avg_power_score].iloc[-1],
+                #     -hpsim.log_df[hpsim.colname_freq_accuracy_score].iloc[-1],
+                #     -hpsim.log_df[hpsim.colname_freq_purity_score].iloc[-1]
+                # ]
                 logger.info("out['F'] = %s" % out['F'])
 
             except AttributeError as e:
@@ -195,17 +196,54 @@ if __name__ == '__main__':
     # n_proccess = 8
     # pool = multiprocessing.Pool(n_proccess)
     runner = StarmapParallelization(pool.starmap)
-    ref_dirs = get_reference_directions("das-dennis", 3, n_partitions=12)
+    # ref_dirs = get_reference_directions("das-dennis", 3, n_partitions=12)
+    from pymoo.operators.sampling.lhs import LHS
 
-    algorithm = NSGA3(pop_size=10,
-                      ref_dirs=ref_dirs)
+    first_sampling = True
+
+
+    class SamplingWithGoodEnoughValues(LHS):
+        """
+        给定初始值的采样
+        可以提前指定足够好的结果
+        """
+
+        def __init__(self):
+            super(SamplingWithGoodEnoughValues, self).__init__()
+
+        def do(self, problem, n_samples, **kwargs):
+            res = super(SamplingWithGoodEnoughValues, self).do(problem, n_samples, **kwargs)
+            global first_sampling
+
+            if first_sampling:
+                res[0].X = initial_data.loc[0].values
+                first_sampling = False
+                logger.info("设置了初始值：res[0].X = %s\n此后first_sampling = %s" % (res[0].X, first_sampling))
+            for i in range(len(res)):
+                while True:
+                    G = [constr(res[i].x) for constr in constraint_ueq]
+                    if numpy.any(numpy.array(G) > 0):
+                        logger.warning("（Sampling）并非全部约束条件都满足for %d：%s\n重新采样……" % (i, G))
+                        res[i].X = super(SamplingWithGoodEnoughValues, self).do(problem, 1, **kwargs)[0].X
+                        continue
+                    else:
+                        break
+            return res
+
+
+    algorithm = pymooPSO(
+        pop_size=10,
+        sampling=SamplingWithGoodEnoughValues(),  # LHS(),
+        # ref_dirs=ref_dirs
+    )
     # from simulation.optimize.myproblem import MyProblem
     # iter = 0
     # def log_iter():
     #     global  iter
     #     logger.info("迭代至第%d代"%iter)
     res = minimize(
-        MyProblem(elementwise_runner=runner),
+        MyProblem(elementwise_runner=runner
+                  ),
         algorithm,
         seed=1,
         termination=('n_gen', 100),

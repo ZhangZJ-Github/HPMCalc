@@ -86,19 +86,19 @@ class HPMSim(TaskBase):
                    self.colname_freq_purity_score: 1  # 频率纯度，如，12.5 GHz的设备除了上述两个主峰外，其他频率成分应趋于0
                    }
         freq_peaks = numpy.array(json.loads(res["freq peaks"]))
-        freq_accuracy_score = self.freq_accuracy_score(freq_peaks, self.desired_frequency, 1e9)
+        freq_accuracy_score = self.freq_accuracy_score(freq_peaks, self.desired_frequency, .5e9)
         avg_power_score = self.avg_power_score(res["avg. power"], self.desired_mean_power)
         freq_purity_score = self.freq_purity_score(freq_peaks)
 
         res[self.colname_avg_power_score] = avg_power_score
         res[self.colname_freq_accuracy_score] = freq_accuracy_score
         res[self.colname_freq_purity_score] = freq_purity_score
-
-        return (
+        score = (
                 avg_power_score ** weights[self.colname_avg_power_score]
                 * freq_accuracy_score ** weights[self.colname_freq_accuracy_score]
                 * freq_purity_score ** weights[self.colname_freq_purity_score]
-        )  # **(1 / sum(list(weights.values())))
+        )
+        return numpy.sign(score) * numpy.abs(score) ** (1 / sum(list(weights.values())))
 
     @staticmethod
     def freq_purity_score(freq_peaks: numpy.ndarray, ):
@@ -117,9 +117,17 @@ class HPMSim(TaskBase):
             1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
         FD_title = TD_title[:-1] + '2'
         output_power_FD = grd.obs[FD_title]['data']  # unit in GHz
+        output_power_FD: pandas.DataFrame = pandas.DataFrame(
+            numpy.vstack([[-1, 0],  # 用于使算法定位到0频率处的峰值
+                          output_power_FD.values]),
+            columns=output_power_FD.columns)
         freq_extrema_indexes = argrelextrema(output_power_FD.values[:, 1], numpy.greater)
 
         freq_extremas: numpy.ndarray = output_power_FD.iloc[freq_extrema_indexes].values  # 频谱极大值
+        # from scipy.signal import find_peaks
+        # freq_peak_indexes = find_peaks(output_power_FD.values[:, 1],0   )[0]
+
+        # 按照峰高排序，选最高的几个
         freq_peak_indexes = list(
             map(lambda v: numpy.where(freq_extremas[:, 1] == v)[0][0], heapq.nlargest(5, freq_extremas[:, 1])))  # 频谱峰值
         freq_peaks = freq_extremas[freq_peak_indexes]
@@ -159,10 +167,17 @@ class HPMSim(TaskBase):
                 ) / 2
 
 
+def get_hpsim():
+    return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
+                  r'D:\MagicFiles\HPM\12.5GHz\优化5', 11.7e9, 1e9)
+
+
 if __name__ == '__main__':
     lock = Lock()
-    hpmsim = HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
-                    r'D:\MagicFiles\HPM\12.5GHz\优化')
+
+    hpmsim = get_hpsim()
+
+    # hpmsim.re_evaluate()
 
     vars_ = hpmsim.template.get_variables()
     logger.info(
@@ -205,10 +220,9 @@ if __name__ == '__main__':
     #
     # )
 
-    def get_hpsim():
-        return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
-                      r'D:\MagicFiles\HPM\12.5GHz\优化2', 11.7e9, 1e9)
-
+    # def get_hpsim():
+    #     return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
+    #                   r'D:\MagicFiles\HPM\12.5GHz\优化2', 11.7e9, 1e9)
 
     def obj_func(params: numpy.ndarray, comment=''):
         return -get_hpsim().update(
