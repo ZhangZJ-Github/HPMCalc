@@ -166,14 +166,15 @@ class HPMSim(TaskBase):
                 )
                 ) / 2
 
+lock = Lock()
 
 def get_hpsim():
     return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
-                  r'D:\MagicFiles\HPM\12.5GHz\优化5', 11.7e9, 1e9)
+                  r'D:\MagicFiles\HPM\12.5GHz\优化5', 11.7e9, 1e9,lock =lock)
 
 
 if __name__ == '__main__':
-    lock = Lock()
+    # lock = Lock()
 
     hpmsim = get_hpsim()
 

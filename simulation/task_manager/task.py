@@ -17,6 +17,7 @@ from collections import OrderedDict
 from threading import Lock
 
 import matplotlib.pyplot as plt
+import numpy
 import pandas
 import sw_to_MAGIC_commands
 from _logging import logger

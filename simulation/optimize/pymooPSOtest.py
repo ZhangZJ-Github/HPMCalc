@@ -101,7 +101,8 @@ if __name__ == '__main__':
         def __init__(self, *args, **kwargs):
             super(MyProblem, self, ).__init__(*args, n_var=len(initial_data.columns),
                                               n_obj=1,
-                                              n_constr=len(constraint_ueq),
+                                              n_ieq_constr=len(constraint_ueq),
+                                              # n_constr=len(constraint_ueq),
                                               xl=initial_data.loc[1].values,
                                               xu=initial_data.loc[2].values, **kwargs)
             logger.info("===============")
@@ -135,7 +136,7 @@ if __name__ == '__main__':
             return out, i
 
         def bad_res(self, out):
-            out['F'] = [self.BIG_NUM] * self.n_obj
+            out['F'] = [self.BIG_NUM ] * self.n_obj
 
         # def _evaluate(self, X, out, *args, **kwargs):
         #     out['F'] = numpy.zeros(( X.shape[0], self.n_obj))
@@ -162,7 +163,6 @@ if __name__ == '__main__':
         def _evaluate(self, x, out, *args, **kwargs
                       ):
             hpsim = get_hpsim()
-            out = {}
             out['G'] = [constr(x) for constr in constraint_ueq]
             if numpy.any(numpy.array(out['G']) > 0):
                 logger.warning("并非全部约束条件都满足：%s" % (out['G']))
@@ -172,8 +172,9 @@ if __name__ == '__main__':
                         hpsim.update({index_to_param_name(i): x[i] for i in range(len(initial_data.columns))},
                                      'PSO'))
             try:
-                score = hpsim.log_df[hpsim.colname_score]
-                out['F'] = [-score * 100]
+                score = hpsim.log_df[hpsim.colname_score][0]
+                out['F'] = [-score * self.BIG_NUM]
+
                 #     [
                 #     -hpsim.log_df[hpsim.colname_avg_power_score].iloc[-1],
                 #     -hpsim.log_df[hpsim.colname_freq_accuracy_score].iloc[-1],
