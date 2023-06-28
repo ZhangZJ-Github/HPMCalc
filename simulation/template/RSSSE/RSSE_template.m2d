@@ -71,7 +71,7 @@ dz_beam_gap = -1mm;
 !REFLECTION CAVITY
 
 !SOLENOID
-B_Z0 = 0.03/4.36*5 /5.64*5/0.5*0.74 / 0.7*0.5 / 738 * 500 /450*500*1Tesla ; !CENTER MAGNETIC FIELD
+B_Z0 = 0.0485434321204457 * %B_z0% *1Tesla ; !CENTER MAGNETIC FIELD
 DZ_COIL = 3 MM ; !single length
 !N_COIL = 20 ;
 
@@ -486,7 +486,7 @@ AREA void_refcav POLYGONAL swANODE.x1mx 0 swANODE.x1mx refcav.rin_left
    +refcav.z0+refcav.dz refcav.rout 
    +refcav.z0+refcav.dz 0
    swANODE.x1mx 0;
-VOID void refcav;
+VOID void_refcav;
 
 AREA void_SWS1.left_drift conformal +refcav.z0+refcav.dz 0 sws1.z0 refcav.rin_right;
 void void_SWS1.left_drift;
@@ -1089,6 +1089,7 @@ observe FIELD_POWER s.da line_near_port_right fft magnitude;
 OBSERVE  FIELD_POWER   S.DA PORT_LEFT fft magnitude; 
 OBSERVE  FIELD_POWER   S.DA PORT_RIGHT fft magnitude; 
 
+OBSERVE  FIELD_POWER    E.J_FREESPACE.DV swPORT_RIGHT.0 fft magnitude; 
 
 LINE window_in conformal swPORT_RIGHT.x1mn 0 swPORT_RIGHT.x1mn SYS$x2mx;
 OBSERVE  FIELD_POWER   S.DA window_in fft magnitude; 
