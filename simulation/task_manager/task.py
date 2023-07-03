@@ -17,9 +17,8 @@ from collections import OrderedDict
 from threading import Lock
 
 import matplotlib.pyplot as plt
-import numpy
 import pandas
-import sw_to_MAGIC_commands
+
 from _logging import logger
 
 # import simulation.task_manager.manual_task
@@ -38,6 +37,9 @@ class MagicTemplate:
 
         with open(filename, 'r') as f:
             self.text = f.read()
+
+    def copy_template_to_working_dir(self):
+        shutil.copy(self.filename, os.path.join(self.working_dir, os.path.split(self.filename)[1]))
 
     def __str__(self):
         return "template: %s\nworking dir: %s" % (self.filename, self.working_dir)
@@ -84,6 +86,9 @@ class TaskBase:
     def __init__(self, template_name, working_dir=r'D:\MagicFiles\HPM\12.5GHz\优化', lock: Lock = Lock()):
         self.template = MagicTemplate(template_name, working_dir)
         self.log_file_name = os.path.join(working_dir, os.path.split(template_name)[1] + ".log.csv")
+        if not os.path.exists(self.MAGIC_SOLVER_PATH):
+            raise RuntimeError("请指定正确的MAGIC求解器路径！")
+
         # if not os.path.exists(self.log_file_name):
         # self.log_df = pandas.DataFrame(#columns=list(self.template.get_variables())
         #                                # + [self.colname_path,self.colname_score]
@@ -137,12 +142,12 @@ class TaskBase:
         #     if key not in self.log_df.columns:
         #         self.log_df[key] = numpy.nan
         #     self.log_df[key][len(self.log_df) - 1] = newdata[key]
-        logger.info("====")
+        logger.info("====为%s加锁===" % self.log_file_name)
         self.lock.acquire()
 
         self.save_log_csv()
         self.lock.release()
-        logger.info("===+=")
+        logger.info("====%s已解锁===" % self.log_file_name)
 
         return self.log_df
 
@@ -273,6 +278,7 @@ class ManualTask:
         self.replace_marker = replace_marker
 
     def run(self, ax=plt.gca()):
+        import sw_to_MAGIC_commands
         os.makedirs(self.folder, exist_ok=True)
         with open(self.m2d_template_name, 'r') as f:
             txt = f.read()

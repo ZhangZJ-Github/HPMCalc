@@ -4,14 +4,11 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : _test.py
 # @Software: PyCharm
-import concurrent.futures
 import heapq
 import json
 import os.path
 
 import matplotlib
-
-import simulation.task_manager.task
 
 matplotlib.use('tkagg')
 
@@ -79,7 +76,7 @@ class HPMSim(TaskBase):
         :param res:
         :return: 最终评分
         """
-        logger.info("evaluate of SOOptimizer")
+        logger.info("evaluate of HPSim")
         # 以下各项得分最高为1
         weights = {self.colname_avg_power_score: 3,  # TODO: 目前应为奇数
                    self.colname_freq_accuracy_score: 2,  # 频率准确度，如，12.5 GHz的设备输出两个主峰应为0和25 GHz，且幅值接近1:1
@@ -166,163 +163,14 @@ class HPMSim(TaskBase):
                 )
                 ) / 2
 
+
 lock = Lock()
 
-def get_hpsim():
+
+def get_hpsim(lock=lock):
     return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
-                  r'D:\MagicFiles\HPM\12.5GHz\优化5', 11.7e9, 1e9,lock =lock)
+                  r'D:\MagicFiles\HPM\12.5GHz\优化6', 11.7e9, 1e9, lock=lock)
 
 
 if __name__ == '__main__':
-    # lock = Lock()
-
-    hpmsim = get_hpsim()
-
-    # hpmsim.re_evaluate()
-
-    vars_ = hpmsim.template.get_variables()
-    logger.info(
-        vars_
-    )
-    initial_csv = 'Initialize.csv'
-    # 取消注释以在Excel中编辑初始条件
-    # pandas.DataFrame(columns=list(vars_)).to_csv(initial_csv,index = False)
-    # os.system("start %s"%initial_csv)
-
-    initial_data = pandas.read_csv(initial_csv, encoding=simulation.task_manager.task.CSV_ENCODING)
-    initial_data = initial_data[initial_data.columns[1:]]  # 去除备注列
-    # initial_data = initial_data[initial_data.columns[initial_data.loc[2] > initial_data.loc[1]]]  # 去除上下限完全一致（无需调整）的变量
-    init_params = {col: initial_data[col][0] for col in initial_data}
-    # aaaa
-
-    index_to_param_name = lambda i: initial_data.columns[i]
-    param_name_to_index = {
-        initial_data.columns[i]: i for i in range(len(initial_data.columns))
-    }
-
-
-    # # <=0
-    # constraint_ueq = (
-    #     lambda params_array: params_array[
-    #                              param_name_to_index['%sws1.dz_out%']] - params_array[
-    #                              param_name_to_index['%sws1.dz_in%']],
-    #     lambda params_array: params_array[
-    #                              param_name_to_index['%sws2.dz_out%']] - params_array[
-    #                              param_name_to_index['%sws2.dz_in%']],
-    #     lambda params_array: params_array[
-    #                              param_name_to_index['%sws3.dz_out%']] - params_array[
-    #                              param_name_to_index['%sws3.dz_in%']],
-    #     lambda params_array: params_array[param_name_to_index['%sws1.dz_in%']] - params_array[
-    #         param_name_to_index['%sws1.p%']],
-    #     lambda params_array: params_array[param_name_to_index['%sws2.dz_in%']] - params_array[
-    #         param_name_to_index['%sws2.p%']],
-    #     lambda params_array: params_array[param_name_to_index['%sws3.dz_in%']] - params_array[
-    #         param_name_to_index['%sws3.p%']],
-    #
-    # )
-
-    # def get_hpsim():
-    #     return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
-    #                   r'D:\MagicFiles\HPM\12.5GHz\优化2', 11.7e9, 1e9)
-
-    def obj_func(params: numpy.ndarray, comment=''):
-        return -get_hpsim().update(
-            {initial_data.columns[i]: params[i] for i in range(len(params))}, comment)
-
-
-    # score = obj_func(initial_data.loc[0].values)  # 用初始值测试
-    from sko.tools import set_run_mode
-    from sko.PSO import PSO
-
-    obj_func_with_comment = lambda x: obj_func(x, 'PSO')
-    set_run_mode(obj_func_with_comment, 'multithreading')
-    pso = PSO(func=obj_func_with_comment,
-              n_dim=len(initial_data.columns), pop=30,
-              lb=[initial_data[col][1] for col in initial_data.columns],
-              ub=[initial_data[col][2] for col in initial_data.columns],
-              # constraint_ueq=constraint_ueq
-              )
-    pso.run(precision=1e-4)
-    # aaaaaaaaaa
-
-    # from scipy.optimize import minimize
-    #
-    # optimize_res = minimize(
-    #     obj_func,
-    #     initial_data.loc[0].values,
-    #     bounds=[
-    #         (initial_data[col][1], initial_data[col][2]) for col in initial_data.columns
-    #     ],
-    #     method='Nelder-Mead'
-    # )
-
-    import ADAM
-
-    dx_for_get_partial_diff = initial_data.loc[3].values
-
-
-    def get_partial_diff_for_ith_param(params, i, old_score):
-        params_changed = params.copy()
-        params_changed[i] += dx_for_get_partial_diff[i]
-        # sim = get_hpsim()
-        logger.info("get_partial_diff_for_ith_param\ni = %d" % i)
-        return (obj_func(params_changed) - old_score) / dx_for_get_partial_diff[i], i
-
-
-    from concurrent.futures import ThreadPoolExecutor
-
-
-    def parallel_get_grad(params: numpy.ndarray, old_score):
-        grad = numpy.zeros(params.shape)
-        pool = ThreadPoolExecutor(max_workers=7)
-
-        # old_score = obj_func(params)
-
-        def set_grad(future: concurrent.futures.Future):
-            res = future.result()
-            i = res[1]
-            grad[i] = res[0]
-            logger.info("i = %d, 更新后 Grad = %s" % (i, grad))
-
-        for i in range(len(params)):
-            exe = pool.submit(get_partial_diff_for_ith_param, params, i, old_score)
-            exe.add_done_callback(lambda future: set_grad(future))
-        pool.shutdown()
-        return grad
-
-
-    def get_partial_func_for_ith_param(params, i, dx_for_get_partial_diff: numpy.ndarray = dx_for_get_partial_diff):
-        params_changed = params.copy()
-        params_changed[i] += dx_for_get_partial_diff[i]
-        # sim = get_hpsim()
-        comment = "用于计算偏微分，%s" % (index_to_param_name(i))
-        logger.info(comment)
-        return obj_func(params_changed, comment), i
-
-
-    def parallel_get_partial_func(params: numpy.ndarray, dx_for_get_partial_diff):
-        partial_func = numpy.zeros(params.shape)  # 目标函数的偏微分
-        pool = ThreadPoolExecutor(max_workers=7)
-
-        # old_score = obj_func(params)
-
-        def set_partial_func(future: concurrent.futures.Future):
-            res = future.result()
-            v, i = res
-            partial_func[i] = v
-            logger.info("i = %d, 更新后偏微分 = %s" % (i, partial_func))
-
-        for i in range(len(params)):
-            exe = pool.submit(get_partial_func_for_ith_param, params, i, dx_for_get_partial_diff)
-            exe.add_done_callback(lambda future: set_partial_func(future))
-        pool.shutdown()
-        return partial_func
-
-
-    adam = ADAM.Adam(obj_func, initial_data.loc[0].values,
-                     parallel_get_partial_func,
-                     dx_for_get_partial_diff,
-                     lb=initial_data.loc[1].values, ub=initial_data.loc[2].values,
-                     unit_steps=initial_data.loc[4].values)
-    ADAM.AdamPlot.plot_fig(adam, 0.5)
-    # adam.run(dx_for_get_partial_diff)
+    avg_power_score = HPMSim.avg_power_score(0.5e9, 1e9)
