@@ -73,7 +73,7 @@ thickness_fresp = 10e-3;
 !REFLECTION CAVITY
 
 !SOLENOID
-B_Z0 = 0.0485434321204457 * 0.35 *1Tesla ; !CENTER MAGNETIC FIELD
+B_Z0 = 0.0485434321204457 * 0.5/0.75 * 0.5 *1Tesla ; !CENTER MAGNETIC FIELD
 DZ_COIL = 3 MM ; !single length
 !N_COIL = 20 ;
 
@@ -363,12 +363,13 @@ enddo;
 ! Define my structure to optimize
 r_particles = (swEMITTER.x2mx+swEMITTER.x2mn)/2;
 
-refcav_out.z0 = swANODE.x1mx + 0;
-refcav_out.r_out = swANODE.x2mn + 3e-3;
+refcav_out.z0 = swANODE.x1mx + %refcav_out.z0_offset%;
+refcav_out.r_out = min(swANODE.x2mn + %refcav_out.r_out_offset%,
+   swANODE.x2mx-thickness_shell);
 refcav_out.r_in_left = swANODE.x2mn;
-refcav_out.r_in_right = max(swANODE.x2mn + (1e-3),r_particles);
-refcav_out.dz_out = 4e-3;
-refcav_out.dz_in = 5e-3;
+refcav_out.r_in_right = max(swANODE.x2mn + (%refcav_out.r_in_right_offset%),r_particles);
+refcav_out.dz_out = %refcav_out.dz_out%;
+refcav_out.dz_in = max(%refcav_out.dz_in%,refcav_out.dz_out);
 
 refcav_in.r_in = swANODE_iner.x2mx - 3e-3;
 refcav_in.r_out_left = swANODE_iner.x2mx;
@@ -376,14 +377,14 @@ refcav_in.r_out_right = min(swANODE_iner.x2mx+(-1e-3),r_particles);
 
 
 
-sws1.N = 3;
-sws1.p = 10e-3;
+sws1.N = int(%sws1.N%);
+sws1.p = %sws1.p%;
 sws1_out.r_in = refcav_out.r_in_right;
 sws1_in.r_out = refcav_in.r_out_right;
-sws1_out.z0 = refcav_out.z0 + refcav_out.dz_in + (10e-3);
-sws1_out.dr = 2e-3;
-sws1_out.dz_in = 3e-3;
-sws1_out.dz_out = min(2.5e-3,sws1_out.dz_in);
+sws1_out.z0 = refcav_out.z0 + refcav_out.dz_in + (%sws1_out.z0_offset%);
+sws1_out.dr = %sws1_out.dr%;
+sws1_out.dz_in = %sws1_out.dz_in%;
+sws1_out.dz_out = min(%sws1_out.dz_out%,sws1_out.dz_in);
 sws1_in.z0 = sws1_out.z0 + (1e-3);
 sws1_in.dr = sws1_out.dr + (0);
 sws1_in.dz_out = sws1_out.dz_in +(0);
@@ -393,30 +394,30 @@ sws1_out.r_out = min(sws1_out.r_in +sws1_out.dr,
 sws1_in.r_in = max(sws1_in.r_out -sws1_in.dr,0);
 
 
-sws2.N = 2;
-sws2.p = 10e-3;
+sws2.N = int(%sws2.N%);
+sws2.p = %sws2.p%;
 sws2_out.r_in = sws1_out.r_in;
 sws2_in.r_out = sws1_in.r_out;
-sws2_out.z0 = sws1_out.z0 + sws1.N * sws1.p + (1e-3);
-sws2_out.dr = 2e-3;
-sws2_out.dz_in = 3e-3;
-sws2_out.dz_out = min(2.5e-3,sws2_out.dz_in);
+sws2_out.z0 = sws1_out.z0 + sws1.N * sws1.p + (%sws2_out.z0_offset%);
+sws2_out.dr = %sws2_out.dr%;
+sws2_out.dz_in = %sws2_out.dz_in%;
+sws2_out.dz_out = min(%sws2_out.dz_out%,sws2_out.dz_in);
 sws2_in.z0 = sws2_out.z0 + (1e-3);
 sws2_in.dr = sws2_out.dr + (0);
 sws2_in.dz_out = sws2_out.dz_in +(0);
 sws2_in.dz_in = min(sws2_out.dz_out +(0),sws2_in.dz_out);
 sws2_out.r_out = min(sws2_out.r_in +sws2_out.dr,
    swANODE.x2mx - thickness_shell);
-sws2_in.r_in = max(sws2_in.r_out-sws2_in.dr,0);
+sws2_in.r_in = max(sws2_in.r_out -sws2_in.dr,0);
 
-sws3.N = 2;
-sws3.p = 9.8e-3;
+sws3.N = int(%sws3.N%);
+sws3.p = %sws3.p%;
 sws3_out.r_in = sws2_out.r_in;
 sws3_in.r_out = sws2_in.r_out;
-sws3_out.z0 = sws2_out.z0 + sws2.N * sws2.p + (1e-3);
-sws3_out.dr = 2.0e-3;
-sws3_out.dz_in = 3e-3;
-sws3_out.dz_out = min(2.5e-3,sws3_out.dz_in);
+sws3_out.z0 = sws2_out.z0 + sws2.N * sws2.p + (%sws3_out.z0_offset%);
+sws3_out.dr = %sws3_out.dr%;
+sws3_out.dz_in = %sws3_out.dz_in%;
+sws3_out.dz_out = min(%sws3_out.dz_out%,sws3_out.dz_in);
 sws3_in.z0 = sws3_out.z0 + (1e-3);
 sws3_in.dr = sws3_out.dr + (0);
 sws3_in.dz_out = sws3_out.dz_in +(0);
@@ -426,15 +427,15 @@ sws3_out.r_out = min(sws3_out.r_in +sws3_out.dr,
 sws3_in.r_in = max(sws3_in.r_out -sws3_in.dr,0);
 
 ! It can also act as extractor(s)
-sws4.N = 2;
-sws4.p = 9.8e-3;
+sws4.N = int(%sws4.N%);
+sws4.p = %sws4.p%;
 sws4_out.r_in = sws3_out.r_in;
 sws4_in.r_out = sws3_in.r_out;
-sws4_out.z0 = sws3_out.z0 + sws3.N * sws3.p + (11e-3);
-sws4_out.dr = 4e-3;
-sws4_out.dz_in = 4e-3;
-sws4_out.dz_out = min(3.5e-3,sws4_out.dz_in);
-sws4_in.z0 = sws4_out.z0 + (0e-3);
+sws4_out.z0 = sws3_out.z0 + sws3.N * sws3.p + (%sws4_out.z0_offset%);
+sws4_out.dr = %sws4_out.dr%;
+sws4_out.dz_in = %sws4_out.dz_in%;
+sws4_out.dz_out = min(%sws4_out.dz_out%,sws4_out.dz_in);
+sws4_in.z0 = sws4_out.z0 + (1e-3);
 sws4_in.dr = sws4_out.dr + (0);
 sws4_in.dz_out = sws4_out.dz_in +(0);
 sws4_in.dz_in = min(sws4_out.dz_out +(0),sws4_in.dz_out);
@@ -443,39 +444,23 @@ sws4_out.r_out = min(sws4_out.r_in +sws4_out.dr,
 sws4_in.r_in = max(sws4_in.r_out -sws4_in.dr,0);
 
 
-out_waveguide.z0 = sws4_out.z0 + sws4.N * sws4.p + (1e-3);
-out_waveguide.outter.r_left = sws4_out.r_in;
-out_waveguide.inner.r = sws4_in.r_out;
-out_waveguide.horn.dz = 10e-3;
-out_waveguide.horn.dr = 10e-3;
-
-out_waveguide.outter.r_right =min(
-   sws4_out.r_in + out_waveguide.horn.dr,
-   swANODE.x2mx-thickness_shell);
-out_waveguide.straight.dz = 50e-3;
-
+out_waveguide.z0 = sws4_out.z0 + sws4.N * sws4.p + (%out_waveguide.z0_offset%);
+out_waveguide.r = sws4_out.r_in;
+out_waveguide.dz = max(%out_waveguide.dz%,thickness_fresp);
 
 simulation_area.zmx = out_waveguide.z0 
-   + out_waveguide.horn.dz
-   + out_waveguide.straight.dz;
+   + out_waveguide.dz;
 
-collector.z0 = out_waveguide.z0 + out_waveguide.horn.dz +( 5e-3);
-collector.straight.dz = 20e-3;
-collector.straight.r_in = min(r_particles + 3e-3, out_waveguide.outter.r_right-1e-3);
-collector.straight.dr = 2e-3;
-collector.rmx = min(
-   collector.straight.r_in + collector.straight.dr,
-   out_waveguide.outter.r_right
-   );
-collector.cone.dz = 20e-3;
-collector.cone.zmx = min(
-   collector.z0+collector.straight.dz+collector.cone.dz,
+collector.z0 = min(out_waveguide.z0 +(%collector.z0_offset%),
    simulation_area.zmx - thickness_shell);
-collector.straight.zmx = max(
-   collector.cone.zmx-collector.cone.dz,
-   collector.z0
-   );
-collector.cone.rmn = collector.straight.r_in - 4e-3;
+
+collector.dz = %collector.dz%;
+
+collector.z_end = min(collector.z0 + collector.dz, 
+   simulation_area.zmx - thickness_shell);
+collector.r_in = min(max(r_particles-(%collector.r_in_offset%), 0),
+   out_waveguide.r);
+collector.r_out = collector.r_in + thickness_shell;
 
 
 simulation_area.zmn = swCATHODE.x1mn;
@@ -500,7 +485,8 @@ AREA void_refcav POLYGONAL
    temp_z2 refcav_in.r_in
    temp_z1 refcav_in.r_in
    refcav_out.z0 refcav_in.r_out_left
-   swANODE.x1mx swANODE.x2mn;
+   swANODE.x1mx refcav_in.r_out_left
+   swANODE.x1mx swANODE.x2mn    ;
 
 VOID void_refcav;
 
@@ -652,35 +638,44 @@ do i = 0,sws4.N-1;
 enddo;
 
 
-temp_z1 = out_waveguide.z0 + out_waveguide.horn.dz;
+temp_z1 = out_waveguide.z0 + out_waveguide.dz;
 AREA void_outwaveguide POLYGONAL 
    temp_z5 sws4_in.r_out
    temp_z4 sws4_out.r_in
-   out_waveguide.z0 out_waveguide.outter.r_left
-   temp_z1 out_waveguide.outter.r_right
-   simulation_area.zmx out_waveguide.outter.r_right
-   simulation_area.zmx out_waveguide.inner.r
+   out_waveguide.z0 out_waveguide.r
+   simulation_area.zmx out_waveguide.r
+   simulation_area.zmx 0
+   temp_z5 0
    temp_z5 sws4_in.r_out;
 VOID void_outwaveguide;
 
+AREA VOID_INNER conformal swANODE_iner.x1mx 0 simulation_area.zmx r_particles;
+VOID VOID_INNER;
+
+
+
 ! temp_r1 = collector.straight.r_in + collector.straight.dr;
 
-AREA void_collector POLYGONAL 
-   collector.z0 collector.straight.r_in
-   collector.z0 collector.rmx
-   simulation_area.zmx collector.rmx
-   simulation_area.zmx 0
-   collector.cone.zmx 0
-   collector.cone.zmx collector.cone.rmn
-   collector.straight.zmx collector.straight.r_in
-   collector.z0 collector.straight.r_in   ;
-CONDUCTOR void_collector MATERIAL COPPER;
+AREA cond_collector.0 conformal collector.z0 collector.r_in collector.z_end collector.r_out;
+AREA cond_collector.1 conformal collector.Z_end collector.r_in simulation_area.zmx out_waveguide.r;
+CONDUCTOR cond_collector.0 MATERIAL COPPER;
+CONDUCTOR cond_collector.1 MATERIAL COPPER;
+
+! AREA collector POLYGONAL 
+!    collector.z0 collector.r_in
+!    collector.z0 collector.r_out
+!    collector.z_end collector.r_out
+!    collector.z_end out_waveguide.R   
+!    simulation_area.zmx out_waveguide.R
+!    simulation_area.zmx collector.r_in
+!    collector.z0 collector.r_in;
+! CONDUCTOR collector MATERIAL COPPER;
 
 swPORT_RIGHT.N_facet=1;
 swPORT_RIGHT.x1mn=simulation_area.zmx-thickness_fresp;
 swPORT_RIGHT.x1mx=simulation_area.zmx;
-swPORT_RIGHT.x2mn=collector.rmx;
-swPORT_RIGHT.x2mx=out_waveguide.outter.r_right;
+swPORT_RIGHT.x2mn=0;
+swPORT_RIGHT.x2mx=collector.r_in;
 AREA swPORT_RIGHT.0 CONFORMAL swPORT_RIGHT.x1mn swPORT_RIGHT.x2mn 
 swPORT_RIGHT.x1mx swPORT_RIGHT.x2mx;  
 
@@ -1085,7 +1080,7 @@ observe field e1 pt_extr fft magnitude;
 
 
 tempz = +(sys$x1mx+out_waveguide.z0)/2;
-tempr = max(1e-3,out_waveguide.outter.r_right-1e-3);
+tempr = max(1e-3,collector.r_in-1e-3);
 POINT pt_out tempz tempr;
 ! observe field e1 pt_out fft magnitude;
 observe field e2 pt_out fft magnitude;

@@ -20,10 +20,22 @@ _1 = pymooPSO
 
 if __name__ == '__main__':
 
-    initial_csv = 'Initialize1.csv'
+    initial_csv = r'F:\changeworld\HPMCalc\simulation\template\CSCA/Initialize.csv'
     # 取消注释以在Excel中编辑初始条件
-    # pandas.DataFrame(columns=list( get_hpsim().template.get_variables())).to_csv(initial_csv,index = False)
-    # os.system("start %s"%initial_csv)
+#     _df = pandas.DataFrame(columns=list(get_hpsim().template.get_variables()))
+#     row_names = """备注
+# 初始值
+# 下界
+# 上界
+# 计算偏微分的步长
+# 单位步长
+# """.split('\n')
+#     _df = pandas.concat([pandas.DataFrame({row_names[0]: row_names[1:]}), _df])
+#
+#     _df.to_csv(initial_csv, index=False, encoding=simulation.task_manager.task.CSV_ENCODING)
+#     os.system("start %s" % initial_csv)
+
+    # aaaaaa
 
     initial_data = pandas.read_csv(initial_csv, encoding=simulation.task_manager.task.CSV_ENCODING)
     initial_data = initial_data[initial_data.columns[1:]]  # 去除备注列
@@ -31,41 +43,45 @@ if __name__ == '__main__':
     init_params = {col: initial_data[col][0] for col in initial_data}
     # aaaa
 
+
     index_to_param_name = lambda i: initial_data.columns[i]
     param_name_to_index = {
         initial_data.columns[i]: i for i in range(len(initial_data.columns))
     }
+    # get_hpsim().update(init_params) # 初始值测试
+    # aaaaaaaaaaa
+
 
     rmin_cathode = HPMSim.rmin_cathode
 
     # <=0
     constraint_ueq = (
-        lambda params_array: params_array[
-                                 param_name_to_index['%sws1.dz_out%']] - params_array[
-                                 param_name_to_index['%sws1.dz_in%']],
-        lambda params_array: params_array[
-                                 param_name_to_index['%sws2.dz_out%']] - params_array[
-                                 param_name_to_index['%sws2.dz_in%']],
-        lambda params_array: params_array[
-                                 param_name_to_index['%sws3.dz_out%']] - params_array[
-                                 param_name_to_index['%sws3.dz_in%']],
-        lambda params_array: params_array[param_name_to_index['%sws1.dz_in%']] - params_array[
-            param_name_to_index['%sws1.p%']],
-        lambda params_array: params_array[param_name_to_index['%sws2.dz_in%']] - params_array[
-            param_name_to_index['%sws2.p%']],
-        lambda params_array: params_array[param_name_to_index['%sws3.dz_in%']] - params_array[
-            param_name_to_index['%sws3.p%']],
-
-        lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-                             params_array[
-                                 param_name_to_index['%refcav.rout%']],
-
-        lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-                             params_array[param_name_to_index['%sws1.a%']],
-        lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-                             params_array[param_name_to_index['%sws2.a%']],
-        lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-                             params_array[param_name_to_index['%sws3.a%']],
+        # lambda params_array: params_array[
+        #                          param_name_to_index['%sws1.dz_out%']] - params_array[
+        #                          param_name_to_index['%sws1.dz_in%']],
+        # lambda params_array: params_array[
+        #                          param_name_to_index['%sws2.dz_out%']] - params_array[
+        #                          param_name_to_index['%sws2.dz_in%']],
+        # lambda params_array: params_array[
+        #                          param_name_to_index['%sws3.dz_out%']] - params_array[
+        #                          param_name_to_index['%sws3.dz_in%']],
+        # lambda params_array: params_array[param_name_to_index['%sws1.dz_in%']] - params_array[
+        #     param_name_to_index['%sws1.p%']],
+        # lambda params_array: params_array[param_name_to_index['%sws2.dz_in%']] - params_array[
+        #     param_name_to_index['%sws2.p%']],
+        # lambda params_array: params_array[param_name_to_index['%sws3.dz_in%']] - params_array[
+        #     param_name_to_index['%sws3.p%']],
+        #
+        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
+        #                      params_array[
+        #                          param_name_to_index['%refcav.rout%']],
+        #
+        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
+        #                      params_array[param_name_to_index['%sws1.a%']],
+        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
+        #                      params_array[param_name_to_index['%sws2.a%']],
+        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
+        #                      params_array[param_name_to_index['%sws3.a%']],
     )
 
 
@@ -87,9 +103,7 @@ if __name__ == '__main__':
             out['F'] = [self.BIG_NUM] * self.n_obj
             # self._evaluate(1,dict(), 1,2,3,4,a =1,ka =1)
 
-
-
-        def _evaluate(self, x, out:dict, *args, **kwargs
+        def _evaluate(self, x, out: dict, *args, **kwargs
                       ):
             hpsim = get_hpsim()
             hpsim.template.copy_template_to_working_dir()
@@ -118,6 +132,8 @@ if __name__ == '__main__':
                 logger.warning("忽略的报错：%s" % e)
                 self.bad_res(out)
             return
+
+
 
 
     from multiprocessing.pool import ThreadPool

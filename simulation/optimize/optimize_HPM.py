@@ -50,23 +50,23 @@ class HPMSim(TaskBase):
         :param params:
         :return:
         """
-        rmin_cathode = self.rmin_cathode
-        params['%sws1.dz_in%'] = max(params['%sws1.dz_in%'], params['%sws1.dz_out%'])
-        params['%sws2.dz_in%'] = max(params['%sws2.dz_in%'], params['%sws2.dz_out%'])
-        params['%sws3.dz_in%'] = max(params['%sws3.dz_in%'], params['%sws3.dz_out%'])
-        params['%sws1.p%'] = max(params['%sws1.dz_in%'], params['%sws1.p%'])
-        params['%sws2.p%'] = max(params['%sws2.dz_in%'], params['%sws2.p%'])
-        params['%sws3.p%'] = max(params['%sws3.dz_in%'], params['%sws3.p%'])
-        params["%sws1.N%"] = int(params["%sws1.N%"])
-        params["%sws2.N%"] = int(params["%sws2.N%"])
-        params["%sws3.N%"] = int(params["%sws3.N%"])
-
-        params['%refcav.rin_right_offset%'] = min(params['%refcav.rin_right_offset%'],
-                                                  params['%refcav.rout%'] - rmin_cathode)
-
-        params['%sws1.a%'] = max(params['%sws1.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
-        params['%sws2.a%'] = max(params['%sws2.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
-        params['%sws3.a%'] = max(params['%sws3.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
+        # rmin_cathode = self.rmin_cathode
+        # params['%sws1.dz_in%'] = max(params['%sws1.dz_in%'], params['%sws1.dz_out%'])
+        # params['%sws2.dz_in%'] = max(params['%sws2.dz_in%'], params['%sws2.dz_out%'])
+        # params['%sws3.dz_in%'] = max(params['%sws3.dz_in%'], params['%sws3.dz_out%'])
+        # params['%sws1.p%'] = max(params['%sws1.dz_in%'], params['%sws1.p%'])
+        # params['%sws2.p%'] = max(params['%sws2.dz_in%'], params['%sws2.p%'])
+        # params['%sws3.p%'] = max(params['%sws3.dz_in%'], params['%sws3.p%'])
+        # params["%sws1.N%"] = int(params["%sws1.N%"])
+        # params["%sws2.N%"] = int(params["%sws2.N%"])
+        # params["%sws3.N%"] = int(params["%sws3.N%"])
+        #
+        # params['%refcav.rin_right_offset%'] = min(params['%refcav.rin_right_offset%'],
+        #                                           params['%refcav.rout%'] - rmin_cathode)
+        #
+        # params['%sws1.a%'] = max(params['%sws1.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
+        # params['%sws2.a%'] = max(params['%sws2.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
+        # params['%sws3.a%'] = max(params['%sws3.a%'], rmin_cathode + params["%refcav.rin_right_offset%"])
 
         return True
 
@@ -102,7 +102,7 @@ class HPMSim(TaskBase):
         ratio = freq_peaks[2, 1] / freq_peaks[1, 1]  # 杂峰 / 第二主峰
         return 1 - ratio
 
-    def get_res(self, m2d_path: str,out_power_TD_titile :str =' FIELD_POWER S.DA @PORT_RIGHT,FFT-#20.1' ) -> dict:
+    def get_res(self, m2d_path: str, out_power_TD_titile: str = ' FIELD_POWER S.DA @PORT_RIGHT,FFT-#20.1') -> dict:
         et = ExtTool(os.path.splitext(m2d_path)[0])
         grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
         TD_title = out_power_TD_titile
@@ -168,8 +168,8 @@ lock = Lock()
 
 
 def get_hpsim(lock=lock):
-    return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
-                  r'D:\MagicFiles\HPM\12.5GHz\优化6', 11.7e9, 1e9, lock=lock)
+    return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\CS\CS.m2d",
+                  r'E:\HPM\11.7GHz\optimize\CS', 11.7e9, 1e9, lock=lock)
 
 
 if __name__ == '__main__':

@@ -363,12 +363,14 @@ enddo;
 ! Define my structure to optimize
 r_particles = (swEMITTER.x2mx+swEMITTER.x2mn)/2;
 
-refcav_out.z0 = swANODE.x1mx + 0;
-refcav_out.r_out = swANODE.x2mn + 3e-3;
+refcav_out.z0 = swANODE.x1mx + %refcav_out.z0_offset%;
+refcav_out.r_out = swANODE.x2mn + %refcav_out.r_out_offset%;
 refcav_out.r_in_left = swANODE.x2mn;
-refcav_out.r_in_right = max(swANODE.x2mn + (1e-3),r_particles);
-refcav_out.dz_out = 4e-3;
-refcav_out.dz_in = 5e-3;
+refcav_out.r_in_right = max(
+   swANODE.x2mn + (%refcav_out.r_in_right_offset%),
+   r_particles);
+refcav_out.dz_out = %refcav_out.dz_out%;
+refcav_out.dz_in = %refcav_out.dz_in%;
 
 refcav_in.r_in = swANODE_iner.x2mx - 3e-3;
 refcav_in.r_out_left = swANODE_iner.x2mx;
@@ -995,7 +997,6 @@ PHI = 2.0;
 EMISSION EXPLOSIVE ;
 ! EMISSION THERMIONIC ;  
 ! EMIT EXPLOSIVE emit_zone ;
-aaa = int(12.12332142);
 do i=0,swEMITTER.N_facet-1;
    EMIT EXPLOSIVE swEMITTER.'i';
 enddo;

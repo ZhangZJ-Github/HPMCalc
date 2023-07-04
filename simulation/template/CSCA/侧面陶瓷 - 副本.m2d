@@ -995,7 +995,6 @@ PHI = 2.0;
 EMISSION EXPLOSIVE ;
 ! EMISSION THERMIONIC ;  
 ! EMIT EXPLOSIVE emit_zone ;
-aaa = int(12.12332142);
 do i=0,swEMITTER.N_facet-1;
    EMIT EXPLOSIVE swEMITTER.'i';
 enddo;
@@ -1094,7 +1093,7 @@ observe field e2 pt_out fft magnitude;
 observe field b3 pt_out fft magnitude;
 
 
-
+N1 = 1.12545;
 
 
 ! ======== OUTPUT GRAPHICS ==================================================

@@ -1,0 +1,1 @@
+kill -processname magic2d_Sng

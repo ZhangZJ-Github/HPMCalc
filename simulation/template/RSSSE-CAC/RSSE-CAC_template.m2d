@@ -432,42 +432,49 @@ enddo;
 
 ! Define my structure to optimize
 r_particles = (swEMITTER.x2mx+swEMITTER.x2mn)/2;
+rmax_of_slot = swANODE.x2mx - thickness_shell;
 
-refcav.rout = %refcav.rout%;
+refcav.rin_left = swANODE.x2mn;
+refcav.rout = min(max(%refcav.rout%,refcav.rin_left),rmax_of_slot);
 refcav.dz = %refcav.dz%;
 refcav.z0 = swANODE.x1mx+(%refcav.z0_offset%);
-refcav.rin_left = swANODE.x2mn;
 refcav.rin_right = swANODE.x2mn + (%refcav.rin_right_offset%);
 
+thickness_shell = 2mm;
 
-sws1.N = %sws1.N%;
+N1 = %sws1.N%; ! to int
+sws1.N = N1;
 sws1.z0 = refcav.z0 + refcav.dz +( %sws1.z0_offset%);
 sws1.dz_in = %sws1.dz_in%;
-sws1.dz_out = %sws1.dz_out%;
-sws1.p = %sws1.p%;
-sws1.a = %sws1.a%;
-sws1.b =refcav.rin_right;
+sws1.dz_out = min(%sws1.dz_out%,sws1.dz_in);
+sws1.p = max(%sws1.p%,sws1.dz_in);
+sws1.a = max(min(%sws1.a%,rmax_of_slot),refcav.rin_right);
+sws1.b = refcav.rin_right;
 
-sws2.N = %sws2.N%;
+N1 = %sws2.N%;
+sws2.N = N1;
 sws2.z0 = sws1.z0 + sws1.N * sws1.p + (%sws2.z0_offset%);
 sws2.dz_in = %sws2.dz_in%;
-sws2.dz_out = %sws2.dz_out%;
-sws2.p = %sws2.p%;
-sws2.a = %sws2.a%;
+sws2.dz_out = min(%sws2.dz_out%,sws2.dz_in);
+sws2.p = max(%sws2.p%,sws2.dz_in);
+sws2.a = max(min(%sws2.a%,swANODE.x2mx - thickness_shell),sws1.b);
 sws2.b =sws1.b;
 
-sws3.N = %sws3.N%;
+N1 = %sws3.N%;
+sws3.N = N1;
 sws3.z0 = sws2.z0 + sws2.N * sws2.p + (%sws3.z0_offset%);
 sws3.dz_in = %sws3.dz_in%;
-sws3.dz_out = %sws3.dz_out%;
-sws3.p = %sws3.p%;
-sws3.a = %sws3.a%;
+sws3.dz_out = min(%sws3.dz_out%,sws3.dz_in);
+sws3.p = max(%sws3.p%,sws3.dz_in);
+sws3.a = max(min(%sws3.a%,swANODE.x2mx - thickness_shell),sws2.b);
 sws3.b = sws2.b;
 
 extractor.z0 = sws3.z0 + sws3.N * sws3.p + (%extractor.z0_offset%);
 extractor.dz = %extractor.dz%;
-extractor.rout = %extractor.rout%;
 extractor.rin_left = sws3.b;
+extractor.rout = min(
+   max(%extractor.rout%,extractor.rin_left),
+   rmax_of_slot);
 extractor.rin_right = r_particles-(%extractor.rin_right_offset%);
 
 out_waveguide.z0 = extractor.z0+extractor.dz;
