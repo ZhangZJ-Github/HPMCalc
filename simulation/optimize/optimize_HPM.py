@@ -102,10 +102,10 @@ class HPMSim(TaskBase):
         ratio = freq_peaks[2, 1] / freq_peaks[1, 1]  # 杂峰 / 第二主峰
         return 1 - ratio
 
-    def get_res(self, m2d_path: str) -> dict:
+    def get_res(self, m2d_path: str,out_power_TD_titile :str =' FIELD_POWER S.DA @PORT_RIGHT,FFT-#20.1' ) -> dict:
         et = ExtTool(os.path.splitext(m2d_path)[0])
         grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
-        TD_title = ' FIELD_POWER S.DA @PORT_RIGHT,FFT-#20.1'
+        TD_title = out_power_TD_titile
         output_power_TD = grd.obs[TD_title]['data']
         colname_period = 'period'
         output_power_TD[colname_period] = output_power_TD[0] // (

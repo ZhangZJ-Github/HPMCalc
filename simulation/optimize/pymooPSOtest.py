@@ -20,9 +20,9 @@ _1 = pymooPSO
 
 if __name__ == '__main__':
 
-    initial_csv = 'Initialize.csv'
+    initial_csv = 'Initialize1.csv'
     # 取消注释以在Excel中编辑初始条件
-    # pandas.DataFrame(columns=list(vars_)).to_csv(initial_csv,index = False)
+    # pandas.DataFrame(columns=list( get_hpsim().template.get_variables())).to_csv(initial_csv,index = False)
     # os.system("start %s"%initial_csv)
 
     initial_data = pandas.read_csv(initial_csv, encoding=simulation.task_manager.task.CSV_ENCODING)
@@ -85,8 +85,11 @@ if __name__ == '__main__':
 
         def bad_res(self, out):
             out['F'] = [self.BIG_NUM] * self.n_obj
+            # self._evaluate(1,dict(), 1,2,3,4,a =1,ka =1)
 
-        def _evaluate(self, x, out, *args, **kwargs
+
+
+        def _evaluate(self, x, out:dict, *args, **kwargs
                       ):
             hpsim = get_hpsim()
             hpsim.template.copy_template_to_working_dir()
