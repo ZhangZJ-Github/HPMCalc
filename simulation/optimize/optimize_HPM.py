@@ -168,8 +168,8 @@ lock = Lock()
 
 
 def get_hpsim(lock=lock):
-    return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\CS\CS.m2d",
-                  r'E:\HPM\11.7GHz\optimize\CS', 11.7e9, 1e9, lock=lock)
+    return HPMSim(r'D:\zhangzijing\codes\hpmcalc\simulation\template\CS\CS.m2d',
+                  r'D:\zhangzijing\BigFiles\HPM\11.7GHz\优化\CS', 11.7e9, 1e9, lock=lock)
 
 
 if __name__ == '__main__':

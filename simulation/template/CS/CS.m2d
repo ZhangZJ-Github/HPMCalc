@@ -108,31 +108,31 @@ DR= 0.2 MM ;
 
 !FOCUSING_ELECTRODE
 
-! AREA FOCUSING_ELECTRODE POLYGONAL 
-!    -Z_LEFT,R_INPUT 
-!    -Z_LEFT,R_SHELL 
-!    0,R_SHELL 
-!    0,R_BEAM_TUNNEL 
-!    -Z_BEAM_GAP,R_BEAM_TUNNEL 
-!    -15e-3,R_INPUT 
+! AREA FOCUSING_ELECTRODE POLYGONAL
+!    -Z_LEFT,R_INPUT
+!    -Z_LEFT,R_SHELL
+!    0,R_SHELL
+!    0,R_BEAM_TUNNEL
+!    -Z_BEAM_GAP,R_BEAM_TUNNEL
+!    -15e-3,R_INPUT
 !    -Z_LEFT,R_INPUT;
-! AREA FOCUSING_ELECTRODE POLYGONAL 
-!    -Z_LEFT,R_INPUT 
-!    -Z_LEFT,R_SHELL 
-!    0,R_SHELL 
-!    0,R_BEAM_TUNNEL 
-!    -Z_BEAM_GAP,R_BEAM_TUNNEL 
-!    ZBEGIN,R_INPUT 
+! AREA FOCUSING_ELECTRODE POLYGONAL
+!    -Z_LEFT,R_INPUT
+!    -Z_LEFT,R_SHELL
+!    0,R_SHELL
+!    0,R_BEAM_TUNNEL
+!    -Z_BEAM_GAP,R_BEAM_TUNNEL
+!    ZBEGIN,R_INPUT
 !    -Z_LEFT,R_INPUT;
 ! dZ_FOCUSING2 = 0mm;
 ! temp_r1 = min(+(dZ_FOCUSING-dZ_FOCUSING2)*TAN(THETA_FOCUSING)
 !    +R_BEAM_TUNNEL-dr_focusing , R_INPUT);
-! AREA FOCUSING_ELECTRODE POLYGONAL 
+! AREA FOCUSING_ELECTRODE POLYGONAL
 !    -dZ_FOCUSING R_INPUT
 !    -dZ_FOCUSING R_SHELL
-!    0,R_SHELL 
-!    0,+R_BEAM_TUNNEL-dr_focusing 
-!    -dZ_FOCUSING2,+R_BEAM_TUNNEL-dr_focusing 
+!    0,R_SHELL
+!    0,+R_BEAM_TUNNEL-dr_focusing
+!    -dZ_FOCUSING2,+R_BEAM_TUNNEL-dr_focusing
 !    -dZ_FOCUSING,temp_r1
 !    -dZ_FOCUSING R_INPUT;
 
@@ -143,17 +143,17 @@ DR= 0.2 MM ;
 ! Area LEFT_PORT_CONDUCTOR conformal Z_LEFT R_CATHODE +Z_LEFT+W_SHELL R_SHELL;
 ! CONDUCTOR LEFT_PORT_CONDUCTOR;
 
-! AREA FOCUSING_ELECTRODE POLYGONAL 
-!    Z_LEFT,R_INPUT 
-!    Z_LEFT,R_SHELL 
-!    0,R_SHELL 
-!    0,+R_BEAM_TUNNEL-dr_focusing 
-!    -dZ_FOCUSING2,+R_BEAM_TUNNEL-dr_focusing 
+! AREA FOCUSING_ELECTRODE POLYGONAL
+!    Z_LEFT,R_INPUT
+!    Z_LEFT,R_SHELL
+!    0,R_SHELL
+!    0,+R_BEAM_TUNNEL-dr_focusing
+!    -dZ_FOCUSING2,+R_BEAM_TUNNEL-dr_focusing
 !    -dZ_FOCUSING,temp_r1
 !    -dZ_FOCUSING R_INPUT
 !    Z_LEFT,R_INPUT;
 !SHELL+WINDOW
-! AREA SHELL POLYGONAL 0,R_BEAM_TUNNEL 0,R_SHELL Z_RIGHT,R_SHELL Z_RIGHT,R_OUTPUT 
+! AREA SHELL POLYGONAL 0,R_BEAM_TUNNEL 0,R_SHELL Z_RIGHT,R_SHELL Z_RIGHT,R_OUTPUT
 ! ZEND,R_BEAM_TUNNEL 0,R_BEAM_TUNNEL ;
 
 
@@ -343,7 +343,7 @@ DR= 0.2 MM ;
 ! DIELECTRIC SHELL_NEAR_CATHODE 8.5;!ceramics
 
 ! area shell conformal 0 R_INPUT Z_RIGHT R_SHELL;
-! AREA OUTPUT_WINDOW CONFORMAL 
+! AREA OUTPUT_WINDOW CONFORMAL
 !    +swANODE.x1mx-W_SHELL,0 swANODE.x1mx,swANODE.x2mx;
 
 
@@ -448,7 +448,7 @@ out_waveguide.z0 = sws4_out.z0 + sws4.N * sws4.p + (%out_waveguide.z0_offset%);
 out_waveguide.r = sws4_out.r_in;
 out_waveguide.dz = max(%out_waveguide.dz%,thickness_fresp);
 
-simulation_area.zmx = out_waveguide.z0 
+simulation_area.zmx = out_waveguide.z0
    + out_waveguide.dz;
 
 collector.z0 = min(out_waveguide.z0 +(%collector.z0_offset%),
@@ -456,7 +456,7 @@ collector.z0 = min(out_waveguide.z0 +(%collector.z0_offset%),
 
 collector.dz = %collector.dz%;
 
-collector.z_end = min(collector.z0 + collector.dz, 
+collector.z_end = min(collector.z0 + collector.dz,
    simulation_area.zmx - thickness_shell);
 collector.r_in = min(max(r_particles-(%collector.r_in_offset%), 0),
    out_waveguide.r);
@@ -466,7 +466,7 @@ collector.r_out = collector.r_in + thickness_shell;
 simulation_area.zmn = swCATHODE.x1mn;
 simulation_area.rmx = swANODE.x2mx;
 
-AREA main conformal swANODE.x1mx 0 
+AREA main conformal swANODE.x1mx 0
    simulation_area.zmx simulation_area.zmx;
 CONDUCTOR main MATERIAL COPPER;
 
@@ -475,11 +475,11 @@ temp_z2 = temp_z1 + refcav_out.dz_out;
 temp_z3 = refcav_out.z0 + refcav_out.dz_in;
 
 
-AREA void_refcav POLYGONAL 
-   swANODE.x1mx swANODE.x2mn    
-   refcav_out.z0 refcav_out.r_in_left 
-   temp_z1 refcav_out.r_out 
-   temp_z2 refcav_out.r_out 
+AREA void_refcav POLYGONAL
+   swANODE.x1mx swANODE.x2mn
+   refcav_out.z0 refcav_out.r_in_left
+   temp_z1 refcav_out.r_out
+   temp_z2 refcav_out.r_out
    temp_z3 refcav_out.r_in_right
    temp_z3 refcav_in.r_out_right
    temp_z2 refcav_in.r_in
@@ -499,6 +499,10 @@ AREA VOID_DRIFT_before_sws1 POLYGONAL
    temp_z3 refcav_in.r_out_right;
 VOID VOID_DRIFT_before_sws1;
 
+! Unity with sws
+temp_z4 = temp_z3;
+temp_z5 = temp_z4;
+
 do i = 0,sws1.N-1;
    offset = i * sws1.p;
    temp_z0 = sws1_out.z0 + offset;
@@ -511,8 +515,8 @@ do i = 0,sws1.N-1;
    temp_z7 = temp_z6 - (sws1_in.dz_out - sws1_in.dz_in) / 2;
    temp_z8 = temp_z7 - sws1_in.dz_in;
    temp_z9 = sws1_in.z0 + offset;
-   AREA void_sws1.'i' POLYGONAL 
-      temp_z0 sws1_out.r_in 
+   AREA void_sws1.'i' POLYGONAL
+      temp_z0 sws1_out.r_in
       temp_z1 sws1_out.r_out
       temp_z2 sws1_out.r_out
       temp_z3 sws1_out.r_in
@@ -548,8 +552,8 @@ do i = 0,sws2.N-1;
    temp_z7 = temp_z6 - (sws2_in.dz_out - sws2_in.dz_in) / 2;
    temp_z8 = temp_z7 - sws2_in.dz_in;
    temp_z9 = sws2_in.z0 + offset;
-   AREA void_sws2.'i' POLYGONAL 
-      temp_z0 sws2_out.r_in 
+   AREA void_sws2.'i' POLYGONAL
+      temp_z0 sws2_out.r_in
       temp_z1 sws2_out.r_out
       temp_z2 sws2_out.r_out
       temp_z3 sws2_out.r_in
@@ -585,8 +589,8 @@ do i = 0,sws3.N-1;
    temp_z7 = temp_z6 - (sws3_in.dz_out - sws3_in.dz_in) / 2;
    temp_z8 = temp_z7 - sws3_in.dz_in;
    temp_z9 = sws3_in.z0 + offset;
-   AREA void_sws3.'i' POLYGONAL 
-      temp_z0 sws3_out.r_in 
+   AREA void_sws3.'i' POLYGONAL
+      temp_z0 sws3_out.r_in
       temp_z1 sws3_out.r_out
       temp_z2 sws3_out.r_out
       temp_z3 sws3_out.r_in
@@ -621,8 +625,8 @@ do i = 0,sws4.N-1;
    temp_z7 = temp_z6 - (sws4_in.dz_out - sws4_in.dz_in) / 2;
    temp_z8 = temp_z7 - sws4_in.dz_in;
    temp_z9 = sws4_in.z0 + offset;
-   AREA void_sws4.'i' POLYGONAL 
-      temp_z0 sws4_out.r_in 
+   AREA void_sws4.'i' POLYGONAL
+      temp_z0 sws4_out.r_in
       temp_z1 sws4_out.r_out
       temp_z2 sws4_out.r_out
       temp_z3 sws4_out.r_in
@@ -639,7 +643,7 @@ enddo;
 
 
 temp_z1 = out_waveguide.z0 + out_waveguide.dz;
-AREA void_outwaveguide POLYGONAL 
+AREA void_outwaveguide POLYGONAL
    temp_z5 sws4_in.r_out
    temp_z4 sws4_out.r_in
    out_waveguide.z0 out_waveguide.r
@@ -661,11 +665,11 @@ AREA cond_collector.1 conformal collector.Z_end collector.r_in simulation_area.z
 CONDUCTOR cond_collector.0 MATERIAL COPPER;
 CONDUCTOR cond_collector.1 MATERIAL COPPER;
 
-! AREA collector POLYGONAL 
+! AREA collector POLYGONAL
 !    collector.z0 collector.r_in
 !    collector.z0 collector.r_out
 !    collector.z_end collector.r_out
-!    collector.z_end out_waveguide.R   
+!    collector.z_end out_waveguide.R
 !    simulation_area.zmx out_waveguide.R
 !    simulation_area.zmx collector.r_in
 !    collector.z0 collector.r_in;
@@ -676,8 +680,8 @@ swPORT_RIGHT.x1mn=simulation_area.zmx-thickness_fresp;
 swPORT_RIGHT.x1mx=simulation_area.zmx;
 swPORT_RIGHT.x2mn=0;
 swPORT_RIGHT.x2mx=collector.r_in;
-AREA swPORT_RIGHT.0 CONFORMAL swPORT_RIGHT.x1mn swPORT_RIGHT.x2mn 
-swPORT_RIGHT.x1mx swPORT_RIGHT.x2mx;  
+AREA swPORT_RIGHT.0 CONFORMAL swPORT_RIGHT.x1mn swPORT_RIGHT.x2mn
+swPORT_RIGHT.x1mx swPORT_RIGHT.x2mx;
 
 ! ! do i = 0,swRefl.N_facet-1;
 ! !    CONDUCTOR swRefl.'i' MATERIAL COPPER;
@@ -691,7 +695,7 @@ swPORT_RIGHT.x1mx swPORT_RIGHT.x2mx;
 ! AREA CA_NO_BEAM CONFORMAL +Z_LEFT+W_SHELL,R_EMIT -dZ_FOCUSING-dZ_BEAM_GAP,0 ;
 ! ! AREA EMIT_ZONE CONFORMAL -dZ_FOCUSING-Z_BEAM_GAP,R_CATHODE -dZ_FOCUSING-Z_BEAM_GAP-DR*2,R_EMIT;
 
-! AREA guard_electrode conformal +ZBEGIN-2e-3,R_EMIT 
+! AREA guard_electrode conformal +ZBEGIN-2e-3,R_EMIT
 !    +ZBEGIN-1e-3,+R_CATHODE+5e-3;
 ! ! CONDUCTOR guard_electrode;
 
@@ -702,7 +706,7 @@ swPORT_RIGHT.x1mx swPORT_RIGHT.x2mx;
 R_COIL = +swANODE.x2mx+1mm;
 Z_COIL_START = (swCATHODE.x1mn-30mm);
 ! N_COIL = (swANODE.x1mx-Z_COIL_START+30mm)/DZ_COIL;
-Z_COIL_end = simulation_area.zmx - 0mm;
+Z_COIL_end = simulation_area.zmx + 10mm;
 N_COIL = min(199,(Z_COIL_end-Z_COIL_START)/DZ_COIL);
 DZ_COIL = (Z_COIL_end-Z_COIL_START)/N_COIL;
 
@@ -713,7 +717,7 @@ DO I=0,N_COIL-1 ;
    ZCOIL.'I' =Z_COIL_START+ I*DZ_COIL ;
    ! ZCOIL.'I' = ZBEGIN + I*DZ_COIL ;
 
-   POINT LOOP.'I'  ZCOIL.'I' 0.0 ; 
+   POINT LOOP.'I'  ZCOIL.'I' 0.0 ;
    COILS AXIS X1 LOOP.'I' R_COIL COIL_CURRENT ;
 ENDDO ;
 
@@ -729,7 +733,7 @@ ENDDO ;
 ! DO I=0,N_COIL.cathode-1 ;
 !    ZCOIL.cathode.'I' =Z_COIL_START.cathode + I*DZ_COIL.cathode ;
 !    ! ZCOIL.'I' = ZBEGIN + I*DZ_COIL ;
-!    POINT LOOP.cathode.'I'  ZCOIL.cathode.'I' 0.0 ; 
+!    POINT LOOP.cathode.'I'  ZCOIL.cathode.'I' 0.0 ;
 !    COILS AXIS X1 LOOP.cathode.'I' R_COIL.cathode COIL_CURRENT.cathode ;
 ! ENDDO ;
 
@@ -769,8 +773,8 @@ ENDDO ;
 ! simulation_area.zmn = swCATHODE.x1mn;
 ! simulation_area.zmx = swANODE.x1mx;
 ! simulation_area.rmx = swANODE.x2mx;
-AREA simulation_area conformal 
-   simulation_area.zmn 0 simulation_area.zmx 
+AREA simulation_area conformal
+   simulation_area.zmn 0 simulation_area.zmx
    simulation_area.rmx;
 mark simulation_area x1 size dz;
 mark simulation_area x2 size dr;
@@ -825,11 +829,11 @@ freespace swLEFT.0 NEGATIVE x2 ALL;
 ! temp_z_cav2 = +z_premodulation_cav2+dz_premodulation_cav2;
 ! temp_r_cav2 =  +R_BEAM_TUNNEL+dR_premodulation_cav2;
 
-! area gap_premodulation_cav1 conformal 
-!    z_premodulation_cav1 R_BEAM_TUNNEL  
+! area gap_premodulation_cav1 conformal
+!    z_premodulation_cav1 R_BEAM_TUNNEL
 !    temp_z_cav1,    temp_r_cav1;
-! area gap_premodulation_cav2 conformal 
-!    z_premodulation_cav2 R_BEAM_TUNNEL  
+! area gap_premodulation_cav2 conformal
+!    z_premodulation_cav2 R_BEAM_TUNNEL
 !    temp_z_cav2,    temp_r_cav2;
 
 ! void gap_premodulation_cav1;
@@ -857,14 +861,14 @@ LINE PORT_RIGHT CONFORMAL swPORT_RIGHT.x1mn,swPORT_RIGHT.x2mn swPORT_RIGHT.x1mn,
 
 !LINE PORT_RADIO CONFORMAL Z_FRONT,R_OUTER Z_LENGTH,R_OUTER ;
 
- 
+
 
 
 ! PORT PORT_LEFT POSITIVE ;!INCOMING 500e3 LAPLACIAN 2 swCATHODE.0 -500e3 swANODE.0 0;
 ! PORT PORT_RIGHT NEGATIVE;
 
 
-  ! LINE gap CONFORMAL R_cathode,0,Z  R_anode,0,Z ;  
+  ! LINE gap CONFORMAL R_cathode,0,Z  R_anode,0,Z ;
 
    ! AREA inlet CONFORMAL R_cathode,0,Z  R_anode,TwoPi,Z ;
 
@@ -874,9 +878,9 @@ LINE PORT_RIGHT CONFORMAL swPORT_RIGHT.x1mn,swPORT_RIGHT.x2mn swPORT_RIGHT.x1mn,
    FUNCTION g3(x1,x2,x3) = 0 ;
    trise = 0.1e-12;
    FUNCTION f(t) =+abs(Vinput)*(1- exp(-t/trise)) ;
-   
 
-   ! PORT PORT_LEFT POSITIVE INCOMING f   
+
+   ! PORT PORT_LEFT POSITIVE INCOMING f
    !   FUNCTION E2 g1 E3 g2
    !   NORMALIZATION VOLTAGE PORT_LEFT ;
 
@@ -894,7 +898,7 @@ observe FIELD_INTEGRAL E.DL PORT_LEFT suffix InputVoltage;
 
 
 !   Port RightPort Negative ;
-Port PORT_LEFT  negative 
+Port PORT_LEFT  negative
    Incoming f Function E1 g1 E3 g3
    NORMALIZATION VOLTAGE  PORT_LEFT
    CIRCUIT .1e-9 f OBS$InputVoltage ;
@@ -965,7 +969,7 @@ DISPLAY_2D;
 ! temp_z3 = ZBEGIN+0.2e-3;
 ! temp_r1 = R_CATHODE-W_EMIT+0.1e-3;
 ! temp_r2 = R_CATHODE-0.1e-3;
-! AREA emit_zone_of_emit_zone conformal 
+! AREA emit_zone_of_emit_zone conformal
 !    temp_z2 temp_r1
 !    temp_z3 temp_r2;
 ! EMIT eBEAM EMIT_ZONE EXCLUDE OSYS$AREA INCLUDE emit_zone_of_emit_zone;
@@ -988,7 +992,7 @@ PHI = 2.0;
 
 !f0=430e9/6;
 EMISSION EXPLOSIVE ;
-! EMISSION THERMIONIC ;  
+! EMISSION THERMIONIC ;
 ! EMIT EXPLOSIVE emit_zone ;
 aaa = int(12.12332142);
 do i=0,swEMITTER.N_facet-1;
@@ -996,13 +1000,13 @@ do i=0,swEMITTER.N_facet-1;
 enddo;
 !EMIT_CURRENT_DENSITY=2e4;
 !BEAM_CURRENT=EMIT_CURRENT_DENSITY*PI*R_EMITTER**2-EMIT_CURRENT_DENSITY*PI*R_EMITTER00**2;
-! function Beamvoltage(t,x1,x2) = 200e3; 
+! function Beamvoltage(t,x1,x2) = 200e3;
 !Do j=0,19 ;
 !Te=0.5/f0;
 !Tp=Te;
 !function Beamcurrent_'j'(t,x1,x2) = 100.e4*THETA(j*(Tp+Te)+Te-T)*THETA(T-j*(Tp+Te));
 !function Beamcurrent_'j'(t,x1,x2) =EMIT_CURRENT_DENSITY;
-!Emission Beam EMIT_CURRENT_DENSITY Beamvoltage model beam_'j'; 
+!Emission Beam EMIT_CURRENT_DENSITY Beamvoltage model beam_'j';
 !Emit beam_'j' EMITTER exclude Osys$AREA INCLUDE EMIT_ZONE;
 !Enddo ;
 
@@ -1010,7 +1014,7 @@ enddo;
 
 !FUNCTION BEAMCURRENT1(t,
 !EMISSION EXPLOSIVE EMIT_CURRENT_DENSITY Beamvoltage model beam0;
-!WALL_TEMPERATURE_J  
+!WALL_TEMPERATURE_J
 !Emit beam0 EMITTER exclude Osys$AREA INCLUDE EMIT_ZONE;
 
 ! OBSERVE Emitted emit_zone Electron Current ;
@@ -1019,7 +1023,7 @@ OBSERVE Emitted swEMITTER Electron Current ;
 ! observe FIELD_INTEGRAL E.dl PORT_SHELL_NEAR_CATHODE;
 ! observe FIELD_INTEGRAL E.dl LINE_PN;
 
-! LINE line_near_absorber conformal +swPORT_RIGHT.x1mn-20mm 0 
+! LINE line_near_absorber conformal +swPORT_RIGHT.x1mn-20mm 0
 !    +swPORT_RIGHT.x1mn-20mm sys$x2mx;
 N1 = (sws4.N/2);
 z_extractor = sws4_out.z0+sws4_out.dz_in/2 + sws4.p * N1;
@@ -1028,7 +1032,7 @@ LINE line_near_extractor conformal z_extractor 0 z_extractor sys$x2mx;
 observe FIELD_INTEGRAL J.DA line_near_extractor;
 
 z_refcav = refcav_out.z0 + refcav_out.dz_out/2;
-LINE line_near_refcav conformal z_refcav 0 
+LINE line_near_refcav conformal z_refcav 0
    z_refcav sys$x2mx;
 observe FIELD_INTEGRAL J.DA line_near_refcav;
 
@@ -1041,7 +1045,7 @@ observe FIELD_INTEGRAL J.DA line_near_refcav;
 ! observe COLLECTED emit_zone ALL Current;
 ! tempz = +(swProbeReflCav.x1mn+swProbeReflCav.x1mx)/2;
 ! tempr = +(swProbeReflCav.x2mn+swProbeReflCav.x2mx)/2;
-POINT pt_reflection_cav 
+POINT pt_reflection_cav
    z_refcav r_particles;
 observe field e1 pt_reflection_cav fft magnitude;
 
@@ -1053,12 +1057,12 @@ observe field e1 pt_reflection_cav2 fft magnitude;
 
 ! tempz = +(swProbeReflCav.x1mn+swProbeReflCav.x1mx)/2;
 ! tempr = +(swProbeReflCav.x2mn+swProbeReflCav.x2mx)/2;
-! POINT pt_premod 
+! POINT pt_premod
 !    tempz tempr;
 ! observe field e1 pt_premod fft magnitude;
 
 tempz = sws1_out.z0+sws1.N*sws1.p/2;
-POINT pt_sws1 
+POINT pt_sws1
    tempz r_particles;
 observe field e1 pt_sws1 fft magnitude;
 
@@ -1072,7 +1076,7 @@ POINT pt_sws3
    tempz r_particles;
 observe field e1 pt_sws3 fft magnitude;
 
-POINT pt_extr 
+POINT pt_extr
    z_extractor r_particles;
 observe field e1 pt_extr fft magnitude;
 ! observe field e2 pt_extr fft magnitude;

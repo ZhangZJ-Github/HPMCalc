@@ -78,7 +78,7 @@ from threading import Lock
 
 
 class TaskBase:
-    MAGIC_SOLVER_PATH = r"G:\Program Files\Magic Tools\magic2d_Sng.exe"
+    MAGIC_SOLVER_PATH = r"C:\Program Files\Magic Tools\magic2d_Sng.exe"
     colname_score = "score"
     colname_path = "m2d_path"
     colname_timestamp = 'timestamp'
@@ -183,7 +183,7 @@ class TaskBase:
         try:
             log_df = self.log(param_set, m2d_path)
             last_logged_data = log_df.iloc[len(log_df) - 1]
-            logger.info(str(last_logged_data))
+            logger.info("\n%s"%str(last_logged_data))
             return last_logged_data[self.colname_score]
         except (
                 KeyError, FileNotFoundError, TypeError, IndexError, pandas.errors.ParserError, PermissionError) as e:

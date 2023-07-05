@@ -1,0 +1,6 @@
+备注,%refcav_out.z0_offset%,%refcav_out.r_out_offset%,%refcav_out.r_in_right_offset%,%refcav_out.dz_out%,%refcav_out.dz_in%,%sws1.N%,%sws1.p%,%sws1_out.z0_offset%,%sws1_out.dr%,%sws1_out.dz_in%,%sws1_out.dz_out%,%sws2.N%,%sws2.p%,%sws2_out.z0_offset%,%sws2_out.dr%,%sws2_out.dz_in%,%sws2_out.dz_out%,%sws3.N%,%sws3.p%,%sws3_out.z0_offset%,%sws3_out.dr%,%sws3_out.dz_in%,%sws3_out.dz_out%,%sws4.N%,%sws4.p%,%sws4_out.z0_offset%,%sws4_out.dr%,%sws4_out.dz_in%,%sws4_out.dz_out%,%out_waveguide.z0_offset%,%out_waveguide.dz%,%collector.z0_offset%,%collector.dz%,%collector.r_in_offset%
+初始值,5.00E-03,8.00E-03,1.00E-03,1.00E-02,1.00E-02,3.00E+00,1.00E-02,5.00E-03,5.00E-03,6.00E-03,3.00E-03,3.00E+00,1.00E-02,5.00E-03,5.00E-03,6.00E-03,3.00E-03,3.00E+00,1.00E-02,5.00E-03,5.00E-03,6.00E-03,3.00E-03,3.00E+00,1.00E-02,5.00E-03,5.00E-03,6.00E-03,3.00E-03,1.00E-03,5.00E-02,1.00E-03,1.00E-02,-5.00E-03
+下界,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1.00E-02
+上界,2.00E-02,1.50E-02,5.00E-03,2.00E-02,2.00E-02,5.00E+00,2.00E-02,3.00E-02,1.00E-02,1.00E-02,1.00E-02,5.00E+00,2.00E-02,3.00E-02,1.00E-02,1.00E-02,1.00E-02,5.00E+00,2.00E-02,3.00E-02,1.00E-02,1.00E-02,1.00E-02,5.00E+00,2.00E-02,3.00E-02,1.00E-02,1.00E-02,1.00E-02,2.00E-02,5.00E-02,1.00E-02,2.00E-02,1.00E-02
+计算偏微分的步长,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+单位步长,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,

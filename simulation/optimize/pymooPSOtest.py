@@ -20,7 +20,7 @@ _1 = pymooPSO
 
 if __name__ == '__main__':
 
-    initial_csv = r'F:\changeworld\HPMCalc\simulation\template\CSCA/Initialize.csv'
+    initial_csv = r"D:\zhangzijing\codes\hpmcalc\simulation\template\CS\Initialize - 副本.csv"
     # 取消注释以在Excel中编辑初始条件
 #     _df = pandas.DataFrame(columns=list(get_hpsim().template.get_variables()))
 #     row_names = """备注
@@ -48,8 +48,8 @@ if __name__ == '__main__':
     param_name_to_index = {
         initial_data.columns[i]: i for i in range(len(initial_data.columns))
     }
-    # get_hpsim().update(init_params) # 初始值测试
-    # aaaaaaaaaaa
+    get_hpsim().update(init_params) # 初始值测试
+    aaaaaaaaaaa
 
 
     rmin_cathode = HPMSim.rmin_cathode
