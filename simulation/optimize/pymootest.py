@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
 
     def obj_func(params: numpy.ndarray, comment=''):
-        return -get_hpsim().update(
+        return -get_hpmsim().update(
             {initial_data.columns[i]: params[i] for i in range(len(params))}, comment)
 
 
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
         def elem_evaluate(self, x, i  # out, *args, **kwargs
                           ):
-            hpsim = get_hpsim()
+            hpsim = get_hpmsim()
             out = {}
             out['G'] = [constr(x) for constr in constraint_ueq]
             if numpy.any(numpy.array(out['G']) > 0):
@@ -163,7 +163,7 @@ if __name__ == '__main__':
 
         def _evaluate(self, x, out, *args, **kwargs
                       ):
-            hpsim = get_hpsim()
+            hpsim = get_hpmsim()
             out = {}
             out['G'] = [constr(x) for constr in constraint_ueq]
             if numpy.any(numpy.array(out['G']) > 0):

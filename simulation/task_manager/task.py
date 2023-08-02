@@ -78,7 +78,7 @@ from threading import Lock
 
 
 class TaskBase:
-    MAGIC_SOLVER_PATH = r"C:\Program Files\Magic Tools\magic2d_Sng.exe"
+    MAGIC_SOLVER_PATH = r"G:\Program Files\Magic Tools\magic2d_Sng.exe"
     colname_score = "score"
     colname_path = "m2d_path"
     colname_timestamp = 'timestamp'
@@ -167,7 +167,9 @@ class TaskBase:
 
     def find_old_res(self, params: dict) -> str:
         if os.path.exists(self.log_file_name):
+            self.lock.acquire()
             df = self.load_log()
+            self.lock.release()
             condition = pandas.Series([True] * len(df))
             for key in params:
                 condition = condition & (df[key] == params[key])

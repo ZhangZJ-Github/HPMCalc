@@ -156,21 +156,35 @@ class HPMSim(TaskBase):
         return ((numpy.array([
             g(max_2_freq_peaks_sorted_by_freq[:, 0], desired_freq_SDA[i], freq_tol).sum()
             for i in range(len(desired_freq_SDA))]).sum()
-                 ) / (2 + g(desired_freq_SDA[0], desired_freq_SDA[1], freq_tol) * 2) +
-                + numpy.exp(
+                 ) / (2 + g(desired_freq_SDA[0], desired_freq_SDA[1], freq_tol) * 2) *numpy.exp(
                     - (max_2_freq_peaks_sorted_by_freq[0, 1] / max_2_freq_peaks_sorted_by_freq[1, 1] - 1) ** 2 / (
                             2 * 0.2 ** 2)
                 )
-                ) / 2
+                ) **(1/2)
+        # return (g(max_2_freq_peaks_sorted_by_freq[0, 0], desired_freq_SDA[0], freq_tol) * g(
+        #     max_2_freq_peaks_sorted_by_freq[1, 0], desired_freq_SDA[0], freq_tol) * numpy.exp(
+        #     - (max_2_freq_peaks_sorted_by_freq[0, 1] / max_2_freq_peaks_sorted_by_freq[1, 1] - 1) ** 2 / (
+        #             2 * 0.2 ** 2)
+        # )
+        #         ) ** (1 / 2)
 
 
 lock = Lock()
 
 
-def get_hpsim(lock=lock):
-    return HPMSim(r'D:\zhangzijing\codes\hpmcalc\simulation\template\CS\CS.m2d',
-                  r'D:\zhangzijing\BigFiles\HPM\11.7GHz\优化\CS', 11.7e9, 1e9, lock=lock)
+def get_hpmsim(lock=lock):
+    return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\CS\CS.m2d",
+                  r'E:\HPM\11.7GHz\optimize\CS.1', 11.7e9, 1e9, lock=lock)
 
 
 if __name__ == '__main__':
-    avg_power_score = HPMSim.avg_power_score(0.5e9, 1e9)
+    # get_hpsim().re_evaluate()
+    # scores = HPMSim.avg_power_score(0.5e9, 1e9), HPMSim.freq_accuracy_score(numpy.array([[0, 1e6], [14e9, 1e5]]), 40e9,
+    #                                                                         .1e9)
+    # HPMSim(r"F:\changeworld\HPMCalc\simulation\template\CS\CS.m2d",
+    #        r'E:\HPM\11.7GHz\optimize\CS.1', 11.7e9, 1e9, lock=lock)
+    hpmsim = get_hpmsim()
+    res = hpmsim.get_res(r"E:\HPM\11.7GHz\optimize\CS.1\CS_20230719_105934_45401344.grd",)
+    # res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\CS.manual\CS_20230719_194902_80508928.m2d', )
+
+    score = hpmsim.evaluate(res)

@@ -71,7 +71,7 @@ def get_hpsim():
 
 
 def obj_func(params: numpy.ndarray, comment=''):
-    return -get_hpsim().update(
+    return -get_hpmsim().update(
         {initial_data.columns[i]: params[i] for i in range(len(params))}, comment)
 
 
@@ -92,7 +92,7 @@ class MyProblem(ElementwiseProblem):
         logger.info(self.elementwise_runner)
 
     def _evaluate(self, x, out, *args, **kwargs):
-        hpsim = get_hpsim()
+        hpsim = get_hpmsim()
         out['G'] = [constr(x) for constr in constraint_ueq]
         if numpy.any(numpy.array(out['G']) > 0):
             logger.warning("并非全部约束条件都满足：%s" % (out['G']))

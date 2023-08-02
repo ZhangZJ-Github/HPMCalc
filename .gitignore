@@ -1,0 +1,12 @@
+.idea
+dependencies
+*.grd
+*.par
+*.fld
+*.toc
+*.tlg
+*.log
+*.sum
+*__pycache__
+*log.txt
+*.pytest_cache
