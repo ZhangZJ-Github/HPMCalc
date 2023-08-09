@@ -1,7 +1,0 @@
-备注,%B_z0%,%refcav.rout%,%refcav.dz%,%refcav.z0_offset%,%refcav.rin_right_offset%,%sws1.N%,%sws1.z0_offset%,%sws1.dz_in%,%sws1.dz_out%,%sws1.p%,%sws1.a%,%sws2.N%,%sws2.z0_offset%,%sws2.dz_in%,%sws2.dz_out%,%sws2.p%,%sws2.a%,%sws3.N%,%sws3.z0_offset%,%sws3.dz_in%,%sws3.dz_out%,%sws3.p%,%sws3.a%,%extractor.z0_offset%,%extractor.dz%,%extractor.rout%,%extractor.rin_right_offset%,%out_waveguide.dz%
-初始值,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-下界,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-上界,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-计算偏微分的步长,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-单位步长,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,

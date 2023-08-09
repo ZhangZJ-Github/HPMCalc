@@ -12,90 +12,31 @@ from pymoo.optimize import minimize
 from pymoo.visualization.scatter import Scatter
 from pymoo.algorithms.soo.nonconvex.pso import PSO as pymooPSO
 from simulation.optimize.optimize_HPM import *
-import simulation.task_manager.task
 from pymoo.core.problem import ElementwiseProblem
 import shutil
+from simulation.optimize.initialize import Initializer
 
 _1 = pymooPSO
 
 if __name__ == '__main__':
 
-    initial_csv = r"F:\changeworld\HPMCalc\simulation\template\CS\Initialize.csv"
+    initial_csv_path = r"F:\changeworld\HPMCalc\simulation\template\TTO\Initialize.csv"
     # 取消注释以在Excel中编辑初始条件
-    #     _df = pandas.DataFrame(columns=list(get_hpsim().template.get_variables()))
-    #     row_names = """备注
-    # 初始值
-    # 下界
-    # 上界
-    # 计算偏微分的步长
-    # 单位步长
-    # """.split('\n')
-    #     _df = pandas.concat([pandas.DataFrame({row_names[0]: row_names[1:]}), _df])
-    #
-    #     _df.to_csv(initial_csv, index=False, encoding=simulation.task_manager.task.CSV_ENCODING)
-    #     os.system("start %s" % initial_csv)
-
-    # aaaaaa
-
-    initial_data = pandas.read_csv(initial_csv, encoding=simulation.task_manager.task.CSV_ENCODING)
-    initial_data = initial_data[initial_data.columns[1:]]  # 去除备注列
-    # initial_data = initial_data[initial_data.columns[initial_data.loc[2] > initial_data.loc[1]]]  # 去除上下限完全一致（无需调整）的变量
-    N_initial = len(initial_data) - 4
-
-    init_params = [{col: initial_data[col][i] for col in initial_data} for i in range(N_initial)]
-    # aaaa
-
-    index_to_param_name = lambda i: initial_data.columns[i]
-    param_name_to_index = {
-        initial_data.columns[i]: i for i in range(len(initial_data.columns))
-    }
-    # get_hpsim().update(init_params) # 初始值测试
-    # aaaaaaaaaaa
-
-    rmin_cathode = HPMSim.rmin_cathode
-
-    # <=0
-    constraint_ueq = (
-        # lambda params_array: params_array[
-        #                          param_name_to_index['%sws1.dz_out%']] - params_array[
-        #                          param_name_to_index['%sws1.dz_in%']],
-        # lambda params_array: params_array[
-        #                          param_name_to_index['%sws2.dz_out%']] - params_array[
-        #                          param_name_to_index['%sws2.dz_in%']],
-        # lambda params_array: params_array[
-        #                          param_name_to_index['%sws3.dz_out%']] - params_array[
-        #                          param_name_to_index['%sws3.dz_in%']],
-        # lambda params_array: params_array[param_name_to_index['%sws1.dz_in%']] - params_array[
-        #     param_name_to_index['%sws1.p%']],
-        # lambda params_array: params_array[param_name_to_index['%sws2.dz_in%']] - params_array[
-        #     param_name_to_index['%sws2.p%']],
-        # lambda params_array: params_array[param_name_to_index['%sws3.dz_in%']] - params_array[
-        #     param_name_to_index['%sws3.p%']],
-        #
-        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-        #                      params_array[
-        #                          param_name_to_index['%refcav.rout%']],
-        #
-        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-        #                      params_array[param_name_to_index['%sws1.a%']],
-        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-        #                      params_array[param_name_to_index['%sws2.a%']],
-        # lambda params_array: (params_array[param_name_to_index['%refcav.rin_right_offset%']] + rmin_cathode) -
-        #                      params_array[param_name_to_index['%sws3.a%']],
-    )
+    # Initializer.make_new_initial_csv(initial_csv_path, get_hpmsim())
+    initializer = Initializer(initial_csv_path)
 
 
     class MyProblem(ElementwiseProblem):
         BIG_NUM = 100
 
         def __init__(self, *args, **kwargs):
-            super(MyProblem, self, ).__init__(*args, n_var=len(initial_data.columns),
+            super(MyProblem, self, ).__init__(*args, n_var=len(initializer.initial_df.columns),
                                               n_obj=1,
-                                              n_ieq_constr=len(constraint_ueq),
+                                              n_ieq_constr=0,  # TTOParamPreProcessor.N_constraint_le,
                                               # n_constr=len(constraint_ueq),
-                                              xl=initial_data.loc[N_initial + 0].values,
-                                              xu=initial_data.loc[N_initial + 1].values, **kwargs)
-            logger.info("===============")
+                                              xl=initializer.lower_bound,
+                                              xu=initializer.upper_bound, **kwargs)
+            logger.info("======= Optimization start! ========")
             logger.info(self.elementwise)
             logger.info(self.elementwise_runner)
 
@@ -105,20 +46,22 @@ if __name__ == '__main__':
 
         def _evaluate(self, x, out: dict, *args, **kwargs
                       ):
-            hpsim = get_hpmsim()
-            hpsim.template.copy_template_to_working_dir()
-            shutil.copy(initial_csv, os.path.join(hpsim.template.working_dir, os.path.split(initial_csv)[1]))
+            hpmsim = get_hpmsim()
+            hpmsim.template.copy_template_to_working_dir()
+            shutil.copy(initializer.filename,
+                        os.path.join(hpmsim.template.working_dir, os.path.split(initializer.filename)[1]))
 
-            out['G'] = [constr(x) for constr in constraint_ueq]
-            if numpy.any(numpy.array(out['G']) > 0):
-                logger.warning("并非全部约束条件都满足：%s" % (out['G']))
-                self.bad_res(out)
-                return
+            # out['G'] = [constr(x) for constr in constraint_ueq]
+            # if numpy.any(numpy.array(out['G']) > 0):
+            #     logger.warning("并非全部约束条件都满足：%s" % (out['G']))
+            #     self.bad_res(out)
+            #     return
             logger.info('score = %.2e' %
-                        hpsim.update({index_to_param_name(i): x[i] for i in range(len(initial_data.columns))},
+                        hpmsim.update({initializer.index_to_param_name(i): x[i] for i in
+                                       range(len(initializer.initial_df.columns))},
                                      'PSO'))
             try:
-                score = hpsim.log_df[hpsim.colname_score][0]
+                score = hpmsim.log_df[hpmsim.colname_score][0]
                 out['F'] = [-score * self.BIG_NUM]
 
                 #     [
@@ -129,7 +72,7 @@ if __name__ == '__main__':
                 logger.info("out['F'] = %s" % out['F'])
 
             except AttributeError as e:
-                logger.warning("忽略的报错：%s" % e)
+                logger.warning("（来自%s）忽略的报错：%s" % (hpmsim.last_generated_m2d_path,e))
                 self.bad_res(out)
             return
 
@@ -162,20 +105,23 @@ if __name__ == '__main__':
             res = super(SamplingWithGoodEnoughValues, self).do(problem, n_samples, **kwargs)
             global first_sampling
 
-            if first_sampling:
-                for i in range(min(N_initial, len(res))):
-                    res[i].X = initial_data.loc[i].values
-                    first_sampling = False
-                    logger.info("设置了初始值：res[0].X = %s\n此后first_sampling = %s" % (res[i].X, first_sampling))
-            for i in range(len(res)):
-                while True:
-                    G = [constr(res[i].x) for constr in constraint_ueq]
-                    if numpy.any(numpy.array(G) > 0):
-                        logger.warning("（Sampling）并非全部约束条件都满足for %d：%s\n重新采样……" % (i, G))
-                        res[i].X = super(SamplingWithGoodEnoughValues, self).do(problem, 1, **kwargs)[0].X
-                        continue
-                    else:
-                        break
+            for j in range(len(res)):
+                res[j].X =res[j].X//initializer.precision * initializer.precision
+            if first_sampling:# 若为第一次采样则严格按照初始值设置
+                for i in range(min(initializer. N_initial, len(res))):
+                    res[i].X = initializer. initial_df.loc[i].values
+                    logger.info("设置了初始值：res[%d].X = %s\n" % (i, res[i].X, ))
+                first_sampling = False
+
+            # for i in range(len(res)):
+            #     while True:
+            #         G = [constr(res[i].x) for constr in constraint_ueq]
+            #         if numpy.any(numpy.array(G) > 0):
+            #             logger.warning("（Sampling）并非全部约束条件都满足for %d：%s\n重新采样……" % (i, G))
+            #             res[i].X = super(SamplingWithGoodEnoughValues, self).do(problem, 1, **kwargs)[0].X
+            #             continue
+            #         else:
+            #             break
             return res
 
 

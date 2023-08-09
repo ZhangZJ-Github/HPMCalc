@@ -18,7 +18,6 @@ from threading import Lock
 
 import matplotlib.pyplot as plt
 import pandas
-
 from _logging import logger
 
 # import simulation.task_manager.manual_task
@@ -27,6 +26,7 @@ CSV_ENCODING = 'gbk'
 
 class MagicTemplate:
     VARIABLE_PATTERN = r"%[\w.]+%"
+    M2D_ENCODING = 'utf-8'  # or 'gbk'
 
     def __init__(self, filename, working_dir: str, lock=Lock()):
         self.filename = filename
@@ -35,7 +35,7 @@ class MagicTemplate:
                                           os.path.split(os.path.splitext(self.filename)[0])[1])
         self.lock = lock
 
-        with open(filename, 'r') as f:
+        with open(filename, 'r', encoding=MagicTemplate.M2D_ENCODING) as f:
             self.text = f.read()
 
     def copy_template_to_working_dir(self):
@@ -64,12 +64,12 @@ class MagicTemplate:
         timestamp_ns = time.time_ns()
         time.sleep(0.1)
         self.lock.release()
-        return self.output_prefix + datetime.datetime.fromtimestamp(timestamp_ns / 1e9).strftime(
-            "_%Y%m%d_%H%M%S_") + ("%09d.m2d" % (timestamp_ns % 1e9))[1:]
+        return self.output_prefix + datetime.datetime.fromtimestamp(timestamp_ns // 1e9).strftime(
+            "_%Y%m%d_%H%M%S_") + ("%02d.m2d" % ((timestamp_ns % 1e9) / 1e7))[1:]
 
     def to_m2d(self, replace_rules: dict):
         file_path = self.new_m2d_file_name()
-        with open(file_path, 'w') as f:
+        with open(file_path, 'w', encoding=MagicTemplate.M2D_ENCODING) as f:
             f.write(self.generate(replace_rules))
         return file_path
 
@@ -79,13 +79,17 @@ from threading import Lock
 
 class TaskBase:
     MAGIC_SOLVER_PATH = r"G:\Program Files\Magic Tools\magic2d_Sng.exe"
-    colname_score = "score"
-    colname_path = "m2d_path"
-    colname_timestamp = 'timestamp'
+
+    class Colname:
+        score = "score"
+        path = "m2d_path"
+        timestamp = 'timestamp'
+        comment = 'comment'
 
     def __init__(self, template_name, working_dir=r'D:\MagicFiles\HPM\12.5GHz\优化', lock: Lock = Lock()):
         self.template = MagicTemplate(template_name, working_dir)
         self.log_file_name = os.path.join(working_dir, os.path.split(template_name)[1] + ".log.csv")
+        self.last_generated_m2d_path = '' # 最近一次生成的m2d文件路径
         if not os.path.exists(self.MAGIC_SOLVER_PATH):
             raise RuntimeError("请指定正确的MAGIC求解器路径！")
 
@@ -104,11 +108,12 @@ class TaskBase:
         logger.info("使用模板：%s" % self.template)
 
     def save_log_csv(self):
-        if os.path.exists(self.log_file_name):
-            df = pandas.concat([self.load_log(), self.log_df], axis=0)
-        else:
-            df = self.log_df
-        self.rewrite_log_csv(df)
+        logger.info("====为%s加锁====" % self.log_file_name)
+        self.lock.acquire()
+        header = False if os.path.exists(self.log_file_name) else True
+        self.log_df.to_csv(self.log_file_name, encoding=CSV_ENCODING, index=False, mode='a', header=header)
+        self.lock.release()
+        logger.info("====%s已解锁====" % self.log_file_name)
 
     def rewrite_log_csv(self, df):
         df.to_csv(self.log_file_name, encoding=CSV_ENCODING, index=False)
@@ -122,7 +127,8 @@ class TaskBase:
     #         self.log_df = pandas.merge(pandas.read_csv(self.log_file_name, encoding=CSV_ENCODING), self.log_df,
     #                                    on=None, how='outer')#.drop_duplicates()
 
-    def log(self, params: dict, m2d_path: str):
+    def log(self, params: dict,
+            m2d_path: str):
         """
         将修改的参数和主要结果记录到文件中
         :return:
@@ -130,9 +136,9 @@ class TaskBase:
         newdata = params.copy()
 
         res = self.get_res(m2d_path)
-        res[self.colname_timestamp] = time.time()
-        res[self.colname_score] = self.evaluate(res)
-        res[self.colname_path] = m2d_path
+        res[self.Colname.timestamp] = time.time()
+        res[self.Colname.score] = self.evaluate(res)
+        res[self.Colname.path] = m2d_path
 
         newdata.update(res)
         # self.load_log_csv()
@@ -142,13 +148,7 @@ class TaskBase:
         #     if key not in self.log_df.columns:
         #         self.log_df[key] = numpy.nan
         #     self.log_df[key][len(self.log_df) - 1] = newdata[key]
-        logger.info("====为%s加锁===" % self.log_file_name)
-        self.lock.acquire()
-
         self.save_log_csv()
-        self.lock.release()
-        logger.info("====%s已解锁===" % self.log_file_name)
-
         return self.log_df
 
     def load_log(self) -> pandas.DataFrame:
@@ -166,6 +166,7 @@ class TaskBase:
         return True
 
     def find_old_res(self, params: dict) -> str:
+        # TODO: 检查有效性
         if os.path.exists(self.log_file_name):
             self.lock.acquire()
             df = self.load_log()
@@ -176,7 +177,7 @@ class TaskBase:
             old_res_line = df[condition]
             if len(old_res_line):
                 logger.info(old_res_line)
-                old_m2d_path = old_res_line[self.colname_path].values[len(old_res_line) - 1]
+                old_m2d_path = old_res_line[self.Colname.path].values[len(old_res_line) - 1]
                 logger.info("找到了之前的记录：%s" % old_m2d_path)
                 return old_m2d_path
         return ""  # means not found
@@ -185,8 +186,8 @@ class TaskBase:
         try:
             log_df = self.log(param_set, m2d_path)
             last_logged_data = log_df.iloc[len(log_df) - 1]
-            logger.info("\n%s"%str(last_logged_data))
-            return last_logged_data[self.colname_score]
+            logger.info("\n%s" % str(last_logged_data))
+            return last_logged_data[self.Colname.score]
         except (
                 KeyError, FileNotFoundError, TypeError, IndexError, pandas.errors.ParserError, PermissionError) as e:
             logger.warning("记录结果时报错，已忽略：\n%s" % e)
@@ -198,7 +199,7 @@ class TaskBase:
         :param param_set:
         :return: 评分
         """
-        param_set['comment'] = comment
+        param_set[self.Colname.comment] = comment
         params_check_status = self.params_check(param_set)
         if not params_check_status:
             logger.warning("无效参数：%s" % (param_set))
@@ -208,8 +209,10 @@ class TaskBase:
         if old_m2d_path:
             return self.log_and_info(param_set, old_m2d_path)
 
-        logger.info("当前参数：%s" % param_set)
         m2d_path = self.template.to_m2d({key: str(param_set[key]) for key in param_set})
+        self.last_generated_m2d_path= m2d_path
+        logger.info("当前参数：%s => %s" % (param_set,m2d_path))
+
         cmd = '"%s" %s' % (self.MAGIC_SOLVER_PATH, m2d_path)
         logger.info("Run command:\n%s" % cmd)
         os.system(cmd)
@@ -229,14 +232,15 @@ class TaskBase:
         对log.csv中的每条记录重新打分
         :return:
         """
+        # 一般不并行执行，因此不加锁
         log_df = self.load_log()
         for i in range(len(log_df)):
-            path = log_df[self.colname_path][i]
+            path = log_df[self.Colname.path][i]
 
             res = self.get_res(path)
             score = self.evaluate(res)
             # log_df[self.colname_score] [i]= score
-            res[self.colname_score] = score
+            res[self.Colname.score] = score
             for key in res:
                 log_df[key][i] = res[key]
 
@@ -249,7 +253,7 @@ class TaskBase:
         """
         log_df = self.load_log()
         # index_to_delete = [log_df[self.colname_score] < score_threshold ]
-        m2d_paths_to_delete = log_df[self.colname_path][log_df[self.colname_score] < score_threshold]  # .tolist()
+        m2d_paths_to_delete = log_df[self.Colname.path][log_df[self.Colname.score] < score_threshold]  # .tolist()
         big_files_to_delete = []
         from total_parser import ExtTool
         import os

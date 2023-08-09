@@ -23,16 +23,17 @@ from threading import Lock
 
 
 class HPMSim(TaskBase):
-    rmin_cathode = 18e-3
     # 评分明细
-    EVAL_COLUMNS = colname_avg_power_score, colname_freq_accuracy_score, colname_freq_purity_score = [
-        "avg_power_score",
-        "freq_accuracy_score",  # 频率准确度，如，12.5 GHz的设备输出两个主峰应为0和25 GHz，且幅值接近1:1
-        "freq_purity_score"  # 频率纯度，如，12.5 GHz的设备除了上述两个主峰外，其他频率成分应趋于0
+    EVAL_COLUMNS = colname_power_eff_score, colname_out_power_score, colname_freq_accuracy_score, colname_freq_purity_score = [
+        "power efficiency score",
+        "out power score",
+        "freq accuracy score",  # 频率准确度，如，12.5 GHz的设备输出两个主峰应为0和25 GHz，且幅值接近1:1
+        "freq purity score"  # 频率纯度，如，12.5 GHz的设备除了上述两个主峰外，其他频率成分应趋于0
     ]
 
-    RAW_RES_COLUMNS = colname_avg_power, colname_freq_peaks = [
-        "avg. power",
+    RAW_RES_COLUMNS = colname_avg_power_in, colname_avg_power_out, colname_freq_peaks = [
+        "avg. power in",
+        "avg. power out",
         "freq peaks"
     ]
 
@@ -78,20 +79,26 @@ class HPMSim(TaskBase):
         """
         logger.info("evaluate of HPSim")
         # 以下各项得分最高为1
-        weights = {self.colname_avg_power_score: 3,  # TODO: 目前应为奇数
-                   self.colname_freq_accuracy_score: 2,  # 频率准确度，如，12.5 GHz的设备输出两个主峰应为0和25 GHz，且幅值接近1:1
-                   self.colname_freq_purity_score: 1  # 频率纯度，如，12.5 GHz的设备除了上述两个主峰外，其他频率成分应趋于0
-                   }
+        weights = {
+            self.colname_power_eff_score: 2,
+            self.colname_out_power_score: 1,
+            self.colname_freq_accuracy_score: 2,  # 频率准确度，如，12.5 GHz的设备输出两个主峰应为0和25 GHz，且幅值接近1:1
+            self.colname_freq_purity_score: 1  # 频率纯度，如，12.5 GHz的设备除了上述两个主峰外，其他频率成分应趋于0
+        }
         freq_peaks = numpy.array(json.loads(res["freq peaks"]))
         freq_accuracy_score = self.freq_accuracy_score(freq_peaks, self.desired_frequency, .5e9)
         avg_power_score = self.avg_power_score(res["avg. power"], self.desired_mean_power)
         freq_purity_score = self.freq_purity_score(freq_peaks)
 
-        res[self.colname_avg_power_score] = avg_power_score
+        res[self.colname_out_power_score] = avg_power_score
         res[self.colname_freq_accuracy_score] = freq_accuracy_score
         res[self.colname_freq_purity_score] = freq_purity_score
         score = (
-                avg_power_score ** weights[self.colname_avg_power_score]
+                numpy.abs(
+                    self.power_efficiency_score(res[self.colname_avg_power_in], res[self.colname_avg_power_out])) **
+                weights[
+                    self.colname_power_eff_score] *
+                avg_power_score ** weights[self.colname_out_power_score]
                 * freq_accuracy_score ** weights[self.colname_freq_accuracy_score]
                 * freq_purity_score ** weights[self.colname_freq_purity_score]
         )
@@ -102,16 +109,35 @@ class HPMSim(TaskBase):
         ratio = freq_peaks[2, 1] / freq_peaks[1, 1]  # 杂峰 / 第二主峰
         return 1 - ratio
 
-    def get_res(self, m2d_path: str, out_power_TD_titile: str = ' FIELD_POWER S.DA @PORT_RIGHT,FFT-#20.1') -> dict:
+    @staticmethod
+    def _get_mean(df: pandas.DataFrame, DeltaT):
+        """
+        获取近周期的时间序列数据df在时间间隔DeltaT内的均值
+        :param df: 第0列为时间，第1列为值
+        :param DeltaT:
+        :return:
+        """
+        colname_period = 'period'
+        df[colname_period] = df[0] // (DeltaT)
+        return df.groupby(colname_period).mean().iloc[-2][1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
+
+    def get_res(self, m2d_path: str, out_power_TD_titile: str = r' FIELD_POWER S.DA @RIGHT,FFT-#4.1',
+                in_power_TD_titile: str = r" FIELD_POWER S.DA @LEFT,FFT-#3.1", ) -> dict:
+        """
+        从结果文件中提取出关心的参数，供下一步分析
+        :param m2d_path:
+        :param out_power_TD_titile:
+        :return:
+        """
         et = ExtTool(os.path.splitext(m2d_path)[0])
         grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
         TD_title = out_power_TD_titile
-        output_power_TD = grd.obs[TD_title]['data']
-        colname_period = 'period'
-        output_power_TD[colname_period] = output_power_TD[0] // (
-                3 * 1 / (2 * self.desired_frequency))  # 功率：2倍频；为获得比较平滑的结果，这里扩大了采样周期
-        mean_output_power = output_power_TD.groupby(colname_period).mean().iloc[-2][
-            1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
+        output_power_TD, input_power_TD = grd.obs[TD_title]['data'], grd.obs[in_power_TD_titile]['data']
+        dT_for_period_avg = 3 * 1 / (2 * self.desired_frequency)
+        mean_output_power = self._get_mean(output_power_TD,
+                                           dT_for_period_avg)  # 功率：2倍频；为获得比较平滑的结果，这里扩大了采样周期
+        mean_input_power = self._get_mean(input_power_TD,
+                                          dT_for_period_avg)
         FD_title = TD_title[:-1] + '2'
         output_power_FD = grd.obs[FD_title]['data']  # unit in GHz
         output_power_FD: pandas.DataFrame = pandas.DataFrame(
@@ -130,7 +156,8 @@ class HPMSim(TaskBase):
         freq_peaks = freq_extremas[freq_peak_indexes]
         freq_peaks[:, 0] *= 1e9  # Convert to SI unit
         res = {
-            self.colname_avg_power: mean_output_power,
+            self.colname_avg_power_in: mean_input_power,  # TODO
+            self.colname_avg_power_out: mean_output_power,
             self.colname_freq_peaks: json.dumps(freq_peaks.tolist())
         }
         return res
@@ -138,7 +165,7 @@ class HPMSim(TaskBase):
     @staticmethod
     def avg_power_score(avg_power, desired_power):
         return 2 * (1 / (1 + numpy.exp(
-            -(3 * avg_power) / desired_power)) - 0.5)  # sigmoid函数，平均输出为0则0分，正无穷为1分，负无穷为-1分
+            -(3 * avg_power) / desired_power)) - 0.5)  # sigmoid函数的变形。平均输出为0则0分，正无穷为1分，负无穷为-1分
 
     @staticmethod
     def freq_accuracy_score(freq_peaks_sorted_by_magn: numpy.ndarray, desired_freq, freq_tol):
@@ -156,11 +183,11 @@ class HPMSim(TaskBase):
         return ((numpy.array([
             g(max_2_freq_peaks_sorted_by_freq[:, 0], desired_freq_SDA[i], freq_tol).sum()
             for i in range(len(desired_freq_SDA))]).sum()
-                 ) / (2 + g(desired_freq_SDA[0], desired_freq_SDA[1], freq_tol) * 2) *numpy.exp(
-                    - (max_2_freq_peaks_sorted_by_freq[0, 1] / max_2_freq_peaks_sorted_by_freq[1, 1] - 1) ** 2 / (
-                            2 * 0.2 ** 2)
-                )
-                ) **(1/2)
+                 ) / (2 + g(desired_freq_SDA[0], desired_freq_SDA[1], freq_tol) * 2) * numpy.exp(
+            - (max_2_freq_peaks_sorted_by_freq[0, 1] / max_2_freq_peaks_sorted_by_freq[1, 1] - 1) ** 2 / (
+                    2 * 0.2 ** 2)
+        )
+                ) ** (1 / 2)
         # return (g(max_2_freq_peaks_sorted_by_freq[0, 0], desired_freq_SDA[0], freq_tol) * g(
         #     max_2_freq_peaks_sorted_by_freq[1, 0], desired_freq_SDA[0], freq_tol) * numpy.exp(
         #     - (max_2_freq_peaks_sorted_by_freq[0, 1] / max_2_freq_peaks_sorted_by_freq[1, 1] - 1) ** 2 / (
@@ -168,13 +195,17 @@ class HPMSim(TaskBase):
         # )
         #         ) ** (1 / 2)
 
+    @staticmethod
+    def power_efficiency_score(avg_power_in, avg_power_out, ):
+        return avg_power_out / avg_power_in
+
 
 lock = Lock()
 
 
 def get_hpmsim(lock=lock):
-    return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\CS\CS.m2d",
-                  r'E:\HPM\11.7GHz\optimize\CS.1', 11.7e9, 1e9, lock=lock)
+    return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
+                  r'E:\HPM\11.7GHz\optimize\TTO', 11.7e9, 1e9, lock=lock)
 
 
 if __name__ == '__main__':
@@ -184,7 +215,7 @@ if __name__ == '__main__':
     # HPMSim(r"F:\changeworld\HPMCalc\simulation\template\CS\CS.m2d",
     #        r'E:\HPM\11.7GHz\optimize\CS.1', 11.7e9, 1e9, lock=lock)
     hpmsim = get_hpmsim()
-    res = hpmsim.get_res(r"E:\HPM\11.7GHz\optimize\CS.1\CS_20230719_105934_45401344.grd",)
+    res = hpmsim.get_res(r"E:\HPM\11.7GHz\optimize\CS.1\CS_20230719_105934_45401344.grd", )
     # res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\CS.manual\CS_20230719_194902_80508928.m2d', )
 
     score = hpmsim.evaluate(res)

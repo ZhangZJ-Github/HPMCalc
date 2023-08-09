@@ -14,11 +14,11 @@ from concurrent.futures import ThreadPoolExecutor
 
 if __name__ == '__main__':
     def get_hpmsim(lock=Lock()):
-        return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
-                      r'E:\HPM\11.7GHz\optimize\RSSSE.manual', 11.7e9, 1e9, lock=lock)
+        return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
+                      r'E:\HPM\11.7GHz\optimize\TTO.manual', 11.7e9, 1e9, lock=lock)
 
 
-    initial_csv_path = r"F:\changeworld\HPMCalc\simulation\template\RSSSE\Initialize.manual.csv"
+    initial_csv_path = r"F:\changeworld\HPMCalc\simulation\template\TTO\Initialize.manual.csv"
 
     # Initializer.make_new_initial_csv(initial_csv_path, get_hpmsim())
     initializer = Initializer(initial_csv_path)
