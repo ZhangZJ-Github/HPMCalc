@@ -3,8 +3,8 @@ HEADER DEVICE       "RBWO" ;
 HEADER REMARKS      "" ;
 SYSTEM CYLINDRICAL;
 
-dz = 0.2mm;
-dr = 0.2mm;
+dz = 0.5mm;
+dr = 0.5mm;
 
 shell_min_thickness = 2mm;
 
@@ -14,7 +14,7 @@ cathode.dr = 50mm;
 cathode.dz = 5mm;
 cathode.z0 = 0mm;
 cathode.zend = cathode.z0+cathode.dz;
-cathode.rout = 50mm;
+cathode.rout = %cathode.rout%;
 
 emitter.dr = 1mm;
 emitter.dz = 20mm;
@@ -96,7 +96,7 @@ outwaveguide.oblique.dz = %outwaveguide.oblique.dz%;
 outwaveguide.oblique.dr = min(%outwaveguide.oblique.dr%,outshell.rin-outwaveguide.oblique.r1);
 outwaveguide.oblique.r2 = outwaveguide.oblique.r1 
     + outwaveguide.oblique.dr;
-outwaveguide.straight.rin = min(sws3.out.rin + %outwaveguide.straight.rinoffset%,sws3.out.rout);
+outwaveguide.straight.rin = min(sws3.out.rin + (%outwaveguide.straight.rinoffset%),sws3.out.rout);
 outwaveguide.straight.rout = outwaveguide.oblique.r2;
 outwaveguide.straight.dz = %outwaveguide.straight.dz%;
 outwaveguide.straight.z0 = outwaveguide.oblique.z0+ outwaveguide.oblique.dz;
@@ -125,6 +125,8 @@ mark simulation_area x2 size dr;
 AUTOGRID;
 
 
+
+
 CONDUCTOR cathode material copper;
 CONDUCTOR emitter material copper;
 CONDUCTOR outshell material copper;
@@ -150,7 +152,7 @@ LINE left conformal cathode.z0 cathode.rout cathode.z0 outshell.rin;
 FUNCTION g2(x1,x2,x3) = 1 / x2;
 
 FUNCTION g3(x1,x2,x3) = 0 ;
-Vinput = -500e3;
+Vinput = %Vinput%;
 trise = 0.1e-12;
 FUNCTION f(t) =+abs(Vinput)*(1- exp(-t/trise)) ;
 ! PORT left POSITIVE;
@@ -225,7 +227,7 @@ VOID void_waveguide;
 
 
 area absorber conformal absorber.z0 anode.in.rout 
-    sws3.zend anode.out.rin;
+    sws3.zend outwaveguide.straight.rin;
 CONDUCTOR absorber material copper;
 
 coil.N = 199;
@@ -243,7 +245,7 @@ ENDDO;
 
 
 ! MAXWELL BIASED;
-runtime = 50e-9;
+runtime = 30e-9;
 DURATION runtime;
 TIMER FOR_RANGE PERIODIC REAL 0 RUNTIME 0.1e-9;
 TIMER FOR_PHASESPACE PERIODIC REAL 0 RUNTIME 0.2e-9;

@@ -65,7 +65,7 @@ class MagicTemplate:
         time.sleep(0.1)
         self.lock.release()
         return self.output_prefix + datetime.datetime.fromtimestamp(timestamp_ns // 1e9).strftime(
-            "_%Y%m%d_%H%M%S_") + ("%02d.m2d" % ((timestamp_ns % 1e9) / 1e7))[1:]
+            "_%Y%m%d_%H%M%S_") + ("%02d.m2d" % ((timestamp_ns % 1e9) // 1e7))[1:]
 
     def to_m2d(self, replace_rules: dict):
         file_path = self.new_m2d_file_name()
