@@ -73,16 +73,18 @@ class HPMSim(TaskBase):
             self.colname_freq_purity_score: 1  # 频率纯度，如，12.5 GHz的设备除了上述两个主峰外，其他频率成分应趋于0
         }
         freq_peaks = numpy.array(json.loads(res[self.ResKeys.freq_peaks]))
-        freq_accuracy_score = self.freq_accuracy_score(freq_peaks, self.desired_frequency, .5e9)
-        avg_power_score = self.avg_power_score(res[self.ResKeys.avg_power_out], self.desired_mean_power)
-        freq_purity_score = self.freq_purity_score(freq_peaks)
 
-        res[self.colname_out_power_score] = avg_power_score
-        res[self.colname_freq_accuracy_score] = freq_accuracy_score
-        res[self.colname_freq_purity_score] = freq_purity_score
+        res[self.colname_out_power_score] = avg_power_score = self.avg_power_score(res[self.ResKeys.avg_power_out],
+                                                                                   self.desired_mean_power)
+        res[self.colname_freq_accuracy_score] = freq_accuracy_score = self.freq_accuracy_score(freq_peaks,
+                                                                                               self.desired_frequency,
+                                                                                               .5e9)
+        res[self.colname_freq_purity_score] = freq_purity_score = self.freq_purity_score(freq_peaks)
+        res[self.colname_power_eff_score] = power_eff_score = self.power_efficiency_score(
+            res[self.colname_avg_power_in], res[self.colname_avg_power_out])
         score = (
-                numpy.abs(
-                    self.power_efficiency_score(res[self.colname_avg_power_in], res[self.colname_avg_power_out])) **
+                numpy.abs(power_eff_score
+                          ) **
                 weights[self.colname_power_eff_score] *
                 avg_power_score ** weights[self.colname_out_power_score]
                 * freq_accuracy_score ** weights[self.colname_freq_accuracy_score]
@@ -191,7 +193,7 @@ lock = Lock()
 
 def get_hpmsim(lock=lock):
     return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
-                  r'E:\HPM\11.7GHz\optimize\TTO\from_good', 11.7e9, 1e9, lock=lock)
+                  r'E:\HPM\11.7GHz\optimize\TTO\from_good_2', 11.7e9, 1e9, lock=lock)
 
 
 if __name__ == '__main__':
@@ -201,7 +203,7 @@ if __name__ == '__main__':
     # HPMSim(r"F:\changeworld\HPMCalc\simulation\template\CS\CS.m2d",
     #        r'E:\HPM\11.7GHz\optimize\CS.1', 11.7e9, 1e9, lock=lock)
     hpmsim = get_hpmsim()
-    res = hpmsim.get_res(r"E:\HPM\11.7GHz\optimize\TTO\TTO-template_20230810_131048_7.grd", )
+    res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\TTO\from_good\TTO-template_20230813_033810_9.grd', )
     # res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\CS.manual\CS_20230719_194902_80508928.m2d', )
-
-    score = hpmsim.evaluate(res)
+    hpmsim.re_evaluate()
+    # score = hpmsim.evaluate(res)

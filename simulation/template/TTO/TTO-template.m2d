@@ -163,6 +163,10 @@ PORT left Positive
 line right conformal simulation_area.zmx outwaveguide.straight.rin 
     simulation_area.zmx outwaveguide.straight.rout;
 PORT right NEGATIVE;
+
+
+
+
 tempr = (outwaveguide.straight.rout+outwaveguide.straight.rin)/2;
 POINT PT_at_RIGHT simulation_area.zmx tempr;
 ! 写在observe槽内场之前，否则编号不好确定
@@ -176,6 +180,8 @@ observe FIELD B3 PT_at_RIGHT fft magnitude;
 
 observe FIELD E2 RIGHT fft magnitude;
 observe FIELD B3 RIGHT fft magnitude;
+
+observe FIELD_INTEGRAL E.dl right fft magnitude;
 
 do i = 1,3;
     do j = 0,sws'i'.N-1;
@@ -229,6 +235,11 @@ VOID void_waveguide;
 area absorber conformal absorber.z0 anode.in.rout 
     sws3.zend outwaveguide.straight.rin;
 CONDUCTOR absorber material copper;
+
+! trise = 10e-12;
+! POISSON pois1 2 outshell 1.0 absorber 0;
+! Function Vapp(t) = 0;
+! CIRCUIT Vapp pois1;
 
 coil.N = 199;
 COIL.CURRENT = 100 / 76e-3 * %B_ref%;

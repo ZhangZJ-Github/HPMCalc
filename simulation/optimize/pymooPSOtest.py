@@ -61,7 +61,7 @@ if __name__ == '__main__':
                                        range(len(initializer.initial_df.columns))},
                                      'PSO'))
             try:
-                score = hpmsim.log_df[hpmsim.colname_score][0]
+                score = hpmsim.log_df[hpmsim.Colname.score][0]
                 out['F'] = [-score * self.BIG_NUM]
 
                 #     [
