@@ -12,8 +12,9 @@ from simulation.optimize.optimize_HPM import *
 from simulation.optimize.initialize import Initializer
 from concurrent.futures import ThreadPoolExecutor
 
+lock = Lock()
 if __name__ == '__main__':
-    def get_hpmsim(lock=Lock()):
+    def get_hpmsim(lock=lock):
         return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
                       r'E:\HPM\11.7GHz\optimize\TTO.manual', 11.7e9, 1e9, lock=lock)
 

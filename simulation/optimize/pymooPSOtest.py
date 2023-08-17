@@ -59,7 +59,7 @@ if __name__ == '__main__':
             logger.info('score = %.2e' %
                         hpmsim.update({initializer.index_to_param_name(i): x[i] for i in
                                        range(len(initializer.initial_df.columns))},
-                                     'PSO'))
+                                      'PSO'))
             try:
                 score = hpmsim.log_df[hpmsim.Colname.score][0]
                 out['F'] = [-score * self.BIG_NUM]
@@ -72,7 +72,7 @@ if __name__ == '__main__':
                 logger.info("out['F'] = %s" % out['F'])
 
             except AttributeError as e:
-                logger.warning("（来自%s）忽略的报错：%s" % (hpmsim.last_generated_m2d_path,e))
+                logger.warning("（来自%s）忽略的报错：%s" % (hpmsim.last_generated_m2d_path, e))
                 self.bad_res(out)
             return
 
@@ -106,11 +106,12 @@ if __name__ == '__main__':
             global first_sampling
 
             for j in range(len(res)):
-                res[j].X =res[j].X//initializer.precision * initializer.precision
-            if first_sampling:# 若为第一次采样则严格按照初始值设置
-                for i in range(min(initializer. N_initial, len(res))):
-                    res[i].X = initializer. initial_df.loc[i].values
-                    logger.info("设置了初始值：res[%d].X = %s\n" % (i, res[i].X, ))
+                res[j].X = res[j].X // initializer.precision * initializer.precision
+                logger.info('已按照指定精度截断，res[%d].X = %s' % (j, res[j].X))
+            if first_sampling:  # 若为第一次采样则严格按照初始值设置
+                for i in range(min(initializer.N_initial, len(res))):
+                    res[i].X = initializer.initial_df.loc[i].values
+                    logger.info("设置了初始值：res[%d].X = %s\n" % (i, res[i].X,))
                 first_sampling = False
 
             # for i in range(len(res)):

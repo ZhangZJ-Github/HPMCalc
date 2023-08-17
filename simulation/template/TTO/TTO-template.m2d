@@ -3,28 +3,28 @@ HEADER DEVICE       "RBWO" ;
 HEADER REMARKS      "" ;
 SYSTEM CYLINDRICAL;
 
-dz = 0.5mm;
-dr = 0.5mm;
+dz = 0.3mm;
+dr = 0.3mm;
 
 shell_min_thickness = 2mm;
 
 
 ! 阴极底座
-cathode.dr = 50mm;
-cathode.dz = 5mm;
+! cathode.dr = 50mm;
+cathode.dz = 20mm;
 cathode.z0 = 0mm;
 cathode.zend = cathode.z0+cathode.dz;
 cathode.rout = %cathode.rout%;
 
 emitter.dr = 1mm;
-emitter.dz = 20mm;
+emitter.dz = 10mm;
 emitter.rout = cathode.rout;
 emitter.rin = emitter.rout-emitter.dr;
 emitter.r = (emitter.rin+emitter.rout) /2;
 emitter.z0 = cathode.zend;
 emitter.zend = emitter.z0+emitter.dz;
 
-outshell.rin = emitter.rout+20mm;
+outshell.rin = emitter.rout+30mm;
 outshell.rout = outshell.rin+shell_min_thickness;
 
 anode.z0 = emitter.zend+%anode.z0offset%;
@@ -168,7 +168,8 @@ PORT right NEGATIVE;
 
 
 tempr = (outwaveguide.straight.rout+outwaveguide.straight.rin)/2;
-POINT PT_at_RIGHT simulation_area.zmx tempr;
+tempz = simulation_area.zmx - 2mm;
+POINT PT_at_RIGHT tempz tempr;
 ! 写在observe槽内场之前，否则编号不好确定
 observe FIELD_INTEGRAL E.dl left fft magnitude suffix InputVoltage;
 observe Emitted emitter ALL Current;
@@ -235,11 +236,29 @@ VOID void_waveguide;
 area absorber conformal absorber.z0 anode.in.rout 
     sws3.zend outwaveguide.straight.rin;
 CONDUCTOR absorber material copper;
+z = (outwaveguide.straight.z0+outwaveguide.straight.zend) /2;
+LINE inductor_0 conformal 
+    z outwaveguide.straight.rin 
+    z outwaveguide.straight.rout;
+
+inductor inductor_0 1mm;
+! FOIL_1.z0 = sws1.z0;
+! FOIL_1.dz = dz;
+! FOIL_1.zend = FOIL_1.z0+ FOIL_1.dz;
+
+! AREA FOIL_1 conformal FOIL_1.z0 anode.in.rout FOIL_1.zend anode.out.rin;
+! foildz = dz/10;
+! FOIL FOIL_1 foildz Al;
 
 ! trise = 10e-12;
-! POISSON pois1 2 outshell 1.0 absorber 0;
-! Function Vapp(t) = 0;
-! CIRCUIT Vapp pois1;
+! POISSON pois1 2
+!     cathode 1.0 outshell 0 ;
+! POISSON pois2 2 outshell 0 absorber 1.0;
+! Function Vapp1(t) = (Vinput);!*(1-exp(t/ trise));
+! Function Vapp2(t) = 0;
+! CIRCUIT Vapp1 pois1;
+! ! CIRCUIT Vapp2 pois2 MEASURE INTEGRAL 1 right;
+! CIRCUIT Vapp2 pois2;
 
 coil.N = 199;
 COIL.CURRENT = 100 / 76e-3 * %B_ref%;
@@ -259,8 +278,8 @@ ENDDO;
 runtime = 30e-9;
 DURATION runtime;
 TIMER FOR_RANGE PERIODIC REAL 0 RUNTIME 0.1e-9;
-TIMER FOR_PHASESPACE PERIODIC REAL 0 RUNTIME 0.2e-9;
-TIMER FOR_CONTOUR PERIODIC REAL 0 RUNTIME 1e-9;
+TIMER FOR_PHASESPACE PERIODIC REAL 0 RUNTIME 0.5e-9;
+TIMER FOR_CONTOUR PERIODIC REAL 0 RUNTIME 0.5e-9;
 TIMER FOR_STATIC PERIODIC REAL 0 RUNTIME 10e-9;
 
 PHASESPACE  AXES  X1 X2 FOR_PHASESPACE;!  SPECIES ELECTRON MOVIE PNG;
