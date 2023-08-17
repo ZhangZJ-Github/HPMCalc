@@ -20,9 +20,6 @@ from scipy.signal import argrelextrema
 from simulation.task_manager.task import TaskBase
 import numpy
 from threading import Lock
-import re
-import _base
-import scipy.constants as C
 
 
 class HPMSim(TaskBase):
@@ -97,9 +94,7 @@ class HPMSim(TaskBase):
 
     @staticmethod
     def freq_purity_score(freq_peaks: numpy.ndarray, ):
-        max_2_freq_peaks = freq_peaks[:2]
-        max_2_freq_peaks_sorted_by_freq = max_2_freq_peaks[max_2_freq_peaks[:, 0].argsort()]
-        ratio = freq_peaks[2, 1] / max_2_freq_peaks_sorted_by_freq[1, 1]  # 杂峰 / 所需的峰
+        ratio = freq_peaks[2, 1] / freq_peaks[1, 1]  # 杂峰 / 第二主峰
         return 1 - ratio
 
     @staticmethod
@@ -114,32 +109,8 @@ class HPMSim(TaskBase):
         df[colname_period] = df[0] // (DeltaT)
         return df.groupby(colname_period).mean().iloc[-2][1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
 
-    @staticmethod
-    def _get_min_and_max(df: pandas.DataFrame, DeltaT):
-        """
-        获取近周期的时间序列数据df在时间间隔DeltaT内的均值
-        :param df: 第0列为时间，第1列为值
-        :param DeltaT:
-        :return:
-        """
-        colname_period = 'period'
-        df[colname_period] = df[0] // (DeltaT)
-        return df.groupby(colname_period).min().iloc[-2][1], df.groupby(colname_period).max().iloc[-2][
-            1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
-
-    @staticmethod
-    def _length_str_converter(s: str) -> float:
-        """
-
-        :param s: 形如'3.012cm'
-        :return:
-        """
-        unit = re.findall(r'[a-zA-Z]+', s, )[0]
-        numeric = s.split(unit)[0]
-        return float(numeric) * _base.UnitConvertor().length_unit_to_SI_unit_factors[unit]
-
-    def get_res(self, m2d_path: str, out_Er_TD_title: str = r' FIELD E2 @RIGHT,FFT-#7.1',
-                in_power_TD_title: str = r" FIELD_POWER S.DA @LEFT,FFT-#3.1", ) -> dict:
+    def get_res(self, m2d_path: str, out_power_TD_titile: str = r' FIELD_POWER S.DA @RIGHT,FFT-#4.1',
+                in_power_TD_titile: str = r" FIELD_POWER S.DA @LEFT,FFT-#3.1", ) -> dict:
         """
         从结果文件中提取出关心的参数，供下一步分析
         :param m2d_path:
@@ -148,24 +119,13 @@ class HPMSim(TaskBase):
         """
         et = ExtTool(os.path.splitext(m2d_path)[0])
         grd = grd_parser.GRD(et.get_name_with_ext(ExtTool.FileType.grd))
-        TD_title = out_Er_TD_title
-        output_Er_TD, input_power_TD = grd.obs[TD_title]['data'], grd.obs[in_power_TD_title]['data']
-        dT_for_period_avg = 3 * 1 / (1 * self.desired_frequency)
-        mean_input_power = self._get_mean(input_power_TD, dT_for_period_avg)
-        # 几个周期内Er的变化范围
-        Ermin, Ermax = self._get_min_and_max(output_Er_TD, dT_for_period_avg)
-        loc_str = grd.obs[TD_title]['location_str']  # 形如' Averaged: Line: (27.65cm, 3.475cm) To (27.65cm, 4.375cm)'
-
-        _res = re.findall(
-            r'\((' + _base.FrequentUsedPatter.float + '\w+), (' + _base.FrequentUsedPatter.float + '\w+)\) To \((' + _base.FrequentUsedPatter.float + '\w+), (' + _base.FrequentUsedPatter.float + '\w+)\)',
-            loc_str)[0]
-        r1str, r2str = _res[3], _res[9]  # 形如'3.475cm', '4.375cm'
-        logger.info("r1str, r2str = (%s, %s)" % (r1str, r2str))
-        r1, r2 = self._length_str_converter(r1str, ), self._length_str_converter(r2str, )
-        logger.info('r1, r2 = (%.5e,%.5e)' % (r1, r2))
-        mean_output_power = C.epsilon_0 * ((Ermax - Ermin) / 2) ** 2 / 2 * C.c * numpy.pi * (
-                r2 ** 2 - r1 ** 2)  # 估计值，仅供参考，通常远低于S.DA
-
+        TD_title = out_power_TD_titile
+        output_power_TD, input_power_TD = grd.obs[TD_title]['data'], grd.obs[in_power_TD_titile]['data']
+        dT_for_period_avg = 3 * 1 / (2 * self.desired_frequency)
+        mean_output_power = self._get_mean(output_power_TD,
+                                           dT_for_period_avg)  # 功率：2倍频；为获得比较平滑的结果，这里扩大了采样周期
+        mean_input_power = self._get_mean(input_power_TD,
+                                          dT_for_period_avg)
         FD_title = TD_title[:-1] + '2'
         output_power_FD = grd.obs[FD_title]['data']  # unit in GHz
         output_power_FD: pandas.DataFrame = pandas.DataFrame(
@@ -184,10 +144,6 @@ class HPMSim(TaskBase):
         freq_peaks = freq_extremas[freq_peak_indexes]
         freq_peaks[:, 0] *= 1e9  # Convert to SI unit
         res = {
-            'Ermax': Ermax,
-            'Ermin': Ermin,
-            'r1': r1,
-            'r2': r2,
             self.colname_avg_power_in: mean_input_power,  # TODO
             self.colname_avg_power_out: mean_output_power,
             self.colname_freq_peaks: json.dumps(freq_peaks.tolist())
@@ -202,13 +158,7 @@ class HPMSim(TaskBase):
     @staticmethod
     def freq_accuracy_score(freq_peaks_sorted_by_magn: numpy.ndarray, desired_freq, freq_tol):
         """
-        :param freq_peaks_sorted_by_magn: 形如array([
-            [523991000.0, 12923700.0],
-            [1571970000.0, 5934150.0],
-            [2619960000.0, 3399830.0],
-            [4191930000.0, 1545020.0],
-            [5239910000.0, 1140120.0]
-        ])
+        :param freq_peaks_sorted_by_magn:
         :param desired_freq:
         :param freq_tol:
         :return: 满分：1
@@ -216,17 +166,16 @@ class HPMSim(TaskBase):
         g = lambda x, mu, sigma: numpy.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
         max_2_freq_peaks = freq_peaks_sorted_by_magn[:2]
         max_2_freq_peaks_sorted_by_freq = max_2_freq_peaks[max_2_freq_peaks[:, 0].argsort()]
-        # desired_freq_SDA = numpy.array([0, desired_freq * 2])
-        return g(max_2_freq_peaks_sorted_by_freq[1, 0], desired_freq, freq_tol)
+        desired_freq_SDA = numpy.array([0, desired_freq * 2])
 
-        # return ((numpy.array([
-        #     g(max_2_freq_peaks_sorted_by_freq[:, 0], desired_freq_SDA[i], freq_tol).sum()
-        #     for i in range(len(desired_freq_SDA))]).sum()
-        #          ) / (2 + g(desired_freq_SDA[0], desired_freq_SDA[1], freq_tol) * 2) * numpy.exp(
-        #     - (max_2_freq_peaks_sorted_by_freq[0, 1] / max_2_freq_peaks_sorted_by_freq[1, 1] - 1) ** 2 / (
-        #             2 * 0.2 ** 2)
-        # )
-        #         ) ** (1 / 2)
+        return ((numpy.array([
+            g(max_2_freq_peaks_sorted_by_freq[:, 0], desired_freq_SDA[i], freq_tol).sum()
+            for i in range(len(desired_freq_SDA))]).sum()
+                 ) / (2 + g(desired_freq_SDA[0], desired_freq_SDA[1], freq_tol) * 2) * numpy.exp(
+            - (max_2_freq_peaks_sorted_by_freq[0, 1] / max_2_freq_peaks_sorted_by_freq[1, 1] - 1) ** 2 / (
+                    2 * 0.2 ** 2)
+        )
+                ) ** (1 / 2)
         # return (g(max_2_freq_peaks_sorted_by_freq[0, 0], desired_freq_SDA[0], freq_tol) * g(
         #     max_2_freq_peaks_sorted_by_freq[1, 0], desired_freq_SDA[0], freq_tol) * numpy.exp(
         #     - (max_2_freq_peaks_sorted_by_freq[0, 1] / max_2_freq_peaks_sorted_by_freq[1, 1] - 1) ** 2 / (
@@ -239,12 +188,18 @@ class HPMSim(TaskBase):
         return avg_power_out / avg_power_in
 
 
-lock = Lock()
+class MyLock:
+    def __init__(self):
+        # super(MyLock, self).__init__()
+        logger.info('One MyLock object initialized')
+
+
+lock = Lock()#MyLock()
 
 
 def get_hpmsim(lock=lock):
     return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
-                  r'E:\HPM\11.7GHz\optimize\TTO\from_good_4', 11.7e9, 1e9, lock=lock)
+                  r'E:\HPM\11.7GHz\optimize\TTO\from_good_5', 11.7e9, 3e9, lock=lock)
 
 
 if __name__ == '__main__':
