@@ -193,10 +193,19 @@ class TaskBase:
             condition = pandas.Series([True] * len(df))
             for key in params:
                 if key.startswith('%'):
+                    old_condition = condition
                     condition = condition & (df[key] == params[key])
-            # logger.info('condition = %s' % (condition))
+                    logger.info(
+                        'params[%s] = %s, condition.any() = %s, condition[condition] = %s' % (
+                            key, params[key], condition.any(), condition[condition]))
+                    if not condition.any():
+                        logger.info(
+                            'old_condition[df[key] == params[key]] = %s' % (old_condition[df[key] == params[key]]))
+                        # logger.info('df[key][df[key] == params[key]] = \n%s'%(df[key][df[key] == params[key]]))
+                        break
+            logger.info('condition = %s' % (condition))
             old_res_line = df[condition]
-            # logger.info('len(old_res_line) = %d' % (len(old_res_line)))
+            logger.info('len(old_res_line) = %d' % (len(old_res_line)))
             if len(old_res_line):
                 # logger.info("old_res_line = %s" % old_res_line)
                 old_m2d_path = old_res_line[self.Colname.path].values[

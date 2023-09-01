@@ -14,7 +14,7 @@ shell_min_thickness = 2mm;
 cathode.dz = 20mm;
 cathode.z0 = 0mm;
 cathode.zend = cathode.z0+cathode.dz;
-cathode.rout = %cathode.rout%;
+cathode.rout = 52mm;
 
 emitter.dr = 1mm;
 emitter.dz = 10mm;
@@ -27,7 +27,7 @@ emitter.zend = emitter.z0+emitter.dz;
 outshell.rin = emitter.rout+30mm;
 outshell.rout = outshell.rin+shell_min_thickness;
 
-anode.z0 = emitter.zend+%anode.z0offset%;
+anode.z0 = emitter.zend+0.0228;
 
 ! 粒子通道径向厚度最小值
 bunch_channel.dr = min(%bunch_channel.dr%,(outshell.rin-emitter.r)*2 / 1.5);

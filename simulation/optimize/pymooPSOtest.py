@@ -103,10 +103,11 @@ if __name__ == '__main__':
 
         def do(self, problem, n_samples, **kwargs):
             res = super(SamplingWithGoodEnoughValues, self).do(problem, n_samples, **kwargs)
+            logger.info('SamplingWithGoodEnoughValues.do()')
             global first_sampling
 
             for j in range(len(res)):
-                res[j].X = res[j].X // initializer.precision * initializer.precision
+                res[j].X = (res[j].X // initializer.precision).astype(int) * initializer.precision
                 logger.info('已按照指定精度截断，res[%d].X = %s' % (j, res[j].X))
             if first_sampling:  # 若为第一次采样则严格按照初始值设置
                 for i in range(min(initializer.N_initial, len(res))):
@@ -127,7 +128,7 @@ if __name__ == '__main__':
 
 
     algorithm = pymooPSO(
-        pop_size=50,
+        pop_size=49,
         sampling=SamplingWithGoodEnoughValues(),  # LHS(),
         # ref_dirs=ref_dirs
     )
