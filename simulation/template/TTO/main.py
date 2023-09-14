@@ -4,7 +4,7 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : main.py
 # @Software: PyCharm
-from simulation.optimize.optimize_HPM import HPMSimWithInitializer, OptimizeJob, lock
+from simulation.optimize.hpm import HPMSimWithInitializer, OptimizeJob, lock
 import simulation.optimize.initialize
 
 initial_csv = r"F:\changeworld\HPMCalc\simulation\template\TTO\Initialize.csv"
