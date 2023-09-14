@@ -12,10 +12,10 @@ import os.path
 import re
 import shutil
 import time
-from abc import abstractmethod
 from collections import OrderedDict
 from threading import Lock
-
+import matplotlib
+matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import pandas
 from _logging import logger
@@ -82,9 +82,10 @@ class MagicTemplate:
 
 
 from threading import Lock
+from abc import ABC, abstractmethod
 
 
-class TaskBase:
+class TaskBase(ABC):
     MAGIC_SOLVER_PATH = r"G:\Program Files\Magic Tools\magic2d_Sng.exe"
 
     class Colname:
@@ -171,16 +172,19 @@ class TaskBase:
     def load_log(self) -> pandas.DataFrame:
         return pandas.read_csv(self.log_file_name, encoding=CSV_ENCODING)
 
+    @abstractmethod
     def evaluate(self, res: dict):
         pass
 
+    @abstractmethod
     def params_check(self, params: dict) -> bool:
         """
-        检查输入参数是否合法
+        检查输入参数是否合法，若不合法，直接修改传入的字典。
+        log.csv中记录的是此处修改之后的参数值。
         :param params:
-        :return:
+        :return: True if 修改成功
         """
-        return True
+        pass
 
     def find_old_res(self, params: dict) -> str:
         # TODO: 检查有效性

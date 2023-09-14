@@ -102,6 +102,7 @@ if __name__ == '__main__':
             super(SamplingWithGoodEnoughValues, self).__init__()
 
         def do(self, problem, n_samples, **kwargs):
+            # 只在每个个体的第一代执行
             res = super(SamplingWithGoodEnoughValues, self).do(problem, n_samples, **kwargs)
             logger.info('SamplingWithGoodEnoughValues.do()')
             global first_sampling

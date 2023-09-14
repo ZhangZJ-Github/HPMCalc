@@ -1,0 +1,24 @@
+HEADER AUTHOR       "Zi-Jing Zhang" ; 
+HEADER DEVICE       "CavChain" ;
+HEADER REMARKS      "" ;
+SYSTEM CYLINDRICAL;
+
+dz = 0.3mm;
+dr = 0.3mm;
+
+emitter.r = 10mm;
+Vinput = -500e3;
+cathode.dz = 3mm;
+cathode.z0 = 0;
+cathode.zend =cathode.z0+cathode.dz;
+
+emitter.dr = 1mm;
+emitter.dz = 10mm;
+emitter.z0 = cathode.zend;
+emitter.zend = emitter.z0+emitter.dz;
+
+anode.z0 = 0;
+anode.dz = 4mm;
+anode.zend = anode.z0+anode.dz;
+
+shell.thickness = 2mm;

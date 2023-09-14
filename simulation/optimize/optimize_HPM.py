@@ -7,10 +7,21 @@
 import heapq
 import json
 import os.path
+import typing
 
 import matplotlib
 
 matplotlib.use('tkagg')
+
+from pymoo.core.problem import ElementwiseProblem
+
+from multiprocessing.pool import ThreadPool
+
+from pymoo.operators.sampling.lhs import LHS
+from pymoo.algorithms.soo.nonconvex.pso import PSO
+import simulation.optimize.initialize
+from pymoo.visualization.scatter import Scatter
+from pymoo.core.problem import StarmapParallelization
 
 import grd_parser
 import pandas
@@ -20,6 +31,8 @@ from scipy.signal import argrelextrema
 from simulation.task_manager.task import TaskBase
 import numpy
 from threading import Lock
+import shutil
+from pymoo.optimize import minimize
 
 
 class HPMSim(TaskBase):
@@ -51,11 +64,7 @@ class HPMSim(TaskBase):
         self.desired_mean_power = desired_mean_power
 
     def params_check(self, params: dict) -> bool:
-        """
-        将参数合法化
-        :param params:
-        :return:
-        """
+        # Do nothing
         return True
 
     def evaluate(self, res: dict):
@@ -188,18 +197,158 @@ class HPMSim(TaskBase):
         return avg_power_out / avg_power_in
 
 
-class MyLock:
-    def __init__(self):
-        # super(MyLock, self).__init__()
-        logger.info('One MyLock object initialized')
-
-
-lock = Lock()#MyLock()
+lock = Lock()
 
 
 def get_hpmsim(lock=lock):
     return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
                   r'E:\HPM\11.7GHz\optimize\TTO\from_good_5', 11.7e9, 3e9, lock=lock)
+
+
+class HPMSimWithInitializer(HPMSim):
+    """
+    具有基本的参数检查功能的HPMSim子类。
+    参数检查功能依赖于initialize中写入的规则，主要包括越界判断、按指定精度截断。
+    pymoo模块支持越界判断功能，因此没必要在这里重复判断。
+    若要实现更复杂的参数检查规则，可以继承此类（建议相关代码文件置于对应的template文件夹），override params_check方法。
+    """
+
+    def __init__(self, initializer: simulation.optimize.initialize.Initializer, *args, **kwargs):
+        super(HPMSimWithInitializer, self).__init__(*args, **kwargs)
+        self.initializer = initializer
+
+    def params_check(self, params: dict) -> bool:
+        for key in params:
+            precision = self.initializer.precision[self.initializer.param_name_to_index[key]]
+            params[key] = (params[key] // precision) * precision
+        return True
+
+
+def get_HPMSimWithInitializerExample():
+    return HPMSimWithInitializer(
+        simulation.optimize.initialize.Initializer(r"F:\changeworld\HPMCalc\simulation\template\TTO\Initialize.csv"),
+        r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
+        r'E:\HPM\11.7GHz\optimize\TTO\from_good_5', 11.7e9, 3e9, lock=lock)
+
+
+class SamplingWithGoodEnoughValues(LHS):
+    """
+    给定初始值的采样
+    可以提前指定足够好的结果
+    """
+
+    def __init__(self, initializer: simulation.optimize.initialize.Initializer):
+        super(SamplingWithGoodEnoughValues, self).__init__()
+        self.initializer = initializer
+
+    def do(self, problem, n_samples, **kwargs):
+        # 只在每个个体的第一代执行
+        res = super(SamplingWithGoodEnoughValues, self).do(problem, n_samples, **kwargs)
+        logger.info('SamplingWithGoodEnoughValues.do()')
+        logger.info('len(res) = %d' % len(res))
+
+        for i in range(min(self.initializer.N_initial, len(res))):
+            res[i].X = self.initializer.initial_df.loc[i].values
+            logger.info("设置了初始值：res[%d].X = %s\n" % (i, res[i].X,))
+            # first_sampling = False
+
+        # for i in range(len(res)):
+        #     while True:
+        #         G = [constr(res[i].x) for constr in constraint_ueq]
+        #         if numpy.any(numpy.array(G) > 0):
+        #             logger.warning("（Sampling）并非全部约束条件都满足for %d：%s\n重新采样……" % (i, G))
+        #             res[i].X = super(SamplingWithGoodEnoughValues, self).do(problem, 1, **kwargs)[0].X
+        #             continue
+        #         else:
+        #             break
+        return res
+
+
+class MyProblem(ElementwiseProblem):
+    BIG_NUM = 1
+
+    def __init__(self, initializer: simulation.optimize.initialize.Initializer, *args, **kwargs):
+        super(MyProblem, self, ).__init__(*args, n_var=len(initializer.initial_df.columns),
+                                          n_obj=1,
+                                          n_ieq_constr=0,  # TTOParamPreProcessor.N_constraint_le,
+                                          # n_constr=len(constraint_ueq),
+                                          xl=initializer.lower_bound,
+                                          xu=initializer.upper_bound, **kwargs)
+        logger.info("======= Optimization start! ========")
+        self.initializer = initializer
+        logger.info(self.elementwise)
+        logger.info(self.elementwise_runner)
+
+    def bad_res(self, out):
+        out['F'] = [self.BIG_NUM] * self.n_obj
+        # self._evaluate(1,dict(), 1,2,3,4,a =1,ka =1)
+
+    def _evaluate(self, x, out: dict, *args, **kwargs
+                  ):
+        hpmsim = get_hpmsim()
+        hpmsim.template.copy_template_to_working_dir()
+        shutil.copy(self.initializer.filename,
+                    os.path.join(hpmsim.template.working_dir, os.path.split(self.initializer.filename)[1]))
+
+        # out['G'] = [constr(x) for constr in constraint_ueq]
+        # if numpy.any(numpy.array(out['G']) > 0):
+        #     logger.warning("并非全部约束条件都满足：%s" % (out['G']))
+        #     self.bad_res(out)
+        #     return
+        logger.info('score = %.2e' %
+                    hpmsim.update({self.initializer.index_to_param_name(i): x[i] for i in
+                                   range(len(self.initializer.initial_df.columns))},
+                                  'PSO'))
+        try:
+            score = hpmsim.log_df[hpmsim.Colname.score][0]
+            out['F'] = [-score * self.BIG_NUM]
+
+            #     [
+            #     -hpsim.log_df[hpsim.colname_avg_power_score].iloc[-1],
+            #     -hpsim.log_df[hpsim.colname_freq_accuracy_score].iloc[-1],
+            #     -hpsim.log_df[hpsim.colname_freq_purity_score].iloc[-1]
+            # ]
+            logger.info("out['F'] = %s" % out['F'])
+
+        except AttributeError as e:
+            logger.warning("（来自%s）忽略的报错：%s" % (hpmsim.last_generated_m2d_path, e))
+            self.bad_res(out)
+        return
+
+
+class OptimizeJob:
+    def __init__(self, initializer: simulation.optimize.initialize.Initializer,
+                 method_to_get_HPMSimWithInitializer_object: typing.Callable[[], HPMSimWithInitializer]):
+        """
+        :param initializer:
+        :param method_to_get_HPMSimWithInitializer_object:
+        获取新HPMSimWithInitializer对象的方法，即调用method_to_get_HPMSimWithInitializer_object()可以返回一个新的HPMSimWithInitializer对象
+        """
+        self.initializer = initializer
+        self.method_to_get_HPMSimWithInitializer_object = method_to_get_HPMSimWithInitializer_object
+        n_threads = 7
+        pool = ThreadPool(n_threads)
+        self.runner = StarmapParallelization(pool.starmap)
+
+        # first_sampling = True
+
+        self.algorithm = PSO(
+            pop_size=49,
+            sampling=SamplingWithGoodEnoughValues(self.initializer),  # LHS(),
+            # ref_dirs=ref_dirs
+        )
+
+    def run(self):
+        res = minimize(
+            MyProblem(self.initializer, elementwise_runner=self.runner
+                      ),
+            self.algorithm,
+            seed=1,
+            termination=('n_gen', 100),
+            verbose=True,
+            # callback =log_iter,#save_history=True
+        )
+        Scatter().add(res.F).show()
 
 
 if __name__ == '__main__':
@@ -208,6 +357,7 @@ if __name__ == '__main__':
     #                                                                         .1e9)
     # HPMSim(r"F:\changeworld\HPMCalc\simulation\template\CS\CS.m2d",
     #        r'E:\HPM\11.7GHz\optimize\CS.1', 11.7e9, 1e9, lock=lock)
+
     hpmsim = get_hpmsim()
     res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\TTO\from_good\TTO-template_20230813_033810_9.grd', )
     # res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\CS.manual\CS_20230719_194902_80508928.m2d', )

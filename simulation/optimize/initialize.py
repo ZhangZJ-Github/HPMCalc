@@ -10,7 +10,6 @@ import typing
 import pandas
 
 import simulation.task_manager.task
-from simulation.optimize.optimize_HPM import HPMSim
 
 
 class Initializer:
@@ -27,11 +26,14 @@ class Initializer:
         }
         self.lower_bound = self.initial_df.iloc[self.N_initial + 0].values  # 参数下边界
         self.upper_bound = self.initial_df.iloc[self.N_initial + 1].values  # 上边界
-        self.precision = self.initial_df.iloc[self.N_initial + 2].values
+        self.precision = self.initial_df.iloc[self.N_initial + 2].values  # shape (N_params,)
+
+    def update(self):
+        self.__init__(self.filename)
 
     @staticmethod
-    def make_new_initial_csv(filename, hpsim: HPMSim):
-        _df = pandas.DataFrame(columns=list(hpsim.template.get_variables()))
+    def make_new_initial_csv(filename, simtask: simulation.task_manager.task.TaskBase):
+        _df = pandas.DataFrame(columns=list(simtask.template.get_variables()))
         row_names = """备注
 初始值
 下界

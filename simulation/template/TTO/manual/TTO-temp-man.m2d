@@ -1,0 +1,311 @@
+HEADER AUTHOR       "Zi-Jing Zhang" ; 
+HEADER DEVICE       "RBWO" ;
+HEADER REMARKS      "" ;
+SYSTEM CYLINDRICAL;
+
+dz = 0.3mm;
+dr = 0.3mm;
+
+shell_min_thickness = 2mm;
+
+
+! 阴极底座
+! cathode.dr = 50mm;
+cathode.dz = 20mm;
+cathode.z0 = 0mm;
+cathode.zend = cathode.z0+cathode.dz;
+cathode.rout = 52mm;
+
+emitter.dr = 1mm;
+emitter.dz = 10mm;
+emitter.rout = cathode.rout;
+emitter.rin = emitter.rout-emitter.dr;
+emitter.r = (emitter.rin+emitter.rout) /2;
+emitter.z0 = cathode.zend;
+emitter.zend = emitter.z0+emitter.dz;
+
+outshell.rin = emitter.rout+30mm;
+outshell.rout = outshell.rin+shell_min_thickness;
+
+anode.z0 = emitter.zend+0.0228;
+
+! 粒子通道径向厚度最小值
+bunch_channel.dr = min(%bunch_channel.dr%,(outshell.rin-emitter.r)*2 / 1.5);
+
+anode.out.rout = outshell.rin;
+anode.out.rin = emitter.r + bunch_channel.dr/2;
+anode.zend = anode.z0 + %anode.dz%;
+
+anode.in.rout = max(emitter.r - bunch_channel.dr/2,5mm);
+anode.in.rin = max(anode.in.rout - 10mm,0mm);
+
+
+
+! out_shell.dz = 200mm;
+
+
+sws1.z0 =  anode.zend + %sws1.z0offset%;
+sws1.N = int(%sws1.N%);
+sws1.p = %sws1.p%;
+sws1.out.rin = anode.out.rin;
+sws1.out.rout = min(sws1.out.rin + %sws1.out.routoffset%,outshell.rin);
+sws1.out.dzout = min(%sws1.out.dzout%,sws1.p);
+sws1.out.dzin = max(%sws1.out.dzin%,sws1.out.dzout);
+
+sws1.in.dzout = sws1.out.dzin;
+sws1.in.dzin = sws1.out.dzout;
+sws1.in.rout = anode.in.rout;
+sws1.in.rin = max(sws1.in.rout - %sws1.in.rinoffset%,0);
+sws1.zend = sws1.z0+sws1.N * sws1.p;
+
+
+sws2.z0 =  sws1.zend + %sws2.z0offset%;
+sws2.N = int(%sws2.N%);
+sws2.p = %sws2.p%;
+sws2.out.rin = anode.out.rin;
+sws2.out.rout = min(sws2.out.rin + %sws2.out.routoffset%,outshell.rin);
+sws2.out.dzout = min(%sws2.out.dzout%,sws2.p);
+sws2.out.dzin = max(%sws2.out.dzin%,sws2.out.dzout);
+
+sws2.in.dzout = sws2.out.dzin;
+sws2.in.dzin = sws2.out.dzout;
+sws2.in.rout = anode.in.rout;
+sws2.in.rin = max(sws2.in.rout - %sws2.in.rinoffset%,0);
+sws2.zend = sws2.z0+sws2.N * sws2.p;
+
+
+sws3.z0 =  sws2.zend + %sws3.z0%;
+sws3.N = int(%sws3.N%);! >1
+sws3.p = %sws3.p%;
+sws3.out.rin = anode.out.rin;
+sws3.out.rout = min(sws3.out.rin + %sws3.out.routoffset%, outshell.rin);
+sws3.out.dzout = min(%sws3.out.dzout%,sws3.p);
+sws3.out.dzin = max(%sws3.out.dzin%,sws3.out.dzout);
+
+sws3.in.dzout = sws3.out.dzin;
+sws3.in.dzin = sws3.out.dzout;
+sws3.in.rout = anode.in.rout;
+sws3.in.rin = max(sws3.in.rout - %sws3.in.rinoffset%,0);
+sws3.zend = sws3.z0+sws3.N * sws3.p;
+
+z_last_slot = sws3.zend-sws3.p+(sws3.out.dzin-sws3.out.dzin)/2;
+outwaveguide.oblique.z0 = min(z_last_slot
+     + (%outwaveguide.oblique.z0offset%),z_last_slot+sws3.out.dzout);
+outwaveguide.oblique.r1 = sws3.out.rout ;
+outwaveguide.oblique.dz = %outwaveguide.oblique.dz%;
+outwaveguide.oblique.dr = min(%outwaveguide.oblique.dr%,outshell.rin-outwaveguide.oblique.r1);
+outwaveguide.oblique.r2 = outwaveguide.oblique.r1 
+    + outwaveguide.oblique.dr;
+outwaveguide.straight.rin = min(sws3.out.rin + (%outwaveguide.straight.rinoffset%),sws3.out.rout);
+outwaveguide.straight.rout = outwaveguide.oblique.r2;
+outwaveguide.straight.dz = %outwaveguide.straight.dz%;
+outwaveguide.straight.z0 = outwaveguide.oblique.z0+ outwaveguide.oblique.dz;
+outwaveguide.straight.zend = outwaveguide.straight.z0 +outwaveguide.straight.dz;
+
+absorber.dz = min(%absorber.dz%,sws3.p - sws3.out.dzin);
+absorber.z0 = sws3.zend - absorber.dz;
+
+simulation_area.zmn = cathode.z0;
+simulation_area.zmx = outwaveguide.straight.zend;
+simulation_area.rmx = outshell.rout;
+
+
+
+
+AREA cathode conformal cathode.z0 0 cathode.zend cathode.rout;
+AREA emitter conformal emitter.z0 emitter.rin emitter.zend emitter.rout;
+AREA outshell conformal cathode.z0 outshell.rin simulation_area.zmx simulation_area.rmx;
+AREA main conformal anode.z0 0 simulation_area.zmx outshell.rin;
+
+area simulation_area conformal simulation_area.zmn 0 simulation_area.zmx simulation_area.rmx;
+
+mark simulation_area x1 size dz;
+mark simulation_area x2 size dr;
+
+AUTOGRID;
+
+
+
+
+CONDUCTOR cathode material copper;
+CONDUCTOR emitter material copper;
+CONDUCTOR outshell material copper;
+CONDUCTOR main material copper;
+Emission EXPLOSIVE;
+emit EXPLOSIVE emitter;
+
+AREA void_anode POLYGONAL 
+    anode.z0 anode.in.rin
+    anode.zend anode.in.rout
+    anode.zend anode.out.rin
+    anode.z0 anode.out.rout
+    anode.z0 anode.in.rin;
+void void_anode;
+
+
+AREA void_bunch_channel conformal 
+    anode.zend anode.in.rout 
+    sws3.zend anode.out.rin;
+void void_bunch_channel;
+
+LINE left conformal cathode.z0 cathode.rout cathode.z0 outshell.rin;
+FUNCTION g2(x1,x2,x3) = 1 / x2;
+
+FUNCTION g3(x1,x2,x3) = 0 ;
+Vinput = -520e3;
+trise = 0.1e-12;
+FUNCTION f(t) =+abs(Vinput)*(1- exp(-t/trise)) ;
+! PORT left POSITIVE;
+PORT left Positive 
+   Incoming f Function E2 g2 E3 g3
+   NORMALIZATION VOLTAGE  left
+   CIRCUIT .1e-9 f OBS$InputVoltage ;
+line right conformal simulation_area.zmx outwaveguide.straight.rin 
+    simulation_area.zmx outwaveguide.straight.rout;
+PORT right NEGATIVE;
+
+
+
+
+tempr = (outwaveguide.straight.rout+outwaveguide.straight.rin)/2;
+tempz = simulation_area.zmx - 2mm;
+POINT PT_at_RIGHT tempz tempr;
+! 写在observe槽内场之前，否则编号不好确定
+observe FIELD_INTEGRAL E.dl left fft magnitude suffix InputVoltage;
+observe Emitted emitter ALL Current;
+observe FIELD_POWER S.DA left fft magnitude;
+observe FIELD_POWER S.DA right fft magnitude;
+
+observe FIELD E2 PT_at_RIGHT fft magnitude;
+observe FIELD B3 PT_at_RIGHT fft magnitude;
+
+observe FIELD E2 RIGHT fft magnitude;
+observe FIELD B3 RIGHT fft magnitude;
+
+observe FIELD_INTEGRAL E.dl right fft magnitude;
+
+do i = 1,3;
+    do j = 0,sws'i'.N-1;
+        z0 = sws'i'.z0+j*sws'i'.p;
+        z1 = z0 + (sws'i'.in.dzout-sws'i'.in.dzin)/2;
+        z2 = z1 + sws'i'.in.dzin;
+        z3 = z0 + sws'i'.in.dzout;
+        z4 = z0 + sws'i'.p;
+        z7 = z0 + (sws'i'.out.dzin-sws'i'.out.dzout)/2;
+        z6 = z7 + sws'i'.out.dzout;
+        z5 = z0 + sws'i'.out.dzin;
+
+        area void_sws'i'.'j' POLYGONAL 
+            z0 sws'i'.in.rout
+            z1 sws'i'.in.rin
+            z2 sws'i'.in.rin
+            z3 sws'i'.in.rout
+            z4 sws'i'.in.rout
+            z4 sws'i'.out.rin
+            z5 sws'i'.out.rin
+            z6 sws'i'.out.rout
+            z7 sws'i'.out.rout
+            z0 sws'i'.out.rin
+            z0 sws'i'.in.rout;
+        VOID void_sws'i'.'j';
+        ! 观测点（z = 小腔内， r = 粒子经过的位置）
+        pt_at_sws'i'.'j'.z = (z1 + z2)/2;
+        POINT pt_at_sws'i'.'j' pt_at_sws'i'.'j'.z emitter.r;
+         
+        observe field E1 pt_at_sws'i'.'j' fft magnitude;
+        observe field E2 pt_at_sws'i'.'j' fft magnitude;
+        observe field B3 pt_at_sws'i'.'j' fft magnitude;
+
+        LINE line_at_sws'i'.'j' conformal 
+            pt_at_sws'i'.'j'.z sws'i'.in.rout         
+            pt_at_sws'i'.'j'.z sws'i'.out.rin;
+
+        observe FIELD_INTEGRAL J.DA line_at_sws'i'.'j' fft magnitude;
+    ENDDO;
+ENDDO;
+AREA void_waveguide POLYGONAL 
+    outwaveguide.oblique.z0 outwaveguide.oblique.r1
+    outwaveguide.straight.z0 outwaveguide.oblique.r2
+    outwaveguide.straight.zend outwaveguide.straight.rout
+    outwaveguide.straight.zend outwaveguide.straight.rin
+    outwaveguide.oblique.z0 outwaveguide.straight.rin
+    outwaveguide.oblique.z0 outwaveguide.oblique.r1;
+VOID void_waveguide;
+
+
+area absorber conformal absorber.z0 anode.in.rout 
+    sws3.zend outwaveguide.straight.rin;
+CONDUCTOR absorber material copper;
+z = (outwaveguide.straight.z0+outwaveguide.straight.zend) /2;
+LINE inductor_0 conformal 
+    z outwaveguide.straight.rin 
+    z outwaveguide.straight.rout;
+
+inductor inductor_0 1mm;
+! FOIL_1.z0 = sws1.z0;
+! FOIL_1.dz = dz;
+! FOIL_1.zend = FOIL_1.z0+ FOIL_1.dz;
+
+! AREA FOIL_1 conformal FOIL_1.z0 anode.in.rout FOIL_1.zend anode.out.rin;
+! foildz = dz/10;
+! FOIL FOIL_1 foildz Al;
+
+! trise = 10e-12;
+! POISSON pois1 2
+!     cathode 1.0 outshell 0 ;
+! POISSON pois2 2 outshell 0 absorber 1.0;
+! Function Vapp1(t) = (Vinput);!*(1-exp(t/ trise));
+! Function Vapp2(t) = 0;
+! CIRCUIT Vapp1 pois1;
+! ! CIRCUIT Vapp2 pois2 MEASURE INTEGRAL 1 right;
+! CIRCUIT Vapp2 pois2;
+
+coil.N = 199;
+COIL.CURRENT = 100 / 76e-3 * %B_ref%;
+coil.z0 = simulation_area.zmn -%coil.z0offset%;
+coil.R = simulation_area.rmx + 5mm;
+coil.zend = simulation_area.zmx + %coil.zendoffset%;
+do i = 0, coil.N-1 ;
+    z = coil.z0+i * (coil.zend-coil.z0)/coil.N;
+    point coil.'i' z 0.0;
+    coils AXIS x1 coil.'i' coil.R coil.Current;
+ENDDO;
+
+
+
+
+! MAXWELL BIASED;
+runtime = 30e-9;
+DURATION runtime;
+TIMER FOR_RANGE PERIODIC REAL 0 RUNTIME 0.1e-9;
+TIMER FOR_PHASESPACE PERIODIC REAL 0 RUNTIME 3e-9;
+TIMER FOR_CONTOUR PERIODIC REAL 0 RUNTIME 3e-9;
+TIMER FOR_STATIC PERIODIC REAL 0 RUNTIME 10e-9;
+
+PHASESPACE  AXES  X1 X2 FOR_PHASESPACE;!  SPECIES ELECTRON MOVIE PNG;
+PHASESPACE  AXES  X1 KE FOR_PHASESPACE;! SPECIES ELECTRON MOVIE PNG;
+PHASESPACE  AXES  X1 P1 FOR_PHASESPACE;
+
+Contour Field B1st Osys$area FOR_STATIC Shade;!  MOVIE PNG;
+Contour Field E1 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+Contour Field E2 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+Contour Field |E| Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+
+LINE line_particle_moving conformal simulation_area.zmn emitter.r 
+    simulation_area.zmx emitter.r;
+RANGE FIELD B1st line_particle_moving FOR_STATIC;! FFT magnitude;
+RANGE FIELD B2st line_particle_moving FOR_STATIC;! FFT magnitude;
+range field E1 line_particle_moving FOR_RANGE FFT magnitude;
+range FIELD_INTEGRAL J.DA X1 osys$area FOR_RANGE FFT magnitude;;
+range FIELD_POWER S.DA x1 osys$area FOR_RANGE;! FFT magnitude;
+range FIELD_POWER E.J_PARTICLE x1 osys$area FOR_RANGE;! FFT magnitude;
+range particle power ALL X1 FOR_RANGE;
+
+
+DISPLAY_2D;
+min_total_sws_periods = 0;
+total_sws_periods =sws1.N + sws2.N + sws3.N;
+if total_sws_periods.GT.min_total_sws_periods then;
+    start;
+ENDIF;
+stop;
