@@ -36,7 +36,7 @@ DR = G0;
 !beam tunnel
 F_OPT = 40 GHZ ;
 R_BEAM_TUNNEL = 15.2 MM ;
-R_CORE = R_BEAM_TUNNEL - 3E8/F_OPT *1.0; 
+R_CORE = R_BEAM_TUNNEL - 3E8/F_OPT *1.0 + %R_core_offset%; 
 
 !cathode
 V_CA = 500e3 VOLT;
@@ -73,13 +73,13 @@ R_PRE2 = R_BEAM_TUNNEL + 1.2_MM ;
 !R_PRE2.1 = R_PRE0 - 2.4_MM ;
 
 !sws1
-W_SWS1 = 8_MM ;!front drift length
+W_SWS1 = %W_SWS1% ;!front drift length
 W_P1 = 2.9 MM ;
 W_D1 = 1.6 MM ;
 R_B1 = R_BEAM_TUNNEL ;
 R_A1 = 16.0 MM ;
 !R_A1 = R_B1 ;
-N_P1 =10 ;
+N_P1 =%N_P1% ;
 
 !sws2
 W_SWS2 = 3_MM ;!front drift length
@@ -331,7 +331,7 @@ PHASESPACE  AXES  X1 KE FOR_ELECTRIC ;! SPECIES ELECTRON MOVIE PNG;
 RANGE PARTICLE CURRENT ELECTRON x1 FOR_ELECTRIC;
 RANGE PARTICLE ENERGY ELECTRON x1 FOR_ELECTRIC;
 RANGE FIELD B1ST BEAM_LINE FOR_ELECTRIC;
-!RANGE FIELD E1 BEAM_LINE FOR_ELECTRIC;
+RANGE FIELD E1 BEAM_LINE FOR_ELECTRIC;
 RANGE FIELD_POWER S.DA X1 OSYS$AREA FOR_ELECTRIC;
 
 ! Contour Field B1st Osys$area FOR_CONTOUR Shade;!  MOVIE PNG;
@@ -412,7 +412,7 @@ endif;
 ! ==================================================================
 
 GRAPHICS PAUSEOFF TSYS$FIRST ;
-GRAPHICS PAUSEON  TSYS$LAST ;
+! GRAPHICS PAUSEON  TSYS$LAST ;
 DISPLAY_2D OSYS$AREA OBJECTS ;
 DISPLAY_2D OSYS$AREA MAXWELL GRID ;
 
@@ -420,5 +420,3 @@ DISPLAY_2D OSYS$AREA MAXWELL GRID ;
    STOP ;
 
 ! ============================================================
-
-=              
