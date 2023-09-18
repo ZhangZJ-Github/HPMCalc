@@ -1,0 +1,424 @@
+! ============================================================
+!GRAPHICS PAUSE ;
+! ============================================================
+HEADER AUTHOR       "Yucheng Liu" ; ! ... put your name here
+HEADER ORGANIZATION "0" ;
+HEADER DEVICE       "R-BWO" ;
+HEADER REMARKS      "0" ;
+! ============================================================
+
+SYSTEM CYLINDRICAL ; ! 
+
+! ============================================================
+
+! 1. varialble use R for r position, Z for z positino, W for length at z direction, !    D for cavity width, G for grid size, N for periods number, OBSP for observing point.
+! 2. 
+! 3. dont use 'L' as initial letter to define variables...
+
+! ============================================================
+ON  = 1 ;
+OFF = 0 ;
+! ============================================================
+DRIVE_TEST   = Off; 
+PIMODE_TESTON    =OFF;       
+EmissionOn       = On;
+! ============================================================
+!grid size
+G0= 0.4 MM ;
+G_SHELL = G0*3 ;
+G_EMIT = G0/2 ;
+G_SLOT = G0/2 ;
+DZ = G0;
+DR = G0;
+! ============================================================
+!!!geo parameters input
+
+!beam tunnel
+F_OPT = 40 GHZ ;
+R_BEAM_TUNNEL = 15.2 MM ;
+R_CORE = R_BEAM_TUNNEL - 3E8/F_OPT *1.0; 
+
+!cathode
+V_CA = 500e3 VOLT;
+W_GAP = 10_MM ;! c-a distance
+W_EMIT = 1.8_MM ;
+W_CA = 15_MM ; !cathode length
+R_CA = R_BEAM_TUNNEL-0.0_MM ;! cathode outter radius
+R_EMIT = R_CA-W_EMIT ;
+THETA_GUN = 15 /90*PI/2 RAD ; !focusing angle
+
+!cutoff neck
+W_CUT = 15_MM ;
+R_CUT = R_BEAM_TUNNEL - 3E8/F_OPT *0.45 ; 
+
+!reflector
+W_REF = 4 MM ;
+D_REF = 3 MM ;
+R_REF1 = R_BEAM_TUNNEL +2.0_MM ;
+R_REF2 = R_BEAM_TUNNEL -5.0_MM ;
+
+! pre-bunching (dual-cavity)
+W_PRE01 = 3.5 MM ;
+W_PRE12 = 2_MM ;
+W_PRE23 = 0_MM ;
+!R_PRE0 =( R_CUT + R_BEAM_TUNNEL )/2 ;
+D_PRE1 = 1.2 MM ;
+R_PRE1 = R_BEAM_TUNNEL + 2.3_MM ;
+D_PRE2 = 0.7 MM ;
+R_PRE2 = R_BEAM_TUNNEL + 1.2_MM ;
+!R_PRE2 = R_PRE0 + 2.4_mm ;
+
+!double-side cavity
+!D_PRE2.1 = D_PRE2 ;
+!R_PRE2.1 = R_PRE0 - 2.4_MM ;
+
+!sws1
+W_SWS1 = 8_MM ;!front drift length
+W_P1 = 2.9 MM ;
+W_D1 = 1.6 MM ;
+R_B1 = R_BEAM_TUNNEL ;
+R_A1 = 16.0 MM ;
+!R_A1 = R_B1 ;
+N_P1 =10 ;
+
+!sws2
+W_SWS2 = 3_MM ;!front drift length
+W_P2 = 2.9 MM ;
+W_D2 = 1.6 MM ;
+R_B2 = R_BEAM_TUNNEL ;
+R_A2 = 16.0 MM ;
+N_P2 =0 ;
+DP2 = 0.00_MM ; !for period change
+
+!extractor
+!D_EXT = 3.2 MM ;
+D_EXT = 0.0 MM ;
+R_EXT = R_BEAM_TUNNEL + 5.2 MM ;
+W_EXT = 2.7_MM ;!front drift length
+
+!input&output
+W_OUT = 5_MM ;!
+THETA_OUT = 0 /90*PI/2 RAD ; !horn output
+!R_IN = TAN(THETA_GUN)*W_GAP + R_BEAM_TUNNEL ;
+R_IN = R_EXT + 4_MM ; !input outter radius
+R_OUT = R_BEAM_TUNNEL + W_OUT*TAN(THETA_OUT);!output outter radius
+!R_OUT = R_BEAM_TUNNEL; !straight output
+
+!tube shell
+W_SHELL = 5* DR ;
+R_SHELL =MAX(R_IN,R_OUT)+W_SHELL ;
+
+!soilnoid
+B_Z0 = 0.7_Tesla ; !CENTER MAGNETIC FIELD
+DZ_COIL = 3MM ; !single coil length
+
+! ============================================================
+! z-position for each section
+Z_GAP1 = -TAN(THETA_GUN)*(R_IN-R_BEAM_TUNNEL);
+Z_GAP = -W_GAP ;
+Z_GUN = Z_GAP - W_CA ;
+Z_CUT = W_CUT ;
+Z_PRE = W_PRE01 + W_PRE12 + W_PRE23 + D_PRE1 + D_PRE2 +Z_CUT;
+!Z_PRE = 0 ;
+!Z_CUT = Z_PRE + W_CUT ;
+Z_SWS1 = Z_PRE +  W_SWS1 + (N_P1-0)*W_P1 ;
+Z_SWS2 = Z_SWS1 +  W_SWS2 + (N_P2-0)*W_P2 ;
+Z_EXT = Z_SWS2 +W_EXT + D_EXT;
+Z_OUT = Z_EXT + W_OUT ;
+
+! ============================================================
+! geometry objects
+
+!shell
+AREA SHELL_L POLYGONAL 
+Z_GUN,R_IN 
+Z_GUN,R_SHELL 
+0,R_SHELL 
+0,R_BEAM_TUNNEL 
+Z_GAP1,R_IN 
+Z_GUN,R_IN;
+AREA SHELL_R POLYGONAL 
+0,R_BEAM_TUNNEL 
+0,R_SHELL 
+Z_OUT,R_SHELL 
+Z_OUT,R_OUT
+Z_EXT,R_BEAM_TUNNEL
+0,R_BEAM_TUNNEL ;
+
+!output freesapce for absorption
+W0 = 2_MM ;
+Z_OUT1 = Z_OUT + W0 ;
+AREA ABSORB_SPACE CONFORMAL Z_OUT1,R_CORE Z_OUT,R_SHELL ;
+AREA CORE CONFORMAL 0,R_CORE Z_OUT1,0 ;
+
+!e-gun
+R0 = R_CA - DR ;
+R1 = R_EMIT + DR ;
+Z0 = Z_GUN + W_SHELL ;
+Z1 = Z_GAP - DR ;
+AREA GUN CONFORMAL Z_GUN,R_CA Z_GAP,0 ;
+AREA GUN0 CONFORMAL Z0,R_EMIT Z_GAP,0 ;
+AREA EMIT_ZONE CONFORMAL Z1,R0 Z_GAP,R1 ;
+LINE BEAM_LINE CONFORMAL Z_GUN,R1 Z_OUT,R1 ;
+
+!front dual-cavity 
+Z0 = W_PRE01 +Z_CUT ;
+Z1 = Z0 + D_PRE1 ;
+Z01 = (Z0+Z1)/2 ;
+AREA SLOT_PRE.1 CONFORMAL Z0,R_BEAM_TUNNEL Z1,R_PRE1 ;
+POINT OBSP.PRE.1 Z01,R_CA ;
+Z0 = W_PRE01 + D_PRE1 + W_PRE12 + Z_CUT;
+Z1 = Z0 + D_PRE2 ;
+Z01 = (Z0+Z1)/2 ;
+AREA SLOT_PRE.2 CONFORMAL Z0,R_BEAM_TUNNEL Z1,R_PRE2 ;
+!AREA SLOT_PRE.2.1 CONFORMAL Z0,R_CUT Z1,R_PRE2.1 ;
+POINT OBSP.PRE.2 Z01,R_CA ;
+
+!cutoff choker(neck)
+AREA CHOKER CONFORMAL 0,R_CORE Z_CUT,R_CUT ;
+R01 = (R_BEAM_TUNNEL +R_CUT)/2 ;
+POINT OBSP.CUT.1 0,R01 ;
+POINT OBSP.CUT.2 Z_CUT,R01 ;
+
+!reflector
+Z0 = W_REF+D_REF ;
+AREA REFLECTOR CONFORMAL W_REF,R_REF1 Z0,R_REF2 ;
+
+!sws 1+2
+Do I=1,N_P1 ;
+	Z1 = Z_PRE + W_SWS1 + W_P1*I;
+	Z2 = Z1 - W_D1;
+	Z12 = (Z1 +Z2)/2 ;
+	AREA SLOT_SWS1.'I' CONFORMAL Z1,R_A1 Z2,R_B1;
+	POINT OBSP.SWS1.'I' Z12,R_CA;
+	LINE OBSL.SWS1.'I' CONFORMAL Z12,R_A1 Z12,R_CORE;
+ENDDO ;
+Do I=1,N_P2 ;
+	Z1 = Z_SWS1 + W_SWS2 + W_P2*I;
+	Z2 = Z1 - W_D2;
+	Z12 = (Z1 +Z2)/2 ;
+	AREA SLOT_SWS2.'I' CONFORMAL Z1,R_A2 Z2,R_B2;
+	POINT OBSP.SWS2.'I' Z12,R_CA;
+	LINE OBSL.SWS2.'I' CONFORMAL Z12,R_A2 Z12,R_CORE;
+ENDDO ;
+
+!extractor
+Z0 = Z_EXT - D_EXT ;
+Z01 = Z_EXT - D_EXT/2 ;
+AREA SLOT_EXT CONFORMAL Z0,R_BEAM_TUNNEL Z_EXT,R_EXT;
+POINT OBSP.EXT Z01,R_CA ;
+LINE OBSL.EXT CONFORMAL Z01,R_CORE Z01,R_EXT ;
+
+!solenoid
+Z_COIL_START = Z_GUN - 100mm;
+Z_COIL_END = Z_OUT +100mm;
+R_COIL = R_SHELL + W_SHELL ;
+N_COIL = (Z_COIL_END-Z_COIL_START )/DZ_COIL;
+COIL_CURRENT = 2*R_COIL *B_Z0/ 1.2566e-6 /10;
+DO I=0,N_COIL ;
+	ZCOIL.'I' = Z_COIL_START  + I*DZ_COIL ;
+	POINT LOOP.'I'  ZCOIL.'I' 0.0 ; 
+	COILS AXIS X1 LOOP.'I' R_COIL COIL_CURRENT ;
+ENDDO ;
+
+! ============================================================
+! ... gridding
+MARK GUN X1 SIZE G0 ;
+MARK GUN X2 SIZE G0 ;
+!MARK ABSORB_SPACE X1 SIZE G0 ;
+!MARK ABSORB_SPACE X2 SIZE G0 ;
+MARK SHELL_L X1 SIZE G_SHELL ;
+MARK SHELL_L X2 SIZE G_SHELL ;
+MARK SHELL_R X1 SIZE G_SHELL ;
+MARK SHELL_R X2 SIZE G_SHELL ;
+MARK CORE X1 SIZE G_SHELL ;
+MARK CORE X2 SIZE G_SHELL ;
+MARK EMIT_ZONE X1 SIZE G_EMIT ;
+MARK EMIT_ZONE X2 SIZE G_EMIT ;
+MARK SLOT_PRE.1 X1 SIZE G_SLOT ;
+!MARK SLOT_PRE.1 X2 SIZE G_SLOT ;
+MARK SLOT_PRE.2 X1 SIZE G_SLOT ;
+!MARK SLOT_PRE.2 X2 SIZE G_SLOT ;
+MARK SLOT_EXT X1 SIZE G_SLOT ;
+!MARK SLOT_EXT X2 SIZE G_SLOT ;
+DO I=1,N_P1 ;
+	MARK SLOT_SWS1.'I' X1 SIZE G_SLOT ;
+	!MARK SLOT_SWS1.'I' X2 SIZE G_SLOT ;
+ENDDO ;
+DO I=1,N_P2 ;
+	MARK SLOT_SWS2.'I' X1 SIZE G_SLOT ;
+	!MARK SLOT_SWS2.'I' X2 SIZE G_SLOT ;
+ENDDO ;
+
+AUTOGRID ;
+! ============================================================
+! ... construction
+VOID ABSORB_SPACE;
+CONDUCTOR SHELL_L MATERIAL COPPER;
+CONDUCTOR SHELL_R MATERIAL COPPER;
+CONDUCTOR GUN MATERIAL COPPER ;
+VOID GUN0 ;
+CONDUCTOR EMIT_ZONE MATERIAL GRAPHITE;! GOLD;
+CONDUCTOR CORE MATERIAL COPPER;
+CONDUCTOR CHOKER MATERIAL COPPER;
+VOID REFLECTOR ;
+VOID SLOT_PRE.1 ;
+VOID SLOT_PRE.2 ;
+!VOID SLOT_PRE.2.1 ;
+DO I=1,N_P1 ;
+	VOID SLOT_SWS1.'I';
+ENDDO ;
+DO I=1,N_P2 ;
+	VOID SLOT_SWS2.'I';
+ENDDO ;
+VOID SLOT_EXT ;
+
+! ============================================================
+! ... boundaries
+
+LINE PORT_L CONFORMAL Z_GUN,R_CA Z_GUN,R_IN ;
+LINE PORT_R CONFORMAL Z_OUT,R_CORE Z_OUT,R_SHELL ;
+! LINE PORT_UP CONFORMAL Z_OUT,R_SHELL Z_OUT1,R_SHELL ;
+
+! PORT  PORT_UP NEGATIVE;
+!PORT PORT_L POSITIVE; !left port to input voltage
+PORT PORT_R NEGATIVE;
+
+FREESPACE ABSORB_SPACE NEGATIVE X1 ALL CONDUCTIVITY 1E-8;
+! ================ E.T.C. PARAMETERS ========================
+Statistics 100 ;
+MODE TM;
+MAXWELL BIASED ;!CENTER;!HIGH_Q;!BIASED ;
+!TIME_STEP=500/SQRT(3.7);
+RUNTIME = 50_NANOSECONDS ;
+DURATION RUNTIME ;
+
+TIMER FOR_ELECTRIC PERIODIC 50 1E5 1E3 ;
+TIMER FOR_CONTOUR PERIODIC 50 1E5 5E3 ;
+
+! ============================================================
+! ... look at geometry
+DISPLAY_2D;
+
+! ============================================================
+If (EmissionOn) then ;
+!voltage input
+!use port
+	FUNCTION VOLT_T(T) = V_CA ;
+	FUNCTION VOLT_R(R) = (R-R_CA)/(R_IN-R_CA);
+	PORT PORT_L POSITIVE  
+	INCOMING VOLT_T  
+	FUNCTION E2 VOLT_R E3 0  
+	NORMALIZATION VOLTAGE PORT_L;
+
+!use poisson
+!POISSON  poisson1 2 CATHODE,Vinput FOCUSING_ELECTRODE,0;! CORE,0;
+!PRESET E1 POISSON poisson1 ;
+!PRESET E2 POISSON poisson1 ;
+
+!emit
+EMISSION EXPLOSIVE ;
+EMIT EXPLOSIVE EMIT_ZONE ;
+
+!results
+OBSERVE Emitted EMIT_ZONE ELECTRON CURRENT ;
+OBSERVE  FIELD_POWER S.DA PORT_L fft magnitude; 
+OBSERVE  FIELD_POWER S.DA PORT_R fft magnitude; 
+
+PHASESPACE  AXES  X1 X2 FOR_ELECTRIC ;! SPECIES ELECTRON MOVIE PNG;
+PHASESPACE  AXES  X1 KE FOR_ELECTRIC ;! SPECIES ELECTRON MOVIE PNG;
+
+RANGE PARTICLE CURRENT ELECTRON x1 FOR_ELECTRIC;
+RANGE PARTICLE ENERGY ELECTRON x1 FOR_ELECTRIC;
+RANGE FIELD B1ST BEAM_LINE FOR_ELECTRIC;
+!RANGE FIELD E1 BEAM_LINE FOR_ELECTRIC;
+RANGE FIELD_POWER S.DA X1 OSYS$AREA FOR_ELECTRIC;
+
+! Contour Field B1st Osys$area FOR_CONTOUR Shade;!  MOVIE PNG;
+ Contour Field E1 Osys$area FOR_CONTOUR Shade;! MOVIE PNG;
+ Contour Field E2 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+! VECTOR FIELD E1 E2  Osys$area FOR_CONTOUR;
+
+OBSERVE FIELD E1 OBSP.PRE.1 FFT MAGNITUDE;
+OBSERVE FIELD E1 OBSP.PRE.2 FFT MAGNITUDE;
+OBSERVE FIELD E1 OBSP.CUT.1 FFT MAGNITUDE;
+OBSERVE FIELD E1 OBSP.CUT.2 FFT MAGNITUDE;
+OBSERVE FIELD_INTEGRAL J_ELECTRON.DA OBSL.EXT ;
+
+DO I=1,N_P1;
+	OBSERVE FIELD E1 OBSP.SWS1.'I' FFT MAGNITUDE ;
+	OBSERVE FIELD_INTEGRAL J_ELECTRON.DA OBSL.SWS1.'I' ;
+ENDDO;
+DO I=1,N_P2;
+	OBSERVE FIELD E1 OBSP.SWS2.'I' FFT MAGNITUDE ;
+	OBSERVE FIELD_INTEGRAL J_ELECTRON.DA OBSL.SWS2.'I' ;
+ENDDO;
+OBSERVE FIELD E1 OBSP.EXT FFT MAGNITUDE ;
+OBSERVE FIELD_INTEGRAL J_ELECTRON.DA OBSL.EXT ;
+
+ENDIF ;
+
+! ============================================================
+
+!phase check
+!z0 = N_PERIOD1*Z_PERIOD1 +Z_DRIFT1 ;
+!dz0 = 0.5 mm ;
+!ndz = z_drift/dz0 -2 ;
+!DO I=1,ndz;
+!dz'I'=z0+I*dz0;
+!dr0 = (r_beam_tunnel +r_in)/2 ;
+!point OBSP_drift'I' dz'I',dr0 ;
+!line OBSL_drift'I' conformal dz'I',r_beam_tunnel dz'I',r_in;
+!observe field e1 OBSP_drift'I' fft magnitude;
+!observe FIELD_INTEGRAL J_ELECTRON.DA OBSL_drift'I';
+!enddo;
+
+! ============================================================
+If (DRIVE_TEST) then ;
+
+PORT PORT_L POSITIVE;
+
+DRIVE.X1 = 0 ;
+DRIVE.X2 = -dz*15 ;
+DRIVE.Y1 = R_CA-DR*2 ; 
+DRIVE.Y2 = DRIVE.Y1 - dr*3;
+AREA FEEDLINE1 CONFORMAL DRIVE.X1, DRIVE.Y1 DRIVE.X2, DRIVE.Y2 ; 
+	RUNTIME = 1_NANOSECONDS ;
+	DURATION RUNTIME ;
+	TIMER SNAPSHOT PERIODIC INTEGER 200,999999,200 ;
+	FUNCTION CURRENT_PULSE(T) = (1E3_AMP/1_METER**2)*STEP(2*SYS$DTIME,T) ;
+	ND = 1 ;
+	DO I = 1, ND ;
+		DRIVER J1 CURRENT_PULSE FEEDLINE'I' ;
+	ENDDO ;
+	!OBSERVE FIELD_INTEGRAL E.DL FEEDLINE1 FFT MAGNITUDE
+                                    ! WINDOW FREQUENCY 0.0 1E2_GHZ;
+	OBSERVE FIELD E1 FEEDLINE1 FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
+	!OBSERVE FIELD E2 FEEDLINE1 FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
+	!OBSERVE FIELD E1 PORT_RIGHT FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
+	!OBSERVE FIELD E2 PORT_RIGHT FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
+	CONTOUR FIELD E1 OSYS$AREA SNAPSHOT SHADE NODUMP ;
+	CONTOUR FIELD E2 OSYS$AREA SNAPSHOT SHADE NODUMP ;
+
+
+!temp obs
+OBSERVE FIELD E1 OBSP.CUT.1 FFT MAGNITUDE;
+OBSERVE FIELD E1 OBSP.CUT.2 FFT MAGNITUDE;
+
+endif;
+! ======== OUTPUT GRAPHICS ==================================================
+
+
+! ==================================================================
+
+GRAPHICS PAUSEOFF TSYS$FIRST ;
+GRAPHICS PAUSEON  TSYS$LAST ;
+DISPLAY_2D OSYS$AREA OBJECTS ;
+DISPLAY_2D OSYS$AREA MAXWELL GRID ;
+
+   START ;
+   STOP ;
+
+! ============================================================
+
+=              

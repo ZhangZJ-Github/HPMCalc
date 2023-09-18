@@ -4,9 +4,9 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : _test.py
 # @Software: PyCharm
-import optimize_HPM
+from simulation.template.TTO.main import get_HPMSimWithInitializer
+
 # optimize_HPM.HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
 #                   r'D:\MagicFiles\HPM\12.5GHz\优化6', 11.7e9, 1e9).clean_folder(0.1)
 # optimize_HPM.get_hpsim().clean_folder(0.2)
-optimize_HPM.HPMSim(r"F:\changeworld\HPMCalc\simulation\template\RSSSE\RSSE_template.m2d",
-                  r'D:\MagicFiles\HPM\12.5GHz\优化6', 11.7e9, 1e9).clean_folder(0.5)
+get_HPMSimWithInitializer().clean_folder(0.3)

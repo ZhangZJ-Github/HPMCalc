@@ -8,7 +8,7 @@
 import matplotlib
 
 matplotlib.use('tkagg')
-from simulation.optimize.optimize_HPM import *
+from simulation.optimize.hpm import *
 from simulation.optimize.initialize import Initializer
 from concurrent.futures import ThreadPoolExecutor
 

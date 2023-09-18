@@ -23,6 +23,7 @@ import simulation.optimize.initialize
 from pymoo.visualization.scatter import Scatter
 from pymoo.core.problem import StarmapParallelization
 
+from concurrent.futures import ThreadPoolExecutor
 import grd_parser
 import pandas
 from _logging import logger
@@ -219,8 +220,9 @@ class HPMSimWithInitializer(HPMSim):
 
     def params_check(self, params: dict) -> bool:
         for key in params:
-            precision = self.initializer.precision[self.initializer.param_name_to_index[key]]
-            params[key] = (params[key] // precision) * precision
+            if key.startswith('%'):
+                precision = self.initializer.precision[self.initializer.param_name_to_index[key]]
+                params[key] = numpy.round(params[key] / precision) * precision
         return True
 
 
@@ -316,16 +318,22 @@ class MyProblem(ElementwiseProblem):
         return
 
 
-class OptimizeJob:
+class JobBase:
     def __init__(self, initializer: simulation.optimize.initialize.Initializer,
                  method_to_get_HPMSimWithInitializer_object: typing.Callable[[], HPMSimWithInitializer]):
         """
-        :param initializer:
-        :param method_to_get_HPMSimWithInitializer_object:
-        获取新HPMSimWithInitializer对象的方法，即调用method_to_get_HPMSimWithInitializer_object()可以返回一个新的HPMSimWithInitializer对象
-        """
+                :param initializer:
+                :param method_to_get_HPMSimWithInitializer_object:
+                获取新HPMSimWithInitializer对象的方法，即调用method_to_get_HPMSimWithInitializer_object()可以返回一个新的HPMSimWithInitializer对象
+                """
         self.initializer = initializer
         self.method_to_get_HPMSimWithInitializer_object = method_to_get_HPMSimWithInitializer_object
+
+
+class OptimizeJob(JobBase):
+    def __init__(self, initializer: simulation.optimize.initialize.Initializer,
+                 method_to_get_HPMSimWithInitializer_object: typing.Callable[[], HPMSimWithInitializer]):
+        super(OptimizeJob, self).__init__(initializer, method_to_get_HPMSimWithInitializer_object)
         n_threads = 7
         pool = ThreadPool(n_threads)
         self.runner = StarmapParallelization(pool.starmap)
@@ -349,6 +357,17 @@ class OptimizeJob:
             # callback =log_iter,#save_history=True
         )
         Scatter().add(res.F).show()
+
+
+class MaunualJOb(JobBase):
+    def __init__(self, *args, **kwargs):
+        super(MaunualJOb, self).__init__(*args, **kwargs)
+
+    def run(self):
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            run = lambda i: self.method_to_get_HPMSimWithInitializer_object().update(self.initializer.init_params[i])
+            for i in range(self.initializer.N_initial):
+                pool.submit(run, i)
 
 
 if __name__ == '__main__':
