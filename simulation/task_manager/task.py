@@ -86,7 +86,7 @@ from abc import ABC, abstractmethod
 
 
 class TaskBase(ABC):
-    MAGIC_SOLVER_PATH = r"G:\Program Files\Magic Tools\magic2d_Sng.exe"
+    MAGIC_SOLVER_PATH = r"C:\Program Files\Magic Tools\magic2d_Sng.exe"
 
     class Colname:
         score = "score"
@@ -96,7 +96,7 @@ class TaskBase(ABC):
 
     def __init__(self,
                  template_name,
-                 working_dir=r'D:\MagicFiles\HPM\12.5GHz\优化',
+                 working_dir=r"E:\ref_test",
                  lock: Lock = Lock()):
         self.template = MagicTemplate(template_name, working_dir)
         self.log_file_name = os.path.join(
