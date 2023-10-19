@@ -1,0 +1,330 @@
+HEADER AUTHOR       "Zi-Jing Zhang" ; 
+HEADER DEVICE       "Bunch+Extractor@40GHz" ;
+HEADER REMARKS      "" ;
+SYSTEM CYLINDRICAL;
+
+dz = 0.7mm;
+dr = 0.7mm;
+clight = 299792458.0;
+pi = 3.141592653589793;
+
+! 目标频率
+f_target = %f_target%;!40e9;
+
+shell_min_thickness = 2mm;
+
+
+anode.zend = 0;
+anode.dz = 1e-3;
+anode.dr = 9e-3;
+anode.z0 = anode.zend - anode.dz;
+
+emitter.r = 14e-3;
+emitter.dr = 1.2mm;
+emitter.dz = 13mm;
+emitter.zend = anode.zend - 5mm;
+emitter.z0 = emitter.zend - emitter.dz;
+emitter.rin = emitter.r - emitter.dr/2;
+emitter.rout = emitter.r + emitter.dr/2;
+
+anode.rin =15.2mm;! emitter.r + emitter.dr/2 + 0.5mm;
+anode.dr = 9mm;
+anode.rout = anode.rin+anode.dr;
+
+
+cathode.zend = emitter.z0;
+cathode.z0 = cathode.zend - shell_min_thickness;
+cathode.rout = emitter.rout;
+
+outshell.rin = anode.rout;
+outshell.z0 = cathode.z0;
+outshell.rout = outshell.rin + shell_min_thickness;
+
+cond_in.rout =anode.rin -6.5mm;! anode.rin - clight / f_target -0.0mm;
+cond_in.z0 = anode.zend;
+cutoffneck.rout = 2*emitter.r - (anode.rin);!anode.rin - clight / f_target * 0.4;
+cutoffneck.z0 = cond_in.z0;
+
+
+swspre.z0=cutoffneck.z0 + 0*5mm;
+swspre.p = 6.5mm;
+swspre.N = 2*0;
+swspre.d = 5mm;
+swspre.dr = 9.2mm;!clight / (f_target/2);
+swspre.rin = emitter.r - swspre.dr / 2;
+swspre.rout = emitter.r + swspre.dr / 2;
+swspre.zend = swspre.z0 + swspre.N * swspre.p;
+swspre.bunch_channel.dr = swspre.dr-3mm;
+swspre.bunch_channel.rin = emitter.r - swspre.bunch_channel.dr/2;
+swspre.bunch_channel.rout = emitter.r + swspre.bunch_channel.dr/2;
+
+
+reflcav.z0 = swspre.zend + 0*10mm;
+reflcav.dr = (anode.rin - emitter.r)*2;!10mm;
+reflcav.dz = 5mm*0;
+reflcav.zend = reflcav.z0+reflcav.dz;
+reflcav.rin = emitter.r - reflcav.dr/2;
+reflcav.rout = emitter.r + reflcav.dr / 2;
+
+! cutoffneck.dz = 30mm;
+cutoffneck.zend = reflcav.zend+2mm;
+
+sws1.z0 = cutoffneck.zend + 3mm;
+sws1.N = 0;
+sws1.p = 2.9mm;
+sws1.d = 1.6mm;
+sws1.dr = 0.8mm;
+sws1.rin = anode.rin;
+sws1.rout = sws1.rin + sws1.dr;
+sws1.zend = sws1.z0+sws1.N*sws1.p;
+
+extractor1.z0 = sws1.zend+1mm;
+extractor1.dz = 2mm;
+extractor1.dr = 5mm;
+extractor1.zend = extractor1.z0 + extractor1.dz;
+extractor1.z = (extractor1.z0+extractor1.zend)/2;
+extractor1.rin = sws1.rin;
+extractor1.rout = extractor1.rin  + extractor1.dr;
+
+cond_out.zend = extractor1.zend + 15mm;
+
+area cathode conformal cathode.z0 0 cathode.zend cathode.rout;
+area emitter conformal emitter.z0 emitter.rin emitter.zend emitter.rout;
+area anode POLYGONAL
+    anode.z0 anode.rout
+    anode.zend anode.rin
+    anode.zend anode.rout
+    anode.z0 anode.rout;
+
+
+
+
+simulation.zmn = cathode.z0;
+simulation.zmx = cond_out.zend;
+simulation.rmx = outshell.rout;
+
+area simulation conformal simulation.zmn 0 cond_out.zend simulation.rmx;
+area cond_out conformal anode.zend anode.rin simulation.zmx anode.rout;
+area cond_in conformal cond_in.z0 0 simulation.zmx cond_in.rout;
+area cutoffneck conformal cutoffneck.z0 cond_in.rout cutoffneck.zend cutoffneck.rout;
+area outshell conformal outshell.z0 outshell.rin simulation.zmx outshell.rout;
+area extractor1 conformal extractor1.z0 extractor1.rin extractor1.zend extractor1.rout;
+
+CONDUCTOR cathode material copper;
+CONDUCTOR emitter material copper;
+CONDUCTOR anode material copper;
+CONDUCTOR cond_out material copper;
+CONDUCTOR cond_in material copper;
+CONDUCTOR cutoffneck material copper;
+CONDUCTOR outshell material copper;
+
+VOID extractor1;
+
+
+mark simulation x1 size dz;
+mark simulation x2 size dr;
+dr2 = dr/3;
+dz2 = dz /3 ;
+dr3 = dr/5;
+mark emitter x2 size dr3;
+mark anode x1 size dz2;
+mark extractor1 x1 size 0.1mm;
+mark extractor1 x2 size 0.1mm;
+
+do i = 1,swspre.N;
+    swspre.'i'.slot.z0 = swspre.z0 + (i-1)*swspre.p;
+    swspre.'i'.slot.zend = swspre.'i'.slot.z0 + swspre.d;
+    area swspre.'i'.slot conformal
+        swspre.'i'.slot.z0 swspre.rin
+        swspre.'i'.slot.zend swspre.rout;
+    void swspre.'i'.slot;
+    z = (swspre.'i'.slot.z0 + swspre.'i'.slot.zend)/2;
+    POINT swspre.'i'.slot.obspt z emitter.r;
+    LINE swspre.'i'.slot.obsline conformal z swspre.rin z swspre.rout;
+    mark     swspre.'i'.slot x1 size dz2;
+    mark     swspre.'i'.slot x2 size dr2;
+ENDDO;
+
+area swspre.bunch_channel conformal swspre.z0 swspre.bunch_channel.rin swspre.zend swspre.bunch_channel.rout;
+VOID swspre.bunch_channel;
+
+do i = 1,sws1.N;
+    sws1.'i'.slot.z0 = sws1.z0 + (i-1)*sws1.p;
+    sws1.'i'.slot.zend = sws1.'i'.slot.z0 + sws1.d;
+    area sws1.'i'.slot conformal
+        sws1.'i'.slot.z0 sws1.rin
+        sws1.'i'.slot.zend sws1.rout;
+    void sws1.'i'.slot;
+    z = (sws1.'i'.slot.z0 + sws1.'i'.slot.zend)/2;
+    POINT sws1.'i'.slot.obspt z emitter.r;
+    LINE sws1.'i'.slot.obsline conformal z sws1.rin z sws1.rout;
+    mark     sws1.'i'.slot x1 size dz2;
+    mark     sws1.'i'.slot x2 size dr2;
+ENDDO;
+AUTOGRID;
+
+LINE left conformal cathode.z0 cathode.rout cathode.z0 outshell.rin;
+LINE right conformal simulation.zmx cond_in.rout simulation.zmx anode.rin;
+
+FUNCTION g2(x1,x2,x3) = 1 / x2;
+
+FUNCTION g3(x1,x2,x3) = 0 ;
+Vinput =0;! -520e3;
+trise = 0.1e-12;
+FUNCTION f(t) =+abs(Vinput)*(1- exp(-t/trise)) ;
+! PORT left POSITIVE;
+
+PORT left Positive
+   Incoming f Function E2 g2 E3 g3
+   NORMALIZATION VOLTAGE left
+   CIRCUIT .1e-9 f OBS$InputVoltage ;
+! For bunch energy in "emision beam" command
+Vinput = -520e3;
+PORT right NEGATIVE;
+
+
+
+
+function energy_to_beta(E) = SQRT(1 - (1/(1+E/0.511e6eV)**2));
+FUNCTION wide_pulse(x, x_min, x_max) = (x .GE. x_min) * (x .LE. x_max)/(x_max - x_min); ! Its integral is 1
+function wide_pulse_center(x, xmu, xsigma) = wide_pulse(x,xmu-xsigma,xmu+xsigma);
+
+driver_bunch.Ipeak = 30e3;
+driver_bunch.rsigma = 500e-6;
+driver_bunch.rin = emitter.r - driver_bunch.rsigma;
+driver_bunch.rout = emitter.r + driver_bunch.rsigma;
+driver_bunch.zsigma = 0.25mm;
+! t = 0时，束团中心位置
+driver_bunch.zmu = driver_bunch.zsigma;
+driver_bunch.E0 = abs(Vinput);
+driver_bunch.beta = energy_to_beta(driver_bunch.E0 *1eV);
+v = driver_bunch.beta*C;
+driver_bunch.tsigma = driver_bunch.zsigma / v;
+! 驱动束团的周期
+driver_bunch.Deltaz =  1/f_target*v;
+Function driver_bunch.J(t, z,r,phi)= driver_bunch.Ipeak*
+    wide_pulse(PI*r**2, PI*driver_bunch.rin**2, PI*driver_bunch.rout**2)*
+    step(mod(z-v*t - driver_bunch.zmu, driver_bunch.Deltaz), - driver_bunch.zsigma)*
+    step( + driver_bunch.zsigma,mod(z-v*t -driver_bunch.zmu, driver_bunch.Deltaz));
+
+r1 = (extractor1.rin + extractor1.rout)/2;
+area area_driver conformal extractor1.z0 r1 Extractor1.zend extractor1.rout;
+LINE line_in_extracotr1 conformal extractor1.z r1 extractor1.z extractor1.rout;
+tsigma = 1e-12;
+tmu = 20 * tsigma;
+function J_driver(t)=17e3/(2*pi*15e-3 * 1e-3)*
+    (exp(-(t-tmu)**2/(2*tsigma**2)))* cos(2*pi*f_target*t);
+! function J_driver(t) = 60e-9/(2*pi*15e-3 * 1e-3) *step(t-tmu, -tsigma) *step(tsigma,t-tmu)/(2*tsigma);
+! driver J1 J_driver area_driver;
+t = 5e-9;
+temp_J = J_driver(t);
+temp0 = 17e3/(2*pi*15e-3 * 1e-3);
+temp1 = exp(-(t-tmu)**2/(2*tsigma));
+
+
+
+z = 0.6e-3;
+t = 0;
+r = emitter.r;
+J = driver_bunch.J(t, z, emitter.R);
+J=driver_bunch.Ipeak*
+    wide_pulse(PI*R**2, PI*driver_bunch.rin**2, PI*driver_bunch.rout**2);
+temp0= driver_bunch.zmu - driver_bunch.zsigma;
+temp1 = step(mod(z-v*t - driver_bunch.zmu, driver_bunch.Deltaz), - driver_bunch.zsigma);
+temp2 = step( + driver_bunch.zsigma,mod(z-v*t -driver_bunch.zmu, driver_bunch.Deltaz));
+temp3 = step(mod(z-v*t - driver_bunch.zmu, driver_bunch.Deltaz), - driver_bunch.zsigma)*
+    step( + driver_bunch.zsigma,mod(z-v*t -driver_bunch.zmu, driver_bunch.Deltaz));
+! Emission EXPLOSIVE;
+! emit EXPLOSIVE emitter;
+emission BEAM driver_bunch.J driver_bunch.E0 model emission_beam;
+z = emitter.zend-dz;
+area emit_zone conformal z driver_bunch.rin emitter.zend driver_bunch.rout;
+emit emission_beam emitter exclude emitter INCLUDE emit_zone;
+observe FIELD_INTEGRAL E.dl left fft magnitude suffix InputVoltage;
+observe Emitted emitter ALL Current;
+observe FIELD_POWER S.DA left fft magnitude;
+observe FIELD_POWER S.DA right fft magnitude;
+POINT pt_near_gun emitter.z0 0;
+observe field E1 pt_near_gun fft magnitude;
+
+! observe FIELD E2 PT_at_RIGHT fft magnitude;
+! observe FIELD B3 PT_at_RIGHT fft magnitude;
+
+observe FIELD E2 RIGHT fft magnitude;
+observe FIELD B3 RIGHT fft magnitude;
+
+observe FIELD_INTEGRAL E.dl right fft magnitude;
+
+area reflcav conformal reflcav.z0 reflcav.rin reflcav.zend reflcav.rout;
+void reflcav;
+reflcav.z = (reflcav.z0+reflcav.zend)/2;
+POINT reflcav.obspt reflcav.z emitter.r;
+observe field E1 reflcav.obspt fft magnitude;
+
+
+POINT extractor1.obspt extractor1.z emitter.r;
+observe field E1 extractor1.obspt fft magnitude;
+
+
+
+do i = 1,swspre.N;
+    observe field E1 swspre.'i'.slot.obspt fft magnitude;
+    observe FIELD_INTEGRAL J.DA swspre.'i'.slot.obsline fft magnitude;
+ENDDO;
+
+
+
+do i = 1,sws1.N;
+    observe field E1 sws1.'i'.slot.obspt fft magnitude;
+    observe FIELD_INTEGRAL J.DA sws1.'i'.slot.obsline fft magnitude;
+ENDDO;
+
+! observe FIELD_INTEGRAL J_driver.DA area_driver fft magnitude;
+
+
+Bref = 0.9Tesla;
+coil.N = 199;
+COIL.CURRENT = 100 / 76e-3 /0.82*0.4/0.217*0.4   * Bref;
+coil.z0 = simulation.zmn - 100mm;
+coil.R = simulation.rmx + 2mm;
+coil.zend = simulation.zmx + 100mm;
+do i = 1, coil.N;
+    z = coil.z0+(i-1) * (coil.zend-coil.z0)/coil.N;
+    point coil.'i' z 0.0;
+    coils AXIS x1 coil.'i' coil.R coil.Current;
+ENDDO;
+
+runtime = 6e-9;
+MAXWELL BIASED;
+DURATION runtime;
+
+
+
+TIMER FOR_RANGE PERIODIC REAL 0 RUNTIME 0.029e-9;
+TIMER FOR_PHASESPACE PERIODIC REAL 0 RUNTIME 0.4399e-9;
+TIMER FOR_CONTOUR PERIODIC REAL 0 RUNTIME 0.4399e-9;
+TIMER FOR_STATIC PERIODIC REAL 0 RUNTIME 10e-9;
+
+PHASESPACE  AXES  X1 X2 FOR_PHASESPACE;!  SPECIES ELECTRON MOVIE PNG;
+PHASESPACE  AXES  X1 KE FOR_PHASESPACE;! SPECIES ELECTRON MOVIE PNG;
+PHASESPACE  AXES  X1 P1 FOR_PHASESPACE;
+
+Contour Field B1st Osys$area FOR_STATIC Shade;!  MOVIE PNG;
+Contour Field E1 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+Contour Field E2 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+Contour Field |E| Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+
+LINE line_particle_moving conformal simulation.zmn emitter.r 
+    simulation.zmx emitter.r;
+LINE reflcav.line conformal reflcav.z reflcav.rin reflcav.z reflcav.rout;
+RANGE FIELD B1st line_particle_moving FOR_STATIC;! FFT magnitude;
+RANGE FIELD B2st line_particle_moving FOR_STATIC;! FFT magnitude;
+range field E1 line_particle_moving FOR_RANGE FFT magnitude;
+range FIELD_INTEGRAL J.DA X1 osys$area FOR_RANGE FFT magnitude;;
+range FIELD_POWER S.DA x1 osys$area FOR_RANGE;! FFT magnitude;
+range FIELD_POWER E.J_PARTICLE x1 osys$area FOR_RANGE;! FFT magnitude;
+range particle power ALL X1 FOR_RANGE;
+! range field E1 reflcav.line FOR_RANGE;
+
+start;
+stop;
