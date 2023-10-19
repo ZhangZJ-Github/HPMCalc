@@ -46,14 +46,14 @@ class Coax40GHzSim(hpm.HPMSimWithInitializer):
         return modulated_depth
 
 
-initial_csv = r"F:\changeworld\HPMCalc\simulation\template\Coax40GHz\Initialize.csv"
+initial_csv = r"F:\changeworld\HPMCalc\simulation\template\Coax40GHz\AddExtractor\Initialize2.csv"
 initializer = simulation.optimize.initialize.Initializer(initial_csv)
 
 
 def get_coax40GHzsim():
     return Coax40GHzSim(initializer,
                         r'F:\changeworld\HPMCalc\simulation\template\Coax40GHz\40GHzTemp.m2d',
-                        r'E:\HPM\40GHz\optimize', 40e9, 3e9, lock=hpm.lock)
+                        r'E:\HPM\40GHz\optimize\test', 40e9, 3e9, lock=hpm.lock)
 
 
 if __name__ == '__main__':

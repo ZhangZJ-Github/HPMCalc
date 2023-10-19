@@ -20,15 +20,21 @@ from multiprocessing.pool import ThreadPool
 from pymoo.operators.sampling.lhs import LHS
 from pymoo.algorithms.soo.nonconvex.pso import PSO
 import simulation.optimize.initialize
+
 from pymoo.visualization.scatter import Scatter
 from pymoo.core.problem import StarmapParallelization
 
 from concurrent.futures import ThreadPoolExecutor
 import grd_parser
 import pandas
+
 from _logging import logger
 from total_parser import ExtTool
+
+# TODO: 2023年10月16日00:47:49 此处import失败：
+# Process finished with exit code -1073741819 (0xC0000005)
 from scipy.signal import argrelextrema
+
 from simulation.task_manager.task import TaskBase
 import numpy
 from threading import Lock
@@ -118,6 +124,30 @@ class HPMSim(TaskBase):
         colname_period = 'period'
         df[colname_period] = df[0] // (DeltaT)
         return df.groupby(colname_period).mean().iloc[-2][1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
+
+    @staticmethod
+    def _get_min(df: pandas.DataFrame, DeltaT):
+        """
+        获取近周期的时间序列数据df在时间间隔DeltaT内的最小值
+        :param df: 第0列为时间，第1列为值
+        :param DeltaT:
+        :return:
+        """
+        colname_period = 'period'
+        df[colname_period] = df[0] // (DeltaT)
+        return df.groupby(colname_period).min().iloc[-2][1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
+
+    @staticmethod
+    def _get_max(df: pandas.DataFrame, DeltaT):
+        """
+        获取近周期的时间序列数据df在时间间隔DeltaT内的最小值
+        :param df: 第0列为时间，第1列为值
+        :param DeltaT:
+        :return:
+        """
+        colname_period = 'period'
+        df[colname_period] = df[0] // (DeltaT)
+        return df.groupby(colname_period).max().iloc[-2][1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
 
     def get_res(self, m2d_path: str, out_power_TD_titile: str = r' FIELD_POWER S.DA @RIGHT,FFT-#4.1',
                 in_power_TD_titile: str = r" FIELD_POWER S.DA @LEFT,FFT-#3.1", ) -> dict:

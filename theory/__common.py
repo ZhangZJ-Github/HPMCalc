@@ -27,5 +27,5 @@ def frequency_of_resonator_TMnmp_cylindial(a, l, n=0, m=1, p=0):
     return (Tnm ** 2 + betap ** 2) ** .5 * C.c / (2 * numpy.pi)
 
 
-def radii_of_waveguide_for_TMnm(f,n=0,m=1):
-    return jn_zeros(n,m)[-1] * C.c / (2 * numpy.pi * f)
+def radii_of_waveguide_for_TMnm(f, n=0, m=1):
+    return jn_zeros(n, m)[-1] * C.c / (2 * numpy.pi * f)
