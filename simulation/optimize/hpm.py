@@ -299,7 +299,8 @@ class SamplingWithGoodEnoughValues(LHS):
 class MyProblem(ElementwiseProblem):
     BIG_NUM = 1
 
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer, *args, **kwargs):
+    def __init__(self, initializer: simulation.optimize.initialize.Initializer,method_to_get_hpm,
+                 *args, **kwargs):
         super(MyProblem, self, ).__init__(*args, n_var=len(initializer.initial_df.columns),
                                           n_obj=1,
                                           n_ieq_constr=0,  # TTOParamPreProcessor.N_constraint_le,
@@ -308,6 +309,7 @@ class MyProblem(ElementwiseProblem):
                                           xu=initializer.upper_bound, **kwargs)
         logger.info("======= Optimization start! ========")
         self.initializer = initializer
+        self.method_to_get_hpm = method_to_get_hpm
         logger.info(self.elementwise)
         logger.info(self.elementwise_runner)
 
@@ -317,7 +319,7 @@ class MyProblem(ElementwiseProblem):
 
     def _evaluate(self, x, out: dict, *args, **kwargs
                   ):
-        hpmsim = get_hpmsim()
+        hpmsim = self.method_to_get_hpm()
         hpmsim.template.copy_template_to_working_dir()
         shutil.copy(self.initializer.filename,
                     os.path.join(hpmsim.template.working_dir, os.path.split(self.initializer.filename)[1]))
@@ -378,7 +380,8 @@ class OptimizeJob(JobBase):
 
     def run(self):
         res = minimize(
-            MyProblem(self.initializer, elementwise_runner=self.runner
+            MyProblem(self.initializer, method_to_get_hpm=self.method_to_get_HPMSimWithInitializer_object,
+                      elementwise_runner=self.runner
                       ),
             self.algorithm,
             seed=1,
