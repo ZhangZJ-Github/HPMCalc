@@ -29,7 +29,8 @@ def spectrogram(df):
     # Compute and plot the spectrogram.
     freqs, ts, Sxx = signal.spectrogram(x, sample_rate,  # mode='complex',
                                         scaling='spectrum',  # return_onesided=False
-                                        nfft=2000
+                                        nperseg=75,
+                                        # nfft=2000
                                         )
     plt.figure()
     plt.pcolormesh(ts, freqs, Sxx + 1e-12, shading='gouraud')
@@ -37,7 +38,8 @@ def spectrogram(df):
     plt.xlabel('Time [sec]')
 
     plt.figure()
-    plt.pcolormesh(ts, 40e9/(freqs+1) / C.c,Sxx , shading='gouraud')
+    plt.pcolormesh(ts, 40e9 / (freqs + 1) / C.c, Sxx, shading='gouraud')
+    plt.grid()
     plt.ylabel('phase velocity [c]')
     plt.xlabel('z [m]')
 
@@ -107,6 +109,7 @@ if __name__ == '__main__':
 
     # To SI unit
     df.iloc[:, 0] *= 1e-3
+    df = df.iloc[300:len(df) - 2700, :]  # 去除前后幅值过高的 否则相速度曲线不明显 难以对比
 
     label = labels[probe_index]
     for i in range(len(label)):
