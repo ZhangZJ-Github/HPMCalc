@@ -20,7 +20,7 @@ from simulation.optimize.hpm import HPMSimWithInitializer
 from simulation.optimize.initialize import Initializer
 
 initialize_csv = r'initialize.csv'
-initializer = Initializer(initialize_csv)
+get_initializer = lambda: Initializer(initialize_csv)  # 动态调用，每次生成新个体时都会重新读一遍优化配置，从而支持在运行时临时修改优化配置
 
 
 class Genac(HPMSimWithInitializer):
@@ -72,7 +72,8 @@ lock = Lock()
 
 
 def get_genac():
-    return Genac(initializer, r'Genac25G-template.m2d', r'E:\GeneratorAccelerator\Genac\optmz\粗网格', 25e9, lock=lock)
+    return Genac(get_initializer(), r'Genac20G100keV.m2d', r'E:\GeneratorAccelerator\Genac\optmz\Genac20G100keV\粗网格', 25e9,
+                 lock=lock)
 
 
 if __name__ == '__main__':
@@ -83,9 +84,9 @@ if __name__ == '__main__':
     # genac.evaluate(res)
     # res
     # aaa
-    optjob = simulation.optimize.hpm.OptimizeJob(initializer, get_genac)
+    optjob = simulation.optimize.hpm.OptimizeJob(get_initializer(), get_genac)
     optjob.algorithm = PSO(
-        pop_size=7,
+        pop_size=14,
         sampling=simulation.optimize.hpm.SamplingWithGoodEnoughValues(optjob.initializer),  # LHS(),
         # ref_dirs=ref_dirs
     )
