@@ -252,8 +252,13 @@ class HPMSimWithInitializer(HPMSim):
         for key in params:
             if key.startswith('%'):
                 precision = self.initializer.precision[self.initializer.param_name_to_index[key]]
-                params[key] = numpy.round(params[key] / precision) * precision
+                params[key] = int(
+                    numpy.round(params[key] / precision)) * precision  # TODO: 检查是否仍会出现形如0.03000000000000001这类数字
         return True
+
+    def find_old_res(self, params: dict) -> str:
+        super(HPMSimWithInitializer, self).find_old_res(params, self.initializer.precision_df.to_dict())
+        pass
 
 
 def get_HPMSimWithInitializerExample():
@@ -299,7 +304,7 @@ class SamplingWithGoodEnoughValues(LHS):
 class MyProblem(ElementwiseProblem):
     BIG_NUM = 1
 
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer,method_to_get_hpm,
+    def __init__(self, initializer: simulation.optimize.initialize.Initializer, method_to_get_hpm,
                  *args, **kwargs):
         super(MyProblem, self, ).__init__(*args, n_var=len(initializer.initial_df.columns),
                                           n_obj=1,
@@ -364,24 +369,22 @@ class JobBase:
 
 class OptimizeJob(JobBase):
     def __init__(self, initializer: simulation.optimize.initialize.Initializer,
-                 method_to_get_HPMSimWithInitializer_object: typing.Callable[[], HPMSimWithInitializer]):
+                 method_to_get_HPMSimWithInitializer_object: typing.Callable[[], HPMSimWithInitializer],
+                 ):
         super(OptimizeJob, self).__init__(initializer, method_to_get_HPMSimWithInitializer_object)
-        n_threads = 7
-        pool = ThreadPool(n_threads)
-        self.runner = StarmapParallelization(pool.starmap)
-
         # first_sampling = True
-
         self.algorithm = PSO(
             pop_size=49,
             sampling=SamplingWithGoodEnoughValues(self.initializer),  # LHS(),
             # ref_dirs=ref_dirs
         )
 
-    def run(self):
+    def run(self, n_threads=7):
+        pool = ThreadPool(n_threads)
+        runner = StarmapParallelization(pool.starmap)
         res = minimize(
             MyProblem(self.initializer, method_to_get_hpm=self.method_to_get_HPMSimWithInitializer_object,
-                      elementwise_runner=self.runner
+                      elementwise_runner=runner
                       ),
             self.algorithm,
             seed=1,
@@ -396,8 +399,8 @@ class MaunualJOb(JobBase):
     def __init__(self, *args, **kwargs):
         super(MaunualJOb, self).__init__(*args, **kwargs)
 
-    def run(self):
-        with ThreadPoolExecutor(max_workers=6) as pool:
+    def run(self, maxworkers=6):
+        with ThreadPoolExecutor(max_workers=maxworkers) as pool:
             run = lambda i: self.method_to_get_HPMSimWithInitializer_object().update(self.initializer.init_params[i])
             for i in range(self.initializer.N_initial):
                 pool.submit(run, i)

@@ -26,8 +26,8 @@ class Initializer:
         }
         self.lower_bound = self.initial_df.iloc[self.N_initial + 0].values  # 参数下边界
         self.upper_bound = self.initial_df.iloc[self.N_initial + 1].values  # 上边界
-        self.precision = self.initial_df.iloc[self.N_initial + 2].values  # shape (N_params,)
-
+        self.precision_df = self.initial_df.iloc[self.N_initial + 2]
+        self.precision = self.precision_df.values  # shape (N_params,)
     def update(self):
         self.__init__(self.filename)
 
