@@ -257,8 +257,7 @@ class HPMSimWithInitializer(HPMSim):
         return True
 
     def find_old_res(self, params: dict) -> str:
-        super(HPMSimWithInitializer, self).find_old_res(params, self.initializer.precision_df.to_dict())
-        pass
+        return super(HPMSimWithInitializer, self).find_old_res(params, self.initializer.precision_df.to_dict())
 
 
 def get_HPMSimWithInitializerExample():

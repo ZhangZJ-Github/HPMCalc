@@ -207,9 +207,9 @@ class TaskBase(ABC):
             mask = (((df[df_this_numeric_params.columns] - df_this_numeric_params).abs() - df_precision) <= 0).all(
                 axis=1)
             m2d_paths = df[self.Colname.path][mask]
-            if m2d_paths:
-                logger.info("找到了之前的记录！\n%s => %s" % (params, m2d_paths[0]))
-                return m2d_paths[0]
+            if m2d_paths.any():
+                logger.info("找到了之前的记录！\n%s => %s" % (params, m2d_paths.values[0]))
+                return m2d_paths.values[0]
             return ''
 
     def log_and_info(self, param_set, m2d_path):
@@ -238,6 +238,7 @@ class TaskBase(ABC):
             return 0.
         logger.info('Finding old result...')
         old_m2d_path = self.find_old_res(param_set)
+        logger.info("old_m2d_path=%s"%old_m2d_path)
 
         if old_m2d_path:
             return self.log_and_info(param_set, old_m2d_path)
