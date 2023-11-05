@@ -20,6 +20,11 @@ def oversize_ratio(r, f):
 def frequency_of_resonator_TMnmp_cylindial(a, l, n=0, m=1, p=0):
     """
     圆柱型谐振腔中TM_{nmp}模式的频率
+    a：圆柱谐振腔的半径
+    l：圆柱谐振腔的轴向长度
+    n: 角向周期数
+    m：径向周期数
+    p: 轴（z）向周期数
     :return:
     """
     Tnm = jn_zeros(n, m)[-1] / a

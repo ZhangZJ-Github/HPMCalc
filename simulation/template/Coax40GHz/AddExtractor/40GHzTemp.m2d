@@ -93,8 +93,8 @@ N_P2 =0 ;
 DP2 = 0.00_MM ; !for period change
 
 !extractor
-!D_EXT = 3.2 MM ;
-D_EXT = 0.0 MM ;
+D_EXT = 3.2 MM ;
+! D_EXT = 0.0 MM ;
 R_EXT = R_BEAM_TUNNEL + 5.2 MM ;
 W_EXT = 2.7_MM ;!front drift length
 
@@ -200,7 +200,7 @@ ENDDO ;
 
 ! mid extractor
 
-extractor0.z1 = Z_PRE + W_SWS1 + W_P1*7;
+extractor0.z1 = Z_PRE + W_SWS1 + W_P1*%extractor0.z1_N_offset%;
 extractor0.dz = %extractor0.dz%;
 extractor0.z2= extractor0.z1 - extractor0.dz ;
 extractor0.dr = 3mm;
@@ -210,7 +210,28 @@ extractor0.rout = extractor0.rin+extractor0.dr;
 area extractor0 conformal extractor0.z1 extractor0.rin extractor0.z2 extractor0.rout;
 
 
+side_out.rout = extractor0.rout+%side_out.rout_offset%;
+side_out.oblique.dz = 4mm;
+side_out.z0 = extractor0.z2;
+side_out.oblique.zend = extractor0.z2 + side_out.oblique.dz;
+side_out.straight.z0 = side_out.oblique.zend;
+side_out.straight.zend = Z_OUT;
+side_out.rin = extractor0.rout - %side_out.rin_offset%;
 
+z = (side_out.straight.zend + side_out.straight.z0)/2;
+line support_rods conformal z side_out.rin z side_out.rout;
+area side_out POLYGONAL 
+	side_out.z0 extractor0.rout 
+	side_out.oblique.zend side_out.rout
+	side_out.straight.zend side_out.rout
+	side_out.straight.zend side_out.rin
+	side_out.z0 side_out.rin
+	side_out.z0 extractor0.rout;
+
+LINE side_out.port CONFORMAL side_out.straight.zend side_out.rin side_out.straight.zend side_out.rout;
+
+z = (Z_EXT + Z_OUT)/2;
+LINE support_rods2 conformal z r_core z R_BEAM_TUNNEL;
 
 Do I=1,N_P2 ;
 	Z1 = Z_SWS1 + W_SWS2 + W_P2*I;
@@ -270,6 +291,7 @@ DO I=1,N_P2 ;
 ENDDO ;
 
 AUTOGRID ;
+
 ! ============================================================
 ! ... construction
 VOID ABSORB_SPACE;
@@ -284,7 +306,6 @@ VOID REFLECTOR ;
 VOID SLOT_PRE.1 ;
 VOID SLOT_PRE.2 ;
 !VOID SLOT_PRE.2.1 ;
-void extractor0;
 DO I=1,N_P1 ;
 	VOID SLOT_SWS1.'I';
 ENDDO ;
@@ -292,17 +313,23 @@ DO I=1,N_P2 ;
 	VOID SLOT_SWS2.'I';
 ENDDO ;
 VOID SLOT_EXT ;
+! void extractor0;
+! VOID side_out;
+
+! inductor support_rods 1mm;
+inductor support_rods2 1mm;
 
 ! ============================================================
 ! ... boundaries
 
 LINE PORT_L CONFORMAL Z_GUN,R_CA Z_GUN,R_IN ;
-LINE PORT_R CONFORMAL Z_OUT,R_CORE Z_OUT,R_SHELL ;
+LINE PORT_R1 CONFORMAL Z_OUT,R_CORE Z_OUT,R_B1 ;
 ! LINE PORT_UP CONFORMAL Z_OUT,R_SHELL Z_OUT1,R_SHELL ;
 
 ! PORT  PORT_UP NEGATIVE;
 !PORT PORT_L POSITIVE; !left port to input voltage
-PORT PORT_R NEGATIVE;
+PORT PORT_R1 NEGATIVE;
+PORT side_out.port NEGATIVE;
 
 FREESPACE ABSORB_SPACE NEGATIVE X1 ALL CONDUCTIVITY 1E-8;
 ! ================ E.T.C. PARAMETERS ========================
@@ -343,7 +370,9 @@ EMIT EXPLOSIVE EMIT_ZONE ;
 !results
 OBSERVE Emitted EMIT_ZONE ELECTRON CURRENT ;
 OBSERVE  FIELD_POWER S.DA PORT_L fft magnitude; 
-OBSERVE  FIELD_POWER S.DA PORT_R fft magnitude; 
+OBSERVE  FIELD_POWER S.DA PORT_R1 fft magnitude; 
+OBSERVE  FIELD_POWER S.DA side_out.port fft magnitude; 
+
 
 PHASESPACE  AXES  X1 X2 FOR_ELECTRIC ;! SPECIES ELECTRON MOVIE PNG;
 PHASESPACE  AXES  X1 KE FOR_ELECTRIC ;! SPECIES ELECTRON MOVIE PNG;
@@ -355,8 +384,8 @@ RANGE FIELD E1 BEAM_LINE FOR_ELECTRIC;
 RANGE FIELD_POWER S.DA X1 OSYS$AREA FOR_ELECTRIC;
 
 ! Contour Field B1st Osys$area FOR_CONTOUR Shade;!  MOVIE PNG;
- Contour Field E1 Osys$area FOR_CONTOUR Shade;! MOVIE PNG;
- Contour Field E2 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+Contour Field E1 Osys$area FOR_CONTOUR Shade;! MOVIE PNG;
+Contour Field E2 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
 ! VECTOR FIELD E1 E2  Osys$area FOR_CONTOUR;
 
 OBSERVE FIELD E1 OBSP.PRE.1 FFT MAGNITUDE;
@@ -417,8 +446,8 @@ AREA FEEDLINE1 CONFORMAL DRIVE.X1, DRIVE.Y1 DRIVE.X2, DRIVE.Y2 ;
                                     ! WINDOW FREQUENCY 0.0 1E2_GHZ;
 	OBSERVE FIELD E1 FEEDLINE1 FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
 	!OBSERVE FIELD E2 FEEDLINE1 FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
-	!OBSERVE FIELD E1 PORT_RIGHT FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
-	!OBSERVE FIELD E2 PORT_RIGHT FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
+	!OBSERVE FIELD E1 PORT_R1IGHT FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
+	!OBSERVE FIELD E2 PORT_R1IGHT FFT MAGNITUDE WINDOW FREQUENCY 0.0 1E2_GHZ;
 	CONTOUR FIELD E1 OSYS$AREA SNAPSHOT SHADE NODUMP ;
 	CONTOUR FIELD E2 OSYS$AREA SNAPSHOT SHADE NODUMP ;
 
