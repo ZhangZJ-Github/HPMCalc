@@ -15,6 +15,7 @@ import time
 from collections import OrderedDict
 from threading import Lock
 import matplotlib
+
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import pandas
@@ -72,7 +73,7 @@ class MagicTemplate:
         self.lock.release()
         return self.output_prefix + datetime.datetime.fromtimestamp(
             timestamp_ns // 1e9).strftime("_%Y%m%d_%H%M%S_") + ("%02d.m2d" % (
-                (timestamp_ns % 1e9) // 1e7))[1:]
+                (timestamp_ns % 1e9) // 1e7))
 
     def to_m2d(self, replace_rules: dict):
         file_path = self.new_m2d_file_name()
@@ -186,7 +187,7 @@ class TaskBase(ABC):
         """
         pass
 
-    def find_old_res(self, params: dict) -> str:
+    def find_old_res(self, params: dict, precisions: dict = {}) -> str:
         # TODO: 检查有效性
         if os.path.exists(self.log_file_name):
             self.lock.acquire()
@@ -194,29 +195,22 @@ class TaskBase(ABC):
             df = self.load_log()
             self.lock.release()
             # logger.info('self.lock.released')
-            condition = pandas.Series([True] * len(df))
+
+            numeric_params = {}
             for key in params:
                 if key.startswith('%'):
-                    old_condition = condition
-                    condition = condition & (df[key] == params[key])
-                    logger.info(
-                        'params[%s] = %s, condition.any() = %s, condition[condition] = %s' % (
-                            key, params[key], condition.any(), condition[condition]))
-                    if not condition.any():
-                        logger.info(
-                            'old_condition[df[key] == params[key]] = %s' % (old_condition[df[key] == params[key]]))
-                        # logger.info('df[key][df[key] == params[key]] = \n%s'%(df[key][df[key] == params[key]]))
-                        break
-            logger.info('condition = %s' % (condition))
-            old_res_line = df[condition]
-            logger.info('len(old_res_line) = %d' % (len(old_res_line)))
-            if len(old_res_line):
-                # logger.info("old_res_line = %s" % old_res_line)
-                old_m2d_path = old_res_line[self.Colname.path].values[
-                    len(old_res_line) - 1]
-                logger.info("找到了之前的记录：%s" % old_m2d_path)
-                return old_m2d_path
-        return ""  # means not found
+                    numeric_params[key] = params[key]
+
+            df_this_numeric_params = pandas.DataFrame(numeric_params, index=df.index)
+            df_precision = pandas.DataFrame({key: precisions.get(key, 0) for key in df_this_numeric_params.columns},
+                                            index=df.index)
+            mask = (((df[df_this_numeric_params.columns] - df_this_numeric_params).abs() - df_precision) <= 0).all(
+                axis=1)
+            m2d_paths = df[self.Colname.path][mask]
+            if m2d_paths.any():
+                logger.info("找到了之前的记录！\n%s => %s" % (params, m2d_paths.values[0]))
+                return m2d_paths.values[0]
+            return ''
 
     def log_and_info(self, param_set, m2d_path):
         try:
@@ -244,6 +238,7 @@ class TaskBase(ABC):
             return 0.
         logger.info('Finding old result...')
         old_m2d_path = self.find_old_res(param_set)
+        logger.info("old_m2d_path=%s"%old_m2d_path)
 
         if old_m2d_path:
             return self.log_and_info(param_set, old_m2d_path)
