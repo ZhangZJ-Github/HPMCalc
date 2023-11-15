@@ -303,7 +303,8 @@ class SamplingWithGoodEnoughValues(LHS):
 class MyProblem(ElementwiseProblem):
     BIG_NUM = 1
 
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer, method_to_get_hpm,
+    def __init__(self, initializer: simulation.optimize.initialize.Initializer,
+                 method_to_get_hpm: typing.Callable[[], HPMSim],
                  *args, **kwargs):
         super(MyProblem, self, ).__init__(*args, n_var=len(initializer.initial_df.columns),
                                           n_obj=1,

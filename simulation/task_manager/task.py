@@ -14,15 +14,18 @@ import shutil
 import time
 from collections import OrderedDict
 from threading import Lock
+
 import matplotlib
 
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import pandas
 from _logging import logger
+from simulation.conf.config import Config
 
 # import simulation.task_manager.manual_task
 CSV_ENCODING = 'gbk'
+cfg = Config.read_json_file()
 
 
 class MagicTemplate:
@@ -87,7 +90,7 @@ from abc import ABC, abstractmethod
 
 
 class TaskBase(ABC):
-    MAGIC_SOLVER_PATH = r"G:\Program Files\Magic Tools\magic2d_Sng.exe"
+    MAGIC_SOLVER_PATH = cfg.get_value(Config.ItemNames.Magic_executable_path)
 
     class Colname:
         score = "score"
@@ -238,7 +241,7 @@ class TaskBase(ABC):
             return 0.
         logger.info('Finding old result...')
         old_m2d_path = self.find_old_res(param_set)
-        logger.info("old_m2d_path=%s"%old_m2d_path)
+        logger.info("old_m2d_path=%s" % old_m2d_path)
 
         if old_m2d_path:
             return self.log_and_info(param_set, old_m2d_path)

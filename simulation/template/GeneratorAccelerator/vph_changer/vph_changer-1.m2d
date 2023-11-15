@@ -1,0 +1,103 @@
+HEADER AUTHOR       "Zi-Jing Zhang" ; 
+HEADER DEVICE       "vphChanger@40GHz" ;
+HEADER REMARKS      "Structure to change phase velocity" ;
+SYSTEM CYLINDRICAL;
+
+dz = 0.7mm;
+dr = 0.35mm;
+dz1 = 0.3mm;
+clight = 299792458.0;
+pi = 3.141592653589793;
+
+! 目标频率
+f_target = 40e9;!40e9;
+
+shell_min_thickness = 2mm;
+
+shell.rin = 4e-3;
+shell.rout = shell.rin + 3e-3;
+shell.z0 = -20e-3;
+shell.zend = 100mm;
+area shell conformal shell.z0 shell.rin shell.zend shell.rout;
+
+driver_area.z0 = -2mm;
+driver_area.zend = 0;
+driver_area.rout = shell.rin - 0.5mm;
+driver_area.rin = driver_area.rout - 1mm;
+area driver_area conformal driver_area.z0 driver_area.rin driver_area.zend driver_area.rout;
+
+simulation.zmn = shell.z0;
+simulation.zmx = shell.zend;
+simulation.rmx = shell.rout;
+area simulation conformal simulation.zmn 0 simulation.zmx simulation.rmx;
+CONDUCTOR shell material copper;
+! CONDUCTOR shell;
+mark simulation x1 size dz;
+mark simulation x2 size dr;
+
+sws1.z0 = driver_area.zend + 10mm;
+sws1.p0 = 1.3mm;
+sws1.dp= -0*0.01mm;
+sws1.dr = 1.2mm;
+sws1.ddr = -0*0.01mm;
+sws1.dz = 0.7mm;
+sws1.rin = shell.rin;
+sws1.n = 45;
+z0 = sws1.z0;
+do i=1,sws1.n;    
+    z1 = z0+sws1.dz;
+    r1 = sws1.rin+sws1.dr+(i-1)*sws1.ddr;
+    area sws1.slot.'i' conformal z0 sws1.rin z1 r1;
+    void sws1.slot.'i';
+    mark sws1.slot.'i' x1 size dz1;
+    p = (i-1)*sws1.dp+sws1.p0;
+    z0 = z0+p;
+ENDDO;
+sws1.zend = z0;
+
+
+
+
+AUTOGRID;
+
+
+function J(t) = 30e3/(2*pi*15e-3*1e-3)*sin(2*Pi*f_target*t);
+driver J1 J driver_area;
+
+
+LINE left conformal simulation.zmn 0 simulation.zmn shell.rin;
+LINE right conformal simulation.zmx 0 simulation.zmx shell.rin;
+port left Positive;
+port right NEGATIVE;
+runtime = 50e-9;!(shell.zend-driver_area.zend)/clight;!5e-9;
+! MAXWELL BIASED;
+DURATION runtime;
+
+
+
+
+
+
+TIMER FOR_RANGE PERIODIC REAL 0 RUNTIME 0.05e-9;
+TIMER FOR_PHASESPACE PERIODIC REAL 0 RUNTIME 0.05e-9;
+TIMER FOR_CONTOUR PERIODIC REAL 0 RUNTIME 0.05e-9;
+TIMER FOR_STATIC PERIODIC REAL 0 RUNTIME 10e-9;
+
+! PHASESPACE  AXES  X1 X2 FOR_PHASESPACE;!  SPECIES ELECTRON MOVIE PNG;
+! PHASESPACE  AXES  X1 KE FOR_PHASESPACE;! SPECIES ELECTRON MOVIE PNG;
+! PHASESPACE  AXES  X1 P1 FOR_PHASESPACE;
+
+! Contour Field B1st Osys$area FOR_STATIC Shade;!  MOVIE PNG;
+Contour Field E1 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+! Contour Field E2 Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+! Contour Field |E| Osys$area FOR_CONTOUR Shade ;! MOVIE PNG;
+
+LINE central_channel.line conformal simulation.zmn 0 simulation.zmx 0;
+range field E1 central_channel.line FOR_RANGE;
+
+point obspt 10mm 0;
+observe field E1 obspt fft magnitude;
+
+
+start;
+stop;

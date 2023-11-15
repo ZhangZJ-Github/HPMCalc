@@ -79,7 +79,7 @@ sws1.rout = sws1.rin + sws1.dr;
 sws1.zend = sws1.z0+sws1.N*sws1.p;
 
 extractor1.z0 = sws1.zend+1mm;
-extractor1.dz = 0*2mm;
+extractor1.dz = 2mm;
 extractor1.dr = 5mm;
 extractor1.zend = extractor1.z0 + extractor1.dz;
 extractor1.z = (extractor1.z0+extractor1.zend)/2;
@@ -190,11 +190,11 @@ function energy_to_beta(E) = SQRT(1 - (1/(1+E/0.511e6eV)**2));
 FUNCTION wide_pulse(x, x_min, x_max) = (x .GE. x_min) * (x .LE. x_max)/(x_max - x_min); ! Its integral is 1
 function wide_pulse_center(x, xmu, xsigma) = wide_pulse(x,xmu-xsigma,xmu+xsigma);
 
-driver_bunch.Ipeak =1; ! 30e3;
+driver_bunch.Ipeak =20e3; ! 30e3;
 driver_bunch.rsigma = 500e-6;
 driver_bunch.rin = emitter.r - driver_bunch.rsigma;
 driver_bunch.rout = emitter.r + driver_bunch.rsigma;
-driver_bunch.zsigma = 0.25mm;
+driver_bunch.zsigma =%driver_bunch.zsigma% !0.25mm;
 ! t = 0时，束团中心位置
 driver_bunch.zmu = driver_bunch.zsigma;
 driver_bunch.E0 = abs(Vinput);
