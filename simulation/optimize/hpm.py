@@ -267,39 +267,6 @@ def get_HPMSimWithInitializerExample():
         r'E:\HPM\11.7GHz\optimize\TTO\from_good_5', 11.7e9, 3e9, lock=lock)
 
 
-class SamplingWithGoodEnoughValues(LHS):
-    """
-    给定初始值的采样
-    可以提前指定足够好的结果
-    """
-
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer):
-        super(SamplingWithGoodEnoughValues, self).__init__()
-        self.initializer = initializer
-
-    def do(self, problem, n_samples, **kwargs):
-        # 只在每个个体的第一代执行
-        res = super(SamplingWithGoodEnoughValues, self).do(problem, n_samples, **kwargs)
-        logger.info('SamplingWithGoodEnoughValues.do()')
-        logger.info('len(res) = %d' % len(res))
-
-        for i in range(min(self.initializer.N_initial, len(res))):
-            res[i].X = self.initializer.initial_df.loc[i].values
-            logger.info("设置了初始值：res[%d].X = %s\n" % (i, res[i].X,))
-            # first_sampling = False
-
-        # for i in range(len(res)):
-        #     while True:
-        #         G = [constr(res[i].x) for constr in constraint_ueq]
-        #         if numpy.any(numpy.array(G) > 0):
-        #             logger.warning("（Sampling）并非全部约束条件都满足for %d：%s\n重新采样……" % (i, G))
-        #             res[i].X = super(SamplingWithGoodEnoughValues, self).do(problem, 1, **kwargs)[0].X
-        #             continue
-        #         else:
-        #             break
-        return res
-
-
 class MyProblem(ElementwiseProblem):
     BIG_NUM = 1
 
@@ -375,7 +342,7 @@ class OptimizeJob(JobBase):
         # first_sampling = True
         self.algorithm = PSO(
             pop_size=49,
-            sampling=SamplingWithGoodEnoughValues(self.initializer),  # LHS(),
+            sampling=self.initializer.init_params_df.values if self.initializer.N_initial else LHS(),
             # ref_dirs=ref_dirs
         )
 
