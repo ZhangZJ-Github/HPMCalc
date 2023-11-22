@@ -19,8 +19,8 @@ class DataProcessing(object):
             pyautogui.PAUSE = 1
             pyautogui.hotkey('win', 'r')
             path = path
-            Review_SNG_path='D:\magic\Review_SNG.exe'
-            pyautogui.typewrite(Review_SNG_path + ' ' + path) #Review_SNG.exe路径
+            Review_SNG_path='D:\magic\Review_SNG.exe' #Review_SNG.exe路径
+            pyautogui.typewrite(Review_SNG_path + ' ' + path) 
             pyautogui.press('\n')
             # print('------------------------------------------------------------')
             pyautogui.press('n')
