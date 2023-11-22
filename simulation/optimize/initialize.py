@@ -20,7 +20,7 @@ class Initializer:
         self.N_initial = len(self.initial_df) - 5
         self.init_params: typing.List[typing.Dict[str, float]] = [
             {col: self.initial_df[col][i] for col in self.initial_df} for i in range(self.N_initial)]
-        self.init_params_df: pandas.DataFrame = self.initial_df.iloc[:self.N_initial]
+        self.init_params_df: pandas.DataFrame = self.initial_df.iloc[:self.N_initial]  # 初始参数
         self.index_to_param_name = lambda i: self.initial_df.columns[i]
         self.param_name_to_index = {
             self.initial_df.columns[i]: i for i in range(len(self.initial_df.columns))
