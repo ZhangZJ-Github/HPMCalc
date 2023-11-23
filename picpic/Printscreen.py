@@ -14,21 +14,21 @@ if __name__ == '__main__':
     ################################################
     #依次读取文件夹中的.toc文件（二选一）
 
-    folderpath = r"F:\11-11\1" #需要修改的文件所在的路径
-    savepath=r"E:\11-18\savepng" #保存路径
-    csvname = 'index.csv'
-    DP=DataProcessing()
-    DP.foldersave(folderpath, savepath, csvname)
+    # folderpath = r"F:\11-11\1" #需要修改的文件所在的路径
+    # savepath=r"E:\11-18\savepng" #保存路径
+    # csvname = 'index.csv'
+    # DP=DataProcessing()
+    # DP.foldersave(folderpath, savepath, csvname)
 
 
     ##################################################
     #读取csv中的文件（二选一）
 
-    # csvpath = r"F:\11-11\10g-optimize4\template.m2d.log.csv"
-    # savepath=r"E:\11-18\savepng"
-    # csvname = 'index.csv'
-    # DP = DataProcessing()
-    # DP.csvsave(csvpath,savepath,csvname )
+    csvpath = r"F:\11-11\10g-optimize4\template.m2d.log.csv"
+    savepath=r"E:\11-18\savepng"
+    csvname = 'index.csv'
+    DP = DataProcessing()
+    DP.csvsave(csvpath,savepath,csvname )
 
 
 
