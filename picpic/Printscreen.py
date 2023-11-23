@@ -1,13 +1,37 @@
 from Datapro import DataProcessing
-import os   #导入os模块
-
+import fld_parser
+import par_parser
+import grd_parser
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import time
+from PIL import Image
+import pyautogui
+import os
 
 if __name__ == '__main__':
-    savepath=r"E:\11-18\3" #保存路径
-    path = r"E:\11-18\3" #需要修改的文件所在的路径
-    original_name = os.listdir(path)        #读取文件初始的名字
-    #print(original_name)
+    ################################################
+    #依次读取文件夹中的.toc文件（二选一）
+
+    folderpath = r"F:\11-11\1" #需要修改的文件所在的路径
+    savepath=r"E:\11-18\savepng" #保存路径
+    csvname = 'index.csv'
     DP=DataProcessing()
-    for i in original_name:                 #遍历全部文件
-        if os.path.splitext(i)[-1]=='.toc':
-            DP.modelsavepng(path+'\\'+i,savepath)   #保存模型图为.png
+    DP.foldersave(folderpath, savepath, csvname)
+
+
+    ##################################################
+    #读取csv中的文件（二选一）
+
+    # csvpath = r"F:\11-11\10g-optimize4\template.m2d.log.csv"
+    # savepath=r"E:\11-18\savepng"
+    # csvname = 'index.csv'
+    # DP = DataProcessing()
+    # DP.csvsave(csvpath,savepath,csvname )
+
+
+
+
+
+
