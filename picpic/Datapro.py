@@ -1,8 +1,18 @@
 import time
+<<<<<<< HEAD
+=======
+import pyautogui
+import os
+import fld_parser
+import par_parser
+import grd_parser
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+>>>>>>> origin/yyh
 from PIL import Image
 import pyautogui
 import os
-
 
 
 class DataProcessing(object):
@@ -12,24 +22,30 @@ class DataProcessing(object):
 
 
 
-
-
-    def modelsavepng(self,path,savepath):
-        if pyautogui.size().height == 1080 and pyautogui.size().width == 1920:
+    def modelsavepng(self,path,savepath,n=8):
+        #分辨率1920*1080或2560*1440，100%缩放 横向
+        if (pyautogui.size().height == 1080 and pyautogui.size().width == 1920) or \
+        (pyautogui.size().height == 1440 and pyautogui.size().width == 2560):
             pyautogui.PAUSE = 1
             pyautogui.hotkey('win', 'r')
             path = path
-            Review_SNG_path='D:\magic\Review_SNG.exe' #Review_SNG.exe路径
-            pyautogui.typewrite(Review_SNG_path + ' ' + path) 
+            Review_SNG_path = 'D:\magic\Review_SNG.exe'  # Review_SNG.exe路径
+            pyautogui.typewrite(Review_SNG_path + ' ' + path)
             pyautogui.press('\n')
             # print('------------------------------------------------------------')
             pyautogui.press('n')
             pyautogui.press('n')
             pyautogui.press('n')
-            time.sleep(7)
-            pyautogui.click(1658, 66)
-            pyautogui.click(462, 55)
-            pyautogui.click(441, 57)
+            time.sleep(n)  #等待n秒打开toc文件 取决于电脑运行速度
+            #若不适配可手调下列click参数
+            if pyautogui.size().height == 1080 and pyautogui.size().width == 1920:
+                pyautogui.click(1658, 66)
+                pyautogui.click(462, 55)
+                pyautogui.click(441, 57)
+            else:
+                pyautogui.click(2239, 117)
+                pyautogui.click(464, 58)
+                pyautogui.click(442, 57)
             directory = savepath  # 保存的目录
             # filename = os.path.basename(path)
             dirStr, ext = os.path.splitext(path)
@@ -38,14 +54,45 @@ class DataProcessing(object):
             im = pyautogui.screenshot()
             try:
                 im.save(path1)  # quality为图片质量，65为最低，95为最高
-                print('图片保存成功，保存在' + directory + "\n")
+                print(file + '.png图片保存成功，保存在' + directory + "\n")
             except:
                 print('图片保存失败')
             time.sleep(1)
-            pyautogui.click(1910, 7)
+            pyautogui.click(pyautogui.size().width-10, 7)
 
         else:
-            print("分辨率错误，请调整至1920*1080")
+            print("分辨率错误，请调整至1920*1080或2560*1440")
+
+    def csvsave(self,csvpath,savepath,csvname='index.csv',n=8):
+        savepath = savepath
+        df = pd.read_csv(csvpath)
+        norepeat_df = df.drop_duplicates(subset='m2d_path', keep='first')
+        norepeat_df.insert(norepeat_df.shape[1], 'png_path', '')
+        for i in norepeat_df.index:
+            dirStr, ext = os.path.splitext(norepeat_df['m2d_path'][i])
+            file = dirStr.split("\\")[-1]
+            # print(norepeat_df['m2d_path'][i])
+            self.modelsavepng(dirStr+'.toc',savepath,n)
+            norepeat_df.at[i, 'png_path'] = savepath + '\\' + file + '.png'
+        norepeat_df.to_csv(savepath + '\\'+csvname)
+
+    def foldersave(self,folferpath,savepath,csvname='index.csv',n=8):
+        path = folferpath  # 需要修改的文件所在的路径
+        savepath = savepath  # 保存路径
+        original_name = os.listdir(path)  # 读取文件初始的名字
+        df = pd.DataFrame()
+        df.insert(df.shape[1], 'm2d_path', '')
+        df.insert(df.shape[1], 'save_path', '')
+        for i in original_name:  # 遍历全部文件
+            if os.path.splitext(i)[-1] == '.toc':
+                dirStr, ext = os.path.splitext(i)
+                file = dirStr.split("\\")[-1]
+                self.modelsavepng(path + '\\' + i, savepath)  # 保存模型图为.png
+                df.loc[len(df.index)] = [path + '\\' + file + '.png', savepath + '\\' + file + '.png']
+        df.to_csv(savepath + '\\' + csvname)
+
+
+
 
 
 
@@ -110,7 +157,8 @@ if __name__ == '__main__':
     # im.getpixel((500, 500))  # 返回im对象上，（500，500）这一点像素的颜色，是一个RGB元组
     # pyautogui.pixelMatchesColor(500, 500, (12, 120, 400))  # 是一个对比函数，对比的是屏幕上（500，500）这一点像素的颜色，与所给的元素是否相同；
 
-    if pyautogui.size().height==1080 and pyautogui.size().width==1920:
+    if (pyautogui.size().height==1080 and pyautogui.size().width==1920) or\
+    (pyautogui.size().height==1440 and pyautogui.size().width==2560):
         pyautogui.PAUSE = 1
         pyautogui.hotkey('win', 'r')
         path=r"E:\11-18\3\Genac10G50keV-1.toc"
@@ -121,9 +169,14 @@ if __name__ == '__main__':
         pyautogui.press('n')
         pyautogui.press('n')
         time.sleep(7)
-        pyautogui.click(1658,66)
-        pyautogui.click(462, 55)
-        pyautogui.click(441, 57)
+        if pyautogui.size().height == 1080 and pyautogui.size().width == 1920:
+            pyautogui.click(1658,66)
+            pyautogui.click(462, 55)
+            pyautogui.click(441, 57)
+        else:
+            pyautogui.click(2239, 117)
+            pyautogui.click(464, 58)
+            pyautogui.click(442, 57)
         directory = os.path.dirname(path) #保存的目录
         # filename = os.path.basename(path)
         dirStr, ext = os.path.splitext(path)
@@ -136,10 +189,10 @@ if __name__ == '__main__':
         except:
             print('图片保存失败')
         time.sleep(1)
-        pyautogui.click(1910, 7)
+        pyautogui.click(pyautogui.size().width-10, 7)
 
     else:
-        print("分辨率错误，请调整至1920*1080")
+        print("分辨率错误，请调整至1920*1080或2560*1440")
 
 
 

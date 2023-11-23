@@ -62,7 +62,7 @@ class HPMSim(TaskBase):
         avg_power_out = 'avg. power out'
         freq_peaks = 'freq peaks'
 
-    def __init__(self, template_name, working_dir=r'D:\MagicFiles\HPM\12.5GHz\优化', desired_frequency=12.5e9,
+    def __init__(self, template_name, working_dir=r'"E:\RBWO1\一段结构模板', desired_frequency=40e9,
                  desired_mean_power=1e9, lock: Lock = Lock()):
         super(HPMSim, self).__init__(template_name, working_dir, lock)
         # self.log_df = self.log_df.reindex(self.log_df.columns.tolist()+self.EVAL_COLUMNS)
@@ -232,8 +232,8 @@ lock = Lock()
 
 
 def get_hpmsim(lock=lock):
-    return HPMSim(r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
-                  r'E:\HPM\11.7GHz\optimize\TTO\from_good_5', 11.7e9, 3e9, lock=lock)
+    return HPMSim(r"E:\RBWO1\一段结构模板\40ghz_2.m2d",
+                  r"E:\ref_test", 40e9, 3e9, lock=lock)
 
 
 class HPMSimWithInitializer(HPMSim):
@@ -260,6 +260,16 @@ class HPMSimWithInitializer(HPMSim):
         return super(HPMSimWithInitializer, self).find_old_res(params, self.initializer.precision_df.to_dict())
 
 
+<<<<<<< HEAD
+=======
+def get_HPMSimWithInitializerExample():
+    return HPMSimWithInitializer(
+        simulation.optimize.initialize.Initializer(r"E:\ref_test\921.csv"),
+        r"E:\ref_test\40ghz_2.m2d",
+        r'E:\微调', 40e9, 3e9, lock=lock)
+
+
+>>>>>>> origin/yyh
 class SamplingWithGoodEnoughValues(LHS):
     """
     给定初始值的采样
@@ -414,7 +424,7 @@ if __name__ == '__main__':
     #        r'E:\HPM\11.7GHz\optimize\CS.1', 11.7e9, 1e9, lock=lock)
 
     hpmsim = get_hpmsim()
-    res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\TTO\from_good\TTO-template_20230813_033810_9.grd', )
+    # res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\TTO\from_good\TTO-template_20230813_033810_9.grd', )
     # res = hpmsim.get_res(r'E:\HPM\11.7GHz\optimize\CS.manual\CS_20230719_194902_80508928.m2d', )
-    hpmsim.re_evaluate()
+    # hpmsim.re_evaluate()
     # score = hpmsim.evaluate(res)

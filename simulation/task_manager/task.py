@@ -100,7 +100,7 @@ class TaskBase(ABC):
 
     def __init__(self,
                  template_name,
-                 working_dir=r'D:\MagicFiles\HPM\12.5GHz\优化',
+                 working_dir=r"E:\ref_test",
                  lock: Lock = Lock()):
         self.template = MagicTemplate(template_name, working_dir)
         self.log_file_name = os.path.join(
