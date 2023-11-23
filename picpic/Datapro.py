@@ -1,6 +1,4 @@
 import time
-<<<<<<< HEAD
-=======
 import pyautogui
 import os
 import fld_parser
@@ -9,11 +7,10 @@ import grd_parser
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
->>>>>>> origin/yyh
 from PIL import Image
 import pyautogui
 import os
-
+from _logging import logger
 
 class DataProcessing(object):
     def __init__(self):
@@ -22,15 +19,16 @@ class DataProcessing(object):
 
 
 
-    def modelsavepng(self,path,savepath,n=8):
+    def modelsavepng(self,path,savepath,n=18):
         #分辨率1920*1080或2560*1440，100%缩放 横向
         if (pyautogui.size().height == 1080 and pyautogui.size().width == 1920) or \
         (pyautogui.size().height == 1440 and pyautogui.size().width == 2560):
             pyautogui.PAUSE = 1
             pyautogui.hotkey('win', 'r')
             path = path
-            Review_SNG_path = 'D:\magic\Review_SNG.exe'  # Review_SNG.exe路径
-            pyautogui.typewrite(Review_SNG_path + ' ' + path)
+            # Review_SNG_path = 'D:\magic\Review_SNG.exe'  # Review_SNG.exe路径
+            pyautogui.typewrite(path)
+            logger.info(path)
             pyautogui.press('\n')
             # print('------------------------------------------------------------')
             pyautogui.press('n')
@@ -65,7 +63,7 @@ class DataProcessing(object):
 
     def csvsave(self,csvpath,savepath,csvname='index.csv',n=8):
         savepath = savepath
-        df = pd.read_csv(csvpath)
+        df = pd.read_csv(csvpath,encoding= 'gbk')
         norepeat_df = df.drop_duplicates(subset='m2d_path', keep='first')
         norepeat_df.insert(norepeat_df.shape[1], 'png_path', '')
         for i in norepeat_df.index:

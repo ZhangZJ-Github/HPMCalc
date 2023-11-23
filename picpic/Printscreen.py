@@ -24,8 +24,8 @@ if __name__ == '__main__':
     ##################################################
     #读取csv中的文件（二选一）
 
-    csvpath = r"F:\11-11\10g-optimize4\template.m2d.log.csv"
-    savepath=r"E:\11-18\savepng"
+    csvpath = r"e:\generatoraccelerator\genac\optmz\genac20g100kev\RoughMesh\genac20g100kev.m2d.log.csv"
+    savepath=r"e:\generatoraccelerator\genac\optmz\genac20g100kev\RoughMesh\ScreenShot"
     csvname = 'index.csv'
     DP = DataProcessing()
     DP.csvsave(csvpath,savepath,csvname )
