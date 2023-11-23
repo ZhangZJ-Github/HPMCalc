@@ -65,12 +65,11 @@ class DataProcessing(object):
         df = pd.read_csv(csvpath)
         norepeat_df = df.drop_duplicates(subset='m2d_path', keep='first')
         norepeat_df.insert(norepeat_df.shape[1], 'png_path', '')
-        DP = DataProcessing()
         for i in norepeat_df.index:
             dirStr, ext = os.path.splitext(norepeat_df['m2d_path'][i])
             file = dirStr.split("\\")[-1]
             # print(norepeat_df['m2d_path'][i])
-            DP.modelsavepng(dirStr+'.toc',savepath,n)
+            self.modelsavepng(dirStr+'.toc',savepath,n)
             norepeat_df.at[i, 'png_path'] = savepath + '\\' + file + '.png'
         norepeat_df.to_csv(savepath + '\\'+csvname)
 
@@ -78,8 +77,6 @@ class DataProcessing(object):
         path = folferpath  # 需要修改的文件所在的路径
         savepath = savepath  # 保存路径
         original_name = os.listdir(path)  # 读取文件初始的名字
-        # print(original_name)
-        DP = DataProcessing()
         df = pd.DataFrame()
         df.insert(df.shape[1], 'm2d_path', '')
         df.insert(df.shape[1], 'save_path', '')
@@ -87,7 +84,7 @@ class DataProcessing(object):
             if os.path.splitext(i)[-1] == '.toc':
                 dirStr, ext = os.path.splitext(i)
                 file = dirStr.split("\\")[-1]
-                DP.modelsavepng(path + '\\' + i, savepath)  # 保存模型图为.png
+                self.modelsavepng(path + '\\' + i, savepath)  # 保存模型图为.png
                 df.loc[len(df.index)] = [path + '\\' + file + '.png', savepath + '\\' + file + '.png']
         df.to_csv(savepath + '\\' + csvname)
 
