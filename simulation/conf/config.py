@@ -20,15 +20,18 @@ class Config:
 
     class ItemNames(Enum):
         Magic_executable_path = auto()
-        General_Particle_Tracer_installed_dir = auto()
+        General_Particle_Tracer_bin_dir = auto()
+        General_Particle_Tracer_license = auto()
 
     str_itemnames: typing.List[str] = [itemname.name for itemname in ItemNames]
 
     item_prompt = {ItemNames.Magic_executable_path.name: 'Magic可执行文件的路径',
-                   ItemNames.General_Particle_Tracer_installed_dir.name: 'General Particle Tracer安装位置，如"G:\Program Files\General Particle Tracer"'}
+                   ItemNames.General_Particle_Tracer_bin_dir.name: r'General Particle Tracer的二进制文件位置，如"G:\Program Files\General Particle Tracer\bin"'}
     default_items = {
         ItemNames.Magic_executable_path.name: r"G:\Program Files\Magic Tools\magic2d_Sng.exe",
-        ItemNames.General_Particle_Tracer_installed_dir.name: r"G:\Program Files\General Particle Tracer"
+        ItemNames.General_Particle_Tracer_bin_dir.name: r"G:\Program Files\General Particle Tracer\bin",
+        ItemNames.General_Particle_Tracer_license .name : r"123456789",
+
     }
 
     @staticmethod

@@ -1,8 +1,12 @@
 # 高功率微波源设计计算器
 ## 安装
 ### 依赖
+
 Magic: 一种PIC 模拟软件
+
 [MagicTools](https://gitee.com/zhangzj-gitee/MagicTools): 用于解析Magic产生的结果文件的Python库
+
+General Particle Tracer
 ### 配置
 运行./simulation/conf/config.py生成本地配置。
 ## 运行

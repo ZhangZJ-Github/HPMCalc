@@ -15,6 +15,7 @@ import os.path
 import re
 import shutil
 import time
+import typing
 from collections import OrderedDict
 
 import matplotlib
@@ -73,7 +74,96 @@ class MAGICSim(SimulationExecutor):
 
 class GeneralParticleTracerSim(SimulationExecutor):
     # TODO
-    pass
+    def __init__(self,
+                 GPT_bin_dir: str = cfg.get_value(cfg.ItemNames.General_Particle_Tracer_bin_dir),
+                 GPT_license: str = cfg.get_value(cfg.ItemNames.General_Particle_Tracer_license)
+                 ):
+        self.GPT_bin_dir = GPT_bin_dir
+        self.GPT_license = GPT_license
+        self.set_env()
+        # self.working_dir = working_dir
+
+    def set_env(self):
+        if self.GPT_bin_dir not in os.environ['PATH']:
+            os.environ['PATH'] += (self.GPT_bin_dir) + r'\;'
+        os.environ['GPTLICENSE'] = self.GPT_license
+
+    def cmd_one_line_command_to_set_env(self):
+        return "set path=%path%;" + r"%s\; && set GPTLICENSE=%s " % (self.GPT_bin_dir, self.GPT_license)
+
+    @staticmethod
+    def bat_to_one_line_command(bat_filename: str):
+        with open(bat_filename, "r") as f:
+            s = f.read()
+        snew = re.sub(r'\n+', " && ", s)
+        return snew
+
+    def cmd_one_line_command_cd_to_dir(self, dir):
+        """
+        Windows cmd环境下切换到某一工作目录的命令
+        :param dir:
+        :return:
+        """
+        return ("cd /d %s" % dir)
+
+    def run_bat(self, batfilepath, workingdir: typing.Union[str, None] = None):
+        """
+        :param batfilepath: 要求：文件内容中不包含注释、空行
+        :param workingdir: 工作目录
+        :return:
+        """
+        batfilepath = os.path.abspath(batfilepath)
+        if not workingdir:
+            workingdir = os.path.split(batfilepath)[0]
+        else:
+            workingdir = os.path.abspath(workingdir)
+        if os.path.exists(workingdir):
+            # cmd = self.command_to_set_env() + ("&& cd %s && %s && " % (workingdir,workingdir.split(':')[0]+':')) + self.bat_to_one_line(batfilepath)
+            cmd = self.make_temporary_bat(workingdir, batfilepath)
+            self.run_one_line_cmd_command(cmd)
+
+    def run(self, GPT_input_file_path: str, *args, **kwargs):
+        self.run_one_line_cmd_command(GPT_input_file_path)
+
+    def run_one_line_cmd_command(self, one_line_cmd_command:str):
+        logger.info("Run command: %s" % one_line_cmd_command)
+        os.system(one_line_cmd_command)
+
+    def make_temporary_bat(self, working_dir: str, main_bat_path: str):
+        """
+        新建的bat内容如下：
+
+        cd /d working_dir
+        <commands in main_bat_path>
+
+        :param working_dir:
+        :param main_bat_path:
+        :return:
+        """
+        cmds = self.cmd_one_line_command_cd_to_dir(working_dir) + "\n"
+        with open(main_bat_path, 'r') as f:
+            cmds += f.read()
+        temp_bat_path = os.path.join(os.path.split(os.path.abspath(__file__))[0], 'temp.bat')
+        with open(temp_bat_path, 'w') as f:
+            f.write(cmds)
+            logger.debug("Run %s\n内容如下\n%s" % (temp_bat_path, cmds))
+        return temp_bat_path
+
+    def delete_result(self, inputfile):
+        """
+        # TODO
+        :param inputfile:
+        :return:
+        """
+
+default_gptsim = GeneralParticleTracerSim()
+def csv_to_gdf(csv_name:str, ):
+    filename_noext = os.path.splitext(csv_name)[0]
+    gdf_name ='%s.gdf'%filename_noext
+    cmd = 'asci2gdf -o %s %s' % (gdf_name, csv_name)
+    logger.debug(cmd)
+    default_gptsim.run_one_line_cmd_command(cmd)
+    return gdf_name
 
 
 class InputFileTemplateBase(ABC):
