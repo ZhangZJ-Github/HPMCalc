@@ -14,9 +14,9 @@ import pandas
 from filenametool import ExtTool
 from pymoo.algorithms.soo.nonconvex.pso import PSO
 from scipy.signal import argrelextrema
-import   simulation.optimize.hpm.hpm
 
-from   simulation.optimize.hpm.hpm  import HPMSimWithInitializer
+import simulation.optimize.hpm
+from simulation.optimize.hpm import HPMSimWithInitializer
 from simulation.task_manager.initialize import Initializer
 
 initialize_csv = r'initialize.csv'
@@ -65,6 +65,14 @@ class Genac(HPMSimWithInitializer):
         res[self.colname_power_eff_score] = eff = res[self.colname_avg_power_out] / res[self.colname_avg_power_in]
         return eff
 
+    def params_check(self, params: dict) -> bool:
+        super(Genac, self).params_check(params)
+        if params['%sws1.p%']<params['%sws1.d%']:
+            return False
+        return True
+
+
+
 
 from threading import Lock
 
@@ -72,13 +80,13 @@ lock = Lock()
 
 
 def get_genac():
-    return Genac(get_initializer(), r'Genac20G100keV.m2d', r'E:\GeneratorAccelerator\Genac\optmz\Genac20G100keV\粗网格', 25e9,
+    return Genac(get_initializer(), r'template.m2d', r"F:\11-11\10g-optimize5", 25e9,
                  lock=lock)
 
 
 if __name__ == '__main__':
     # Initializer.make_new_initial_csv(initialize_csv,
-    #     Genac(None, r'Genac25G-template.m2d', r'D:\MagicFiles\Genac\optmz', 25e9, ))
+    #     Genac(None,r'template.m2d', r"F:\11-11\10g-optimize5", 25e9, ))
     # genac = get_genac()
     # res = genac.get_res(r"E:\GeneratorAccelerator\Genac\optmz\另行处理\CouplerGap3mm.grd")
     # genac.evaluate(res)

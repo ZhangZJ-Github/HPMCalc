@@ -12,15 +12,14 @@ import grd_parser
 import numpy
 import pandas
 from filenametool import ExtTool
-from pymoo.algorithms.soo.nonconvex.pso import PSO
 from scipy.signal import argrelextrema
-import   simulation.optimize.hpm.hpm
 
-from   simulation.optimize.hpm.hpm  import HPMSimWithInitializer
+import simulation.optimize.hpm
+from simulation.optimize.hpm import OptimizeJob, HPMSimWithInitializer
 from simulation.task_manager.initialize import Initializer
 
 initialize_csv = r'initialize.csv'
-get_initializer = lambda: Initializer(initialize_csv)  # 动态调用，每次生成新个体时都会重新读一遍优化配置，从而支持在运行时临时修改优化配置
+initializer = Initializer(initialize_csv)
 
 
 class Genac(HPMSimWithInitializer):
@@ -66,28 +65,21 @@ class Genac(HPMSimWithInitializer):
         return eff
 
 
-from threading import Lock
-
-lock = Lock()
+class MyOptJob(OptimizeJob):
+    pass
 
 
 def get_genac():
-    return Genac(get_initializer(), r'Genac20G100keV.m2d', r'E:\GeneratorAccelerator\Genac\optmz\Genac20G100keV\粗网格', 25e9,
-                 lock=lock)
+    return Genac(initializer, r'template.m2d', r"E:\10-17\10g-optimize", 25e9, )
 
 
 if __name__ == '__main__':
     # Initializer.make_new_initial_csv(initialize_csv,
     #     Genac(None, r'Genac25G-template.m2d', r'D:\MagicFiles\Genac\optmz', 25e9, ))
     # genac = get_genac()
-    # res = genac.get_res(r"E:\GeneratorAccelerator\Genac\optmz\另行处理\CouplerGap3mm.grd")
+    # res = genac.get_res(r"D:\MagicFiles\Genac\optmz\Genac25G-template_20231022_225656_0.grd")
     # genac.evaluate(res)
-    # res
     # aaa
-    optjob = simulation.optimize.hpm.hpm.OptimizeJob(get_initializer(), get_genac)
-    optjob.algorithm = PSO(
-        pop_size=14,
-        sampling=simulation.optimize.hpm.hpm.SamplingWithGoodEnoughValues(optjob.initializer),  # LHS(),
-        # ref_dirs=ref_dirs
-    )
+    optjob = simulation.optimize.hpm.hpm.OptimizeJob(initializer, get_genac)
     optjob.run()
+    pass

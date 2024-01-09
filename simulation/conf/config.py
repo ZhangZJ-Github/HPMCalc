@@ -11,7 +11,7 @@
 import json
 import os
 import typing
-from enum import Enum,auto
+from enum import Enum, auto
 
 
 class Config:
@@ -20,12 +20,18 @@ class Config:
 
     class ItemNames(Enum):
         Magic_executable_path = auto()
+        General_Particle_Tracer_bin_dir = auto()
+        General_Particle_Tracer_license = auto()
 
     str_itemnames: typing.List[str] = [itemname.name for itemname in ItemNames]
 
-    item_prompt = {ItemNames.Magic_executable_path.name: 'Magic可执行文件的路径'}
+    item_prompt = {ItemNames.Magic_executable_path.name: 'Magic可执行文件的路径',
+                   ItemNames.General_Particle_Tracer_bin_dir.name: r'General Particle Tracer的二进制文件位置，如"G:\Program Files\General Particle Tracer\bin"'}
     default_items = {
         ItemNames.Magic_executable_path.name: r"G:\Program Files\Magic Tools\magic2d_Sng.exe",
+        ItemNames.General_Particle_Tracer_bin_dir.name: r"G:\Program Files\General Particle Tracer\bin",
+        ItemNames.General_Particle_Tracer_license .name : r"123456789",
+
     }
 
     @staticmethod
@@ -46,7 +52,7 @@ class Config:
 
     def to_json_file(self, filepath=DEFAULT_PATH):
         with open(filepath, 'w', encoding=Config.DEFAULT_ENCODING) as f:
-            json.dump(self.items, f, )
+            json.dump(self.items, f, separators=(',\n',':'),)
 
     @staticmethod
     def read_json_file(filepath=DEFAULT_PATH):

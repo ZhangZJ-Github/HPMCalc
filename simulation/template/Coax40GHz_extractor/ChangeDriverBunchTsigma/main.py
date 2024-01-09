@@ -9,10 +9,9 @@ import os.path
 
 import grd_parser
 import total_parser
-from _logging import logger
 
 import simulation.optimize.hpm as hpm
-import simulation.optimize.initialize
+import simulation.task_manager.initialize
 
 
 class MySim(hpm.HPMSimWithInitializer):
@@ -51,7 +50,7 @@ class MySim(hpm.HPMSimWithInitializer):
 
 
 initial_csv = r"initialize.csv"
-initializer = simulation.optimize.initialize.Initializer(initial_csv)
+initializer = simulation.task_manager.initialize.Initializer(initial_csv)
 
 
 def get_simobj():

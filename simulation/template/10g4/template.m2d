@@ -1,5 +1,5 @@
 HEADER AUTHOR       "Zi-Jing Zhang" ; 
-HEADER DEVICE       "Genac20G100keV" ;
+HEADER DEVICE       "Genac10G50keV" ;
 HEADER REMARKS      "" ;
 SYSTEM CYLINDRICAL;
 
@@ -9,7 +9,7 @@ clight = 299792458.0;
 pi = 3.141592653589793;
 
 ! 目标频率
-f_target = 25e9;!40e9;
+f_target = 10e9;!40e9;
 
 shell_min_thickness = 2mm;
 
@@ -40,7 +40,7 @@ outshell.rin = anode.rout;
 outshell.z0 = cathode.z0;
 outshell.rout = outshell.rin + shell_min_thickness;
 
-cond_in.rout =anode.rin - %cond_in.routoffset%;! anode.rin - clight / f_target -0.0mm;
+cond_in.rout =anode.rin - 5mm;! anode.rin - clight / f_target -0.0mm;
 cond_in.z0 = anode.zend;
 ! cutoffneck.rout = 2*emitter.r - (anode.rin);!anode.rin - clight / f_target * 0.4;
 cutoffneck.z0 = cond_in.z0;
@@ -63,30 +63,32 @@ swspre.bunch_channel.rout = emitter.r + swspre.bunch_channel.dr/2;
 
 
 reflcav.z0 = swspre.zend + 3mm;
-reflcav.in.dr = %reflcav.in.dr%;!10mm;
+reflcav.in.dr = 5mm;!10mm;
 reflcav.out.dr = reflcav.in.dr;
-reflcav.dz = %reflcav.dz%;
+reflcav.dz = 7mm;
 reflcav.zend = reflcav.z0+reflcav.dz;
 reflcav.rin = emitter.r - reflcav.in.dr;
 reflcav.rout = emitter.r + reflcav.out.dr;
 
+
 ! cutoffneck.dz = 30mm;
-cutoffneck.zend = reflcav.zend+%cutoffneck.zendoffset%;
+cutoffneck.zend = reflcav.zend+0.003;
 
 ! 此半径应大于TM01模式在工作频率下的截止半径
-! TODO: 验证：此通道传输TM01模式，而generator工作在TM02模式时，中央通道的微波脉冲将展宽generator中的两倍
-central_channel.ravg = 7mm;
+central_channel.ravg = 15mm;
 
 
 ! 连接环形通道（Generator）和中央通道（Accelerator），使微波得以通过
 coupler.z0 = cutoffneck.zend+0mm;!20mm;!cutoffneck.zend+0mm;
-coupler.dz = 2mm;
-coupler.out.dz = 2mm;
+coupler.dz = 3mm;
+coupler.out.dz = 3mm;
 coupler.straight.zend = coupler.z0+coupler.dz;
-coupler.zend = coupler.straight.zend+coupler.out.dz;
-coupler.out.dr = 1mm;
-coupler.in.dz = coupler.out.dz;
-coupler.in.dr = coupler.out.dr;
+coupler.out.dr = 20mm;
+coupler.out.zend = coupler.straight.zend+coupler.out.dz;
+
+coupler.in.dz =0.1* coupler.out.dz;
+coupler.in.dr = 0.1*coupler.out.dr;
+coupler.in.zend = coupler.straight.zend+coupler.in.dz;
 coupler.rout = cond_in.rout;
 coupler.rin = central_channel.ravg;
 coupler.out.rin = coupler.rout - coupler.out.dr;
@@ -94,40 +96,49 @@ coupler.in.rout = coupler.rin + coupler.in.dr;
 
 
 
-sws1.z0 = cutoffneck.zend + %sws1.z0offset%;
-sws1.N = %sws1.N%;
-sws1.p = %sws1.p%;
-sws1.d = min(%sws1.d%,sws1.p-0.2mm);
-sws1.drout = %sws1.drout%;
-sws1.drin = 0*0.6mm;
-sws1.rin = anode.rin;!cond_in.rout - sws1.drin;!anode.rin;
+sws1.z0 = cutoffneck.zend + 7mm;
+sws1.N = 3;
+sws1.p = %sws1.p% mm;
+!sws1.d = min(5mm,sws1.p-0.4mm);
+sws1.d =%sws1.d% mm;
+sws1.drout = %sws1.dr% mm;
+sws1.drin = %sws1.dr% mm;
+sws1.rin =cond_in.rout - sws1.drin;! anode.rin;!cond_in.rout - sws1.drin;!anode.rin;
 sws1.rout = anode.rin + sws1.drout;
 sws1.zend = sws1.z0+sws1.N*sws1.p;
 
-sws2.z0 = sws1.zend + %sws2.z0offset%;
-sws2.N = %sws2.N%;
-sws2.p = %sws2.p%;
-sws2.d = min(%sws2.d%,sws2.p-0.2mm);
-sws2.drout = %sws2.drout%;
+sws2.z0 = sws1.zend + 0.0;
+sws2.N = 0*3.0;
+sws2.p = 0.005200000000000001;
+sws2.d = min(0.003,sws2.p-0.2mm);
+sws2.drout = 0.0024000000000000002;
 sws2.drin = 0*0.6mm;
 sws2.rin = anode.rin;!cond_in.rout - sws2.drin;!anode.rin;
 sws2.rout = anode.rin + sws2.drout;
 sws2.zend = sws2.z0+sws2.N*sws2.p;
 
-sws3.z0 = sws2.zend + %sws3.z0offset%;
-sws3.N = %sws3.N%;
-sws3.p = %sws3.p%;
-sws3.d = min(%sws3.d%,sws3.p-0.2mm);
-sws3.drout = %sws3.drout%;
+sws3.z0 = sws2.zend + 0.0;
+sws3.N = 0*3.0;
+sws3.p = 0.0044;
+sws3.d = min(0.0031000000000000003,sws3.p-0.2mm);
+sws3.drout = 0.0023;
 sws3.drin = 0*0.6mm;
 sws3.rin = anode.rin;!cond_in.rout - sws3.drin;!anode.rin;
 sws3.rout = anode.rin + sws3.drout;
 sws3.zend = sws3.z0+sws3.N*sws3.p;
 
+!coupled.cavity
+coupled.cavity.z0=cutoffneck.zend;
+coupled.cavity.dz=5mm;
+coupled.cavity.zend=coupled.cavity.z0+coupled.cavity.dz;
+coupled.cavity.rin=anode.rin;
+coupled.cavity.dr=7mm;
+coupled.cavity.rout=coupled.cavity.rin+coupled.cavity.dr;
+
 ! 槽逐渐加深的非均匀慢波结构
 sws_grad.z0 = sws3.zend + 0mm;
 sws_grad.ravg = anode.rin;
-sws_grad.p = 0.1mm+0*3.0mm;
+sws_grad.p = 0.01mm+0*3.0mm;
 sws_grad.rmin = sws_grad.ravg;!emitter.r + emitter.dr/2+1.5mm;
 ! 半槽深的最大值
 sws_grad.drm = sws_grad.ravg - sws_grad.rmin;
@@ -147,41 +158,64 @@ sws_grad.z2 = sws_grad.z1+ sws_grad.n1*sws_grad.p;
 sws_grad.g2 = sws_grad.drm / (sws_grad.m*sws_grad.p);
 sws_grad.zend = sws_grad.z0+(sws_grad.n+sws_grad.n1+sws_grad.m)*sws_grad.P;
 
-extractor1.z0 = sws_grad.zend+%extractor1.z0offset%;
-extractor1.dz = %extractor1.dz%;
-extractor1.dr = %extractor1.dr%;
+extractor1.z0 = sws_grad.zend+0mm;
+extractor1.dz = 0*0.0048000000000000004;
+extractor1.dr = 0*0.004200000000000001;
 extractor1.zend = extractor1.z0 + extractor1.dz;
 extractor1.z = (extractor1.z0+extractor1.zend)/2;
 extractor1.rin = sws_grad.ravg;
 extractor1.rout = extractor1.rin  + extractor1.dr;
 
-collector.z0 = extractor1.zend + %collector.z0offset%;
-collector.zend = collector.z0 + shell_min_thickness;
+collector.z0 = extractor1.zend + 0*0.009000000000000001;
+! collector.zend = collector.z0 + shell_min_thickness;
 
 
-cond_out.zend = collector.zend;
+! cond_out.zend = collector.zend;
 
-central_channel.sws1.N = 0*30;
-central_channel.sws1.z0 = coupler.zend + 5mm;
-central_channel.sws1.p = 1.3mm;
-central_channel.sws1.slot.dz = 0.7mm;
-central_channel.sws1.dr = 1.2mm;
+central_channel.sws1.N = 0*4;
+central_channel.sws1.z0 = coupler.straight.zend+0;
+central_channel.sws1.p = 2.9mm;
+central_channel.sws1.slot.dz =central_channel.sws1.p -1mm;
+central_channel.sws1.dr = 3.9mm;
 central_channel.sws1.rin = central_channel.ravg;
 central_channel.sws1.rout = central_channel.sws1.rin+central_channel.sws1.dr;
+central_channel.sws1.zend = central_channel.sws1.z0
+    +central_channel.sws1.N*central_channel.sws1.p;
 
+central_channel.sws2.N = 0*3;
+central_channel.sws2.z0 = central_channel.sws1.zend+0;
+central_channel.sws2.p = 3.9mm;
+central_channel.sws2.slot.dz =central_channel.sws2.p -1mm;
+central_channel.sws2.dr = 4.0mm;
+central_channel.sws2.rin = 3mm;!central_channel.ravg;
+central_channel.sws2.rout = central_channel.sws2.rin+central_channel.sws2.dr;
+central_channel.sws2.zend = central_channel.sws2.z0
+    +central_channel.sws2.N*central_channel.sws2.p;
 
+central_channel.sws3.N = 0*13;
+central_channel.sws3.z0 = central_channel.sws2.zend+0;
+central_channel.sws3.p = 4.1mm;
+central_channel.sws3.slot.dz =central_channel.sws3.p -1mm;
+central_channel.sws3.dr = 4.0mm;
+central_channel.sws3.rin = 2.8mm;!central_channel.ravg;
+central_channel.sws3.rout = central_channel.sws3.rin+central_channel.sws3.dr;
+central_channel.sws3.zend = central_channel.sws3.z0
+    +central_channel.sws3.N*central_channel.sws3.p;
+
+collector.zend = max(collector.z0 + shell_min_thickness,central_channel.sws3.zend);
+cond_out.zend = collector.zend;
 emitter_witness.z0 = cathode.zend;
-emitter_witness.dz = emitter.dz + 3mm;
+emitter_witness.dz = emitter.dz -3mm;
 emitter_witness.zend = emitter_witness.z0 + emitter_witness.dz;
-emitter_witness.rout = 0.5mm;
+emitter_witness.rout = 1mm;
 
 area cathode conformal cathode.z0 0 cathode.zend cathode.rout;
 area emitter conformal emitter.z0 emitter.rin emitter.zend emitter.rout;
-area emitter_witness conformal 
+area emitter_witness conformal
     emitter_witness.z0 0
     emitter_witness.zend emitter_witness.rout;
 
-! mark emitter_witness x2 size 0.1mm;
+mark emitter_witness x2 size 0.4mm;
 area anode POLYGONAL
     anode.z0 anode.rout
     anode.zend anode.rin
@@ -201,15 +235,16 @@ area cond_out conformal anode.zend anode.rin simulation.zmx anode.rout;
 area cond_in conformal cond_in.z0 0 simulation.zmx cond_in.rout;
 area cutoffneck.in conformal cutoffneck.z0 cond_in.rout cutoffneck.zend cutoffneck.in.rout;
 area cutoffneck.out conformal cutoffneck.z0 anode.rin cutoffneck.zend cutoffneck.out.rin;
+area coupled.cavity conformal coupled.cavity.z0 coupled.cavity.rin coupled.cavity.zend coupled.cavity.rout;
 area outshell conformal outshell.z0 outshell.rin simulation.zmx outshell.rout;
 area extractor1 conformal extractor1.z0 extractor1.rin extractor1.zend extractor1.rout;
 area coupler.straight conformal coupler.z0 coupler.rin coupler.straight.zend coupler.rout;
-area coupler.out POLYGONAL coupler.straight.zend coupler.rout 
-    coupler.zend coupler.rout 
+area coupler.out POLYGONAL coupler.straight.zend coupler.rout
+    coupler.out.zend coupler.rout
     coupler.straight.zend coupler.out.rin
     coupler.straight.zend coupler.rout;
-area coupler.in POLYGONAL coupler.straight.zend coupler.rin 
-    coupler.zend coupler.rin 
+area coupler.in POLYGONAL coupler.straight.zend coupler.rin
+    coupler.in.zend coupler.rin
     coupler.straight.zend coupler.in.rout
     coupler.straight.zend coupler.rin;
 
@@ -235,6 +270,7 @@ VOID coupler.out;
 VOID coupler.in;
 VOID central_channel;
 VOID hole;
+!VOID coupled.cavity;
 
 area void_sws_grad conformal sws_grad.z0 sws_grad.rmin sws_grad.zend sws_grad.rmax;
 VOID void_sws_grad;
@@ -330,17 +366,66 @@ do i = 1,sws3.N;
     mark     sws3.'i'.slot x1 size 0.4mm;
     mark     sws3.'i'.slot x2 size 0.4mm;
 ENDDO;
-
+z0 = central_channel.sws1.z0;
 do i=1,central_channel.sws1.N;
     z0 = central_channel.sws1.z0+(i-1)*central_channel.sws1.p;
     zend = z0+central_channel.sws1.slot.dz;
-    area central_channel.sws1.slot'i' conformal 
+    area central_channel.sws1.slot'i' conformal
         z0 central_channel.sws1.rin
         zend central_channel.sws1.rout;
-    VOID central_channel.sws1.slot'i';    
+    VOID central_channel.sws1.slot'i';
+    z = (z0+zend) /2 ;
+    POINT csws1.pt'i' z 0;
+    LINE csws1.line'i' conformal z0 0 z0 cond_in.rout;
     mark central_channel.sws1.slot'i' x1 size 0.3mm;
+    mark central_channel.sws1.slot'i' x2 size 0.3mm;
 ENDDO;
 
+area central_channel.sws2.cond conformal
+    central_channel.sws2.z0 central_channel.sws2.rin
+    simulation.zmx central_channel.ravg;
+! CONDUCTOR central_channel.sws2.cond material copper;
+do i=1,central_channel.sws2.N;
+    z0 = central_channel.sws2.z0+(i-1)*central_channel.sws2.p;
+    zend = z0+central_channel.sws2.slot.dz;
+    area central_channel.sws2.slot'i' conformal
+        z0 central_channel.sws2.rin
+        zend central_channel.sws2.rout;
+    VOID central_channel.sws2.slot'i';
+    z = (z0+zend) /2 ;
+    POINT csws2.pt'i' z 0;
+    LINE csws2.line'i' conformal z0 0 z0 cond_in.rout;
+    mark central_channel.sws2.slot'i' x1 size 0.3mm;
+    mark central_channel.sws2.slot'i' x2 size 0.05mm;
+ENDDO;
+
+area central_channel.sws3.cond conformal
+    central_channel.sws3.z0 central_channel.sws3.rin
+    simulation.zmx central_channel.ravg;
+! CONDUCTOR central_channel.sws3.cond material copper;
+do i=1,central_channel.sws3.N;
+    z0 = central_channel.sws3.z0+(i-1)*central_channel.sws3.p;
+    zend = z0+central_channel.sws3.slot.dz;
+    area central_channel.sws3.slot'i' conformal
+        z0 central_channel.sws3.rin
+        zend central_channel.sws3.rout;
+    VOID central_channel.sws3.slot'i';
+    z = (z0+zend) /2 ;
+    POINT csws3.pt'i' z 0;
+    LINE csws3.line'i' conformal z0 0 z0 cond_in.rout;
+    mark central_channel.sws3.slot'i' x1 size 0.3mm;
+    mark central_channel.sws3.slot'i' x2 size 0.1mm;
+ENDDO;
+
+area right_cav conformal z0 0 simulation.zmx central_channel.sws3.rout;
+void right_cav;
+
+
+
+z = emitter_witness.zend-dz;
+witness.emit_zone.rout = 0.8mm;
+area witness.emit_zone conformal z 0 emitter_witness.zend witness.emit_zone.rout;
+mark witness.emit_zone x2 size 0.2mm;
 
 CONDUCTOR collector material copper;
 AUTOGRID;
@@ -350,11 +435,12 @@ LINE line_collector conformal z cond_in.rout z extractor1.rin;
 port line_collector NEGATIVE;
 observe FIELD_POWER S.DA line_collector fft magnitude;
 LINE left conformal cathode.z0 cathode.rout cathode.z0 outshell.rin;
-LINE right conformal simulation.zmx 0 simulation.zmx central_channel.ravg;
+! LINE right conformal simulation.zmx 0 simulation.zmx central_channel.sws3.rout;
+LINE right conformal simulation.zmx 0 simulation.zmx cond_in.rout;
 
 FUNCTION g2(x1,x2,x3) = 1 / x2;
 FUNCTION g3(x1,x2,x3) = 0 ;
-Vinput =100e3;
+Vinput =50e3;
 t1 = 0.3e-9;!50e-3/2.5e8;! 0上升到最大值的时间
 trise = t1/3;
 ! FUNCTION f(t) =+abs(Vinput)*(1- exp(-t/trise)) ;
@@ -419,14 +505,16 @@ Function driver_bunch.J(t, z,r,phi)= driver_bunch.Ipeak*
 
 r1 = (extractor1.rin + extractor1.rout)/2;
 
-area area_driver conformal extractor1.z0 emitter.rin Extractor1.zend emitter.rout;
+! area area_driver conformal extractor1.z0 emitter.rin Extractor1.zend emitter.rout;
+z = coupler.z0+1mm;
+area area_driver conformal coupler.z0 emitter.rin z emitter.rout;
 LINE line_in_extracotr1 conformal extractor1.z r1 extractor1.z extractor1.rout;
 tsigma = 1e-12;
 tmu = 20 * tsigma;
 ! function J_driver(t)=17e3/(2*pi*15e-3 * 1e-3)*
 !     (exp(-(t-tmu)**2/(2*tsigma**2)))* cos(2*pi*f_target*t);
 ! function J_driver(t) = 60e-9/(2*pi*15e-3 * 1e-3) *step(t-tmu, -tsigma) *step(tsigma,t-tmu)/(2*tsigma);
-Function J_driver(t) = 1*sin(2*Pi*f_target*t);
+Function J_driver(t) = 1e6*sin(2*Pi*f_target*t);
 ! driver J1 J_driver area_driver;
 t = 5e-9;
 temp_J = J_driver(t);
@@ -446,13 +534,17 @@ temp1 = step(mod(z-v*t - driver_bunch.zmu, driver_bunch.Deltaz), - driver_bunch.
 temp2 = step( + driver_bunch.zsigma,mod(z-v*t -driver_bunch.zmu, driver_bunch.Deltaz));
 temp3 = step(mod(z-v*t - driver_bunch.zmu, driver_bunch.Deltaz), - driver_bunch.zsigma)*
     step( + driver_bunch.zsigma,mod(z-v*t -driver_bunch.zmu, driver_bunch.Deltaz));
-Emission EXPLOSIVE;
+
+! Emission THEMIONIC ;
+emission EXPLOSIVE;
 emit EXPLOSIVE emitter;
 ! emit EXPLOSIVE emitter_witness;
-emission BEAM driver_bunch.J driver_bunch.E0 model emission_beam;
-z = emitter.zend-dz;
-area emit_zone conformal z driver_bunch.rin emitter.zend driver_bunch.rout;
-! emit emission_beam emitter exclude emitter INCLUDE emit_zone;
+witness.Ipeak =0*1;
+
+function witness.J(t) = witness.Ipeak / (pi*emitter_witness.rout**2);
+emission BEAM witness.J 0.1V model emission_beam;
+
+emit emission_beam emitter_witness exclude emitter_witness INCLUDE witness.emit_zone;
 observe FIELD_INTEGRAL E.dl left fft magnitude suffix InputVoltage;
 observe Emitted emitter ALL Current;
 observe Emitted emitter_witness ALL Current;
@@ -480,6 +572,9 @@ observe field E1 reflcav.obspt fft magnitude;
 POINT extractor1.obspt extractor1.z emitter.r;
 observe field E1 extractor1.obspt fft magnitude;
 
+
+LINE coupler.line conformal coupler.z0 coupler.rin coupler.out.zend coupler.rin;
+observe FIELD_POWER S.DA coupler.line fft magnitude;
 
 
 do i = 1,swspre.N;
@@ -513,26 +608,33 @@ do i = 1,N;
     observe FIELD_POWER S.DA sws_grad.'i'.line1 fft magnitude;
     ! observe FIELD_INTEGRAL J.DA sws_grad.'i'.slot.obsline fft magnitude;
 ENDDO;
+do i = 1,3;
+    do j = 1,central_channel.sws'i'.N;
+        observe field E1 csws'i'.pt'j' fft magnitude;
+        observe FIELD_POWER S.da csws'i'.line'j' fft magnitude;
+    ENDDO;
+ENDDO;
 
 
 
 ! observe FIELD_INTEGRAL J_driver.DA area_driver fft magnitude;
 
 
-Bref = %Bref%*1Tesla;
+Bref = 0.72*1Tesla;
 coil.N = 199;
 COIL.CURRENT = 1366.62491319702* Bref;
 coil.z0 = simulation.zmn - 100mm;
 coil.R = simulation.rmx + 2mm;
-coil.zend = simulation.zmx + %coil.zendoffset%;!100mm;
+coil.zend = simulation.zmx + 100mm;!100mm;
 do i = 1, coil.N;
     z = coil.z0+(i-1) * (coil.zend-coil.z0)/coil.N;
     point coil.'i' z 0.0;
     coils AXIS x1 coil.'i' coil.R coil.Current;
 ENDDO;
 
-runtime = 15e-9;!t2 + 0*5*tdown;
-MAXWELL BIASED;
+runtime = 35e-9;!t2 + 0*5*tdown;
+! MAXWELL BIASED;
+! MAXWELL HIGH_Q;
 MODE TM;
 DURATION runtime;
 
@@ -544,13 +646,13 @@ TIMER FOR_CONTOUR PERIODIC REAL 0 RUNTIME 0.101e-9;
 TIMER FOR_STATIC PERIODIC REAL 0 RUNTIME 10e-9;
 
 PHASESPACE  AXES  X1 X2 FOR_PHASESPACE;!  SPECIES ELECTRON MOVIE PNG;
-PHASESPACE  AXES  X1 KE FOR_PHASESPACE; 
+PHASESPACE  AXES  X1 KE FOR_PHASESPACE;
 PHASESPACE  AXES  X1 P1 FOR_PHASESPACE;
 
 ! For witness
-PHASESPACE  AXES  X1 X2 FOR_PHASESPACE 
+PHASESPACE  AXES  X1 X2 FOR_PHASESPACE
     window x2 0 central_channel.ravg  ;
-PHASESPACE  AXES  X1 KE FOR_PHASESPACE 
+PHASESPACE  AXES  X1 KE FOR_PHASESPACE
     window x2 0 central_channel.ravg  ;
 
 Contour Field B1st Osys$area FOR_STATIC Shade;!  MOVIE PNG;

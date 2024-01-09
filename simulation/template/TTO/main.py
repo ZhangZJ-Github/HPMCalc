@@ -5,10 +5,10 @@
 # @File    : main.py
 # @Software: PyCharm
 from simulation.optimize.hpm import HPMSimWithInitializer, OptimizeJob, lock
-import simulation.optimize.initialize
+import simulation.task_manager.initialize
 
 initial_csv = r"F:\changeworld\HPMCalc\simulation\template\TTO\Initialize.csv"
-initializer = simulation.optimize.initialize.Initializer(initial_csv)
+initializer = simulation.task_manager.initialize.Initializer(initial_csv)
 
 
 def get_HPMSimWithInitializer():
