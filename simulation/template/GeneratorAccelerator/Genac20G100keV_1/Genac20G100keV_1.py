@@ -12,8 +12,8 @@ get_initializer = lambda: Initializer(initialize_csv)  # 动态调用，每次�
 
 
 def get_genac():
-    return Genac(get_initializer(), r'Genac20G100keV_1.m2d',
-                 r'E:\GeneratorAccelerator\Genac\optmz\Genac20G100keV_1\粗网格',
+    return Genac(get_initializer(), r'Genac20G100keV_1_MC.m2d',
+                 r'E:\GeneratorAccelerator\Genac\optmz\Genac20G100keV_1\粗网格/test',
                  25e9,
                  lock=lock)
 
@@ -26,10 +26,10 @@ if __name__ == '__main__':
     # genac.evaluate(res)
     # res
     # aaa
-    optjob = simulation.optimize.hpm.OptimizeJob(get_initializer(), get_genac)
+    optjob = simulation.optimize.hpm.hpm.OptimizeJob(get_initializer(), get_genac)
     optjob.algorithm = PSO(
         pop_size=24,
-        sampling=simulation.optimize.hpm.SamplingWithGoodEnoughValues(optjob.initializer),  # LHS(),
+        sampling=optjob.initializer.init_params_df.values,  # LHS(),
         # ref_dirs=ref_dirs
     )
-    optjob.run(n_threads=8)
+    optjob.run(n_threads=12)

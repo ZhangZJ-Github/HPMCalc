@@ -13,10 +13,11 @@ from scipy import optimize as op
 
 
 if __name__ == '__main__':
-    save_path = r"E:\11-24\database"
-    csv_path = r"F:\11-24\optimize1\template.m2d.log.csv"
+    save_path = r'E:\GeneratorAccelerator\Genac\optmz\Genac10G50keV\粗网格\geom'
+    csv_path = r"E:\GeneratorAccelerator\Genac\optmz\Genac10G50keV\粗网格\Genac10G50keV-temp.m2d.log.csv"
     csv_name = 'database'
-    df = pd.read_csv(csv_path)
+    from simulation.task_manager import task
+    df = pd.read_csv(csv_path,encoding=task.CSV_ENCODING)
     norepeat_df = df.drop_duplicates(subset='m2d_path', keep='first')
     norepeat_df.insert(norepeat_df.shape[1], 'png_path', '')
     norepeat_df.insert(norepeat_df.shape[1], 'Magnetic_field_function_A', '')

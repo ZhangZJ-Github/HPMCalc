@@ -11,7 +11,7 @@ import matplotlib
 
 import simulation.optimize.hpm
 from simulation.optimize.hpm import HPMSimWithInitializer
-from simulation.optimize.initialize import Initializer
+from simulation.task_manager.initialize import Initializer
 
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     # res
     # aaa
-    manjob = simulation.optimize.hpm.MaunualJOb(initializer, get_hpm, )
+    manjob = simulation.optimize.hpm.hpm.MaunualJOb(initializer, get_hpm, )
 
     # optjob.algorithm = PSO(
     #     pop_size=14,

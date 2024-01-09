@@ -34,7 +34,7 @@ class Initializer:
         self.__init__(self.filename)
 
     @staticmethod
-    def make_new_initial_csv(filename, simtask: simulation.task_manager.task.TaskBase):
+    def make_new_initial_csv(filename, simtask: simulation.task_manager.task.MAGICTaskBase):
         _df = pandas.DataFrame(columns=list(simtask.template.get_variables()))
         row_names = """备注
 初始值

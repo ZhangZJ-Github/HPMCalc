@@ -12,7 +12,7 @@ import total_parser
 
 import simulation.optimize.hpm as hpm
 
-import simulation.optimize.initialize
+import simulation.task_manager.initialize
 
 
 class Coax40GHzExtractorSim(hpm.HPMSimWithInitializer):
@@ -49,7 +49,7 @@ class Coax40GHzExtractorSim(hpm.HPMSimWithInitializer):
 
 
 initial_csv = r"initialize.csv"
-initializer = simulation.optimize.initialize.Initializer(initial_csv)
+initializer = simulation.task_manager.initialize.Initializer(initial_csv)
 
 
 def get_simobj():

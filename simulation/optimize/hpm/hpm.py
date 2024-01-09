@@ -19,7 +19,7 @@ from multiprocessing.pool import ThreadPool
 
 from pymoo.operators.sampling.lhs import LHS
 from pymoo.algorithms.soo.nonconvex.pso import PSO
-import simulation.optimize.initialize
+import simulation.task_manager.initialize
 
 from pymoo.visualization.scatter import Scatter
 from pymoo.core.problem import StarmapParallelization
@@ -35,14 +35,14 @@ from total_parser import ExtTool
 # Process finished with exit code -1073741819 (0xC0000005)
 from scipy.signal import argrelextrema
 
-from simulation.task_manager.task import TaskBase
+from simulation.task_manager.task import MAGICTaskBase
 import numpy
 from threading import Lock
 import shutil
 from pymoo.optimize import minimize
 
 
-class HPMSim(TaskBase):
+class HPMSim(MAGICTaskBase):
     # 评分明细
     EVAL_COLUMNS = colname_power_eff_score, colname_out_power_score, colname_freq_accuracy_score, colname_freq_purity_score = [
         "power efficiency score",
@@ -244,7 +244,7 @@ class HPMSimWithInitializer(HPMSim):
     若要实现更复杂的参数检查规则，可以继承此类（建议相关代码文件置于对应的template文件夹），override params_check方法。
     """
 
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer, *args, **kwargs):
+    def __init__(self, initializer: simulation.task_manager.initialize.Initializer, *args, **kwargs):
         super(HPMSimWithInitializer, self).__init__(*args, **kwargs)
         self.initializer = initializer
 
@@ -260,23 +260,13 @@ class HPMSimWithInitializer(HPMSim):
         return super(HPMSimWithInitializer, self).find_old_res(params, self.initializer.precision_df.to_dict())
 
 
-<<<<<<< HEAD
-=======
-def get_HPMSimWithInitializerExample():
-    return HPMSimWithInitializer(
-        simulation.optimize.initialize.Initializer(r"E:\ref_test\921.csv"),
-        r"E:\ref_test\40ghz_2.m2d",
-        r'E:\微调', 40e9, 3e9, lock=lock)
-
-
->>>>>>> origin/yyh
 class SamplingWithGoodEnoughValues(LHS):
     """
     给定初始值的采样
     可以提前指定足够好的结果
     """
 
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer):
+    def __init__(self, initializer: simulation.task_manager.initialize.Initializer):
         super(SamplingWithGoodEnoughValues, self).__init__()
         self.initializer = initializer
 
@@ -305,7 +295,7 @@ class SamplingWithGoodEnoughValues(LHS):
 
 def get_HPMSimWithInitializerExample():
     return HPMSimWithInitializer(
-        simulation.optimize.initialize.Initializer(r"F:\changeworld\HPMCalc\simulation\template\TTO\Initialize.csv"),
+        simulation.task_manager.initialize.Initializer(r"/simulation/template/TTO/Initialize.csv"),
         r"F:\changeworld\HPMCalc\simulation\template\TTO\TTO-template.m2d",
         r'E:\HPM\11.7GHz\optimize\TTO\from_good_5', 11.7e9, 3e9, lock=lock)
 
@@ -313,7 +303,7 @@ def get_HPMSimWithInitializerExample():
 class MyProblem(ElementwiseProblem):
     BIG_NUM = 1
 
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer,
+    def __init__(self, initializer: simulation.task_manager.initialize.Initializer,
                  method_to_get_hpm: typing.Callable[[], HPMSim],
                  *args, **kwargs):
         super(MyProblem, self, ).__init__(*args, n_var=len(initializer.initial_df.columns),
@@ -366,7 +356,7 @@ class MyProblem(ElementwiseProblem):
 
 
 class JobBase:
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer,
+    def __init__(self, initializer: simulation.task_manager.initialize.Initializer,
                  method_to_get_HPMSimWithInitializer_object: typing.Callable[[], HPMSimWithInitializer]):
         """
                 :param initializer:
@@ -378,7 +368,7 @@ class JobBase:
 
 
 class OptimizeJob(JobBase):
-    def __init__(self, initializer: simulation.optimize.initialize.Initializer,
+    def __init__(self, initializer: simulation.task_manager.initialize.Initializer,
                  method_to_get_HPMSimWithInitializer_object: typing.Callable[[], HPMSimWithInitializer],
                  ):
         super(OptimizeJob, self).__init__(initializer, method_to_get_HPMSimWithInitializer_object)

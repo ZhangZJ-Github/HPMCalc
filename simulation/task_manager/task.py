@@ -5,93 +5,23 @@
 # @File    : task.py
 # @Software: PyCharm
 
-import datetime
-import os
 import os.path
 import os.path
-import re
-import shutil
-import time
-from collections import OrderedDict
-from threading import Lock
 
 import matplotlib
 
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import pandas
-from _logging import logger
-from simulation.conf.config import Config
+from deprecated.sphinx import deprecated
+from simulation.task_manager.simulator import *
 
 # import simulation.task_manager.manual_task
 CSV_ENCODING = 'gbk'
 cfg = Config.read_json_file()
 
 
-class MagicTemplate:
-    VARIABLE_PATTERN = r"%[\w.]+%"
-    M2D_ENCODING = 'utf-8'  # or 'gbk'
-
-    def __init__(self, filename, working_dir: str, lock=Lock()):
-        self.filename = filename
-        self.working_dir = working_dir
-        self.output_prefix = os.path.join(
-            self.working_dir,
-            os.path.split(os.path.splitext(self.filename)[0])[1])
-        self.lock = lock
-
-        with open(filename, 'r', encoding=MagicTemplate.M2D_ENCODING) as f:
-            self.text = f.read()
-
-    def copy_template_to_working_dir(self):
-        shutil.copy(
-            self.filename,
-            os.path.join(self.working_dir,
-                         os.path.split(self.filename)[1]))
-
-    def __str__(self):
-        return "template: %s\nworking dir: %s" % (self.filename,
-                                                  self.working_dir)
-
-    def get_variables(self):
-        return list(
-            OrderedDict.fromkeys(re.findall(self.VARIABLE_PATTERN, self.text)))
-
-    def generate(self, replace_rules: dict):
-        """
-        :param replace_rules: {old_str: new_str,}
-        :return:
-        """
-
-        template_text = self.text
-        for old in replace_rules:
-            template_text = template_text.replace(old, replace_rules[old])
-        return template_text
-
-    def new_m2d_file_name(self):
-        self.lock.acquire()
-
-        timestamp_ns = time.time_ns()
-        time.sleep(0.1)
-        self.lock.release()
-        return self.output_prefix + datetime.datetime.fromtimestamp(
-            timestamp_ns // 1e9).strftime("_%Y%m%d_%H%M%S_") + ("%02d.m2d" % (
-                (timestamp_ns % 1e9) // 1e7))
-
-    def to_m2d(self, replace_rules: dict):
-        file_path = self.new_m2d_file_name()
-        with open(file_path, 'w', encoding=MagicTemplate.M2D_ENCODING) as f:
-            f.write(self.generate(replace_rules))
-        return file_path
-
-
-from threading import Lock
-from abc import ABC, abstractmethod
-
-
 class TaskBase(ABC):
-    MAGIC_SOLVER_PATH = cfg.get_value(Config.ItemNames.Magic_executable_path)
-
     class Colname:
         score = "score"
         path = "m2d_path"
@@ -99,16 +29,15 @@ class TaskBase(ABC):
         comment = 'comment'
 
     def __init__(self,
-                 template_name,
-                 working_dir=r"E:\ref_test",
-                 lock: Lock = Lock()):
-        self.template = MagicTemplate(template_name, working_dir)
+                 template: InputFileTemplateBase,
+                 simulation_executor: SimulationExecutor = MAGICSim(),
+                 lock: Lock = Lock(),
+                 ):
+        self.template = template
         self.log_file_name = os.path.join(
-            working_dir,
-            os.path.split(template_name)[1] + ".log.csv")
-        self.last_generated_m2d_path = ''  # 最近一次生成的m2d文件路径
-        if not os.path.exists(self.MAGIC_SOLVER_PATH):
-            raise RuntimeError("请指定正确的MAGIC求解器路径！")
+            template.working_dir,
+            os.path.split(template.filename)[1] + ".log.csv")
+        self.simulation_executor = simulation_executor
 
         # if not os.path.exists(self.log_file_name):
         # self.log_df = pandas.DataFrame(#columns=list(self.template.get_variables())
@@ -246,15 +175,11 @@ class TaskBase(ABC):
         if old_m2d_path:
             return self.log_and_info(param_set, old_m2d_path)
 
-        m2d_path = self.template.to_m2d(
-            {key: str(param_set[key])
-             for key in param_set})
+        m2d_path = self.template.generate_and_to_disk({key: str(param_set[key])
+                                                       for key in param_set})
         self.last_generated_m2d_path = m2d_path
         logger.info("当前参数：%s => %s" % (param_set, m2d_path))
-
-        cmd = '"%s" %s' % (self.MAGIC_SOLVER_PATH, m2d_path)
-        logger.info("Run command:\n%s" % cmd)
-        os.system(cmd)
+        self.simulation_executor.run(m2d_path)
         return self.log_and_info(param_set, m2d_path)
 
     @abstractmethod
@@ -271,7 +196,7 @@ class TaskBase(ABC):
         对log.csv中的每条记录重新打分
         :return:
         """
-        # 一般不并行执行，因此不加锁
+        # 一般不会并行执行，因此不加锁
         log_df = self.load_log()
         for i in range(len(log_df)):
             path = log_df[self.Colname.path][i]
@@ -281,11 +206,14 @@ class TaskBase(ABC):
             # log_df[self.colname_score] [i]= score
             res[self.Colname.score] = score
             for key in res:
+                if key not in log_df.columns:
+                    log_df[key] = pandas.NA
                 log_df[key][i] = res[key]
 
         self.rewrite_log_csv(log_df)
 
-    def clean_folder(self, score_threshold):
+
+    def clean_working_dir(self, score_threshold):
         """
         删除文件夹中不必要的（低分）结果
         :return:
@@ -294,27 +222,27 @@ class TaskBase(ABC):
         # index_to_delete = [log_df[self.colname_score] < score_threshold ]
         m2d_paths_to_delete = log_df[self.Colname.path][
             log_df[self.Colname.score] < score_threshold]  # .tolist()
-        big_files_to_delete = []
-        from total_parser import ExtTool
-        import os
 
         for m2d_path in m2d_paths_to_delete:
-            et = ExtTool(os.path.splitext(m2d_path)[0])
-            for filetype in [
-                ExtTool.FileType.grd, ExtTool.FileType.par,
-                ExtTool.FileType.fld, ExtTool.FileType.toc
-            ]:
-                filename = et.get_name_with_ext(filetype)
-                if os.path.exists(filename):
-                    os.remove(filename)
-                big_files_to_delete.append(filename)
-        # log_df.info(log_df[self.colname_score][index_to_delete])
-        logger.info("已经删除的文件：\n%s" % big_files_to_delete)
+            self.simulation_executor.delete_result(m2d_path)
+
+
+class MAGICTaskBase(TaskBase):
+    MAGIC_SOLVER_PATH = MAGICSim.EXECUTOR_PATH
+
+    def __init__(self,
+                 template_name,
+                 working_dir=r"E:\ref_test",
+                 lock: Lock = Lock(),
+                 simulation_executor=MAGICSim()):
+        super(MAGICTaskBase, self).__init__(MagicTemplate(template_name, working_dir, lock), simulation_executor, lock)
+        self.last_generated_m2d_path = ''  # 最近一次生成的m2d文件路径
 
 
 class ManualTask:
-    MAGIC_SOLVER_PATH = TaskBase.MAGIC_SOLVER_PATH
+    MAGIC_SOLVER_PATH = MAGICTaskBase.MAGIC_SOLVER_PATH
 
+    @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
     def __init__(self, children_sldprt_name, m2d_template_name,
                  replace_marker: str, folder_and_prefix, parent_sldprt_name,
                  description):
@@ -326,6 +254,7 @@ class ManualTask:
         self.description = description
         self.replace_marker = replace_marker
 
+    @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
     def run(self, ax=plt.gca()):
         import sw_to_MAGIC_commands
         os.makedirs(self.folder, exist_ok=True)

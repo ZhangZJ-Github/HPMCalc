@@ -16,7 +16,7 @@ from scipy.signal import argrelextrema
 
 import simulation.optimize.hpm
 from simulation.optimize.hpm import OptimizeJob, HPMSimWithInitializer
-from simulation.optimize.initialize import Initializer
+from simulation.task_manager.initialize import Initializer
 
 initialize_csv = r'initialize.csv'
 initializer = Initializer(initialize_csv)
@@ -80,6 +80,6 @@ if __name__ == '__main__':
     # res = genac.get_res(r"D:\MagicFiles\Genac\optmz\Genac25G-template_20231022_225656_0.grd")
     # genac.evaluate(res)
     # aaa
-    optjob = simulation.optimize.hpm.OptimizeJob(initializer, get_genac)
+    optjob = simulation.optimize.hpm.hpm.OptimizeJob(initializer, get_genac)
     optjob.run()
     pass

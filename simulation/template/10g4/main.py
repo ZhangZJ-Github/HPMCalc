@@ -8,7 +8,6 @@ import heapq
 import json
 import os
 
-import par_parser
 import grd_parser
 import numpy
 import pandas
@@ -18,7 +17,7 @@ from scipy.signal import argrelextrema
 
 import simulation.optimize.hpm
 from simulation.optimize.hpm import HPMSimWithInitializer
-from simulation.optimize.initialize import Initializer
+from simulation.task_manager.initialize import Initializer
 
 initialize_csv = r'initialize.csv'
 get_initializer = lambda: Initializer(initialize_csv)  # 动态调用，每次生成新个体时都会重新读一遍优化配置，从而支持在运行时临时修改优化配置
@@ -93,10 +92,10 @@ if __name__ == '__main__':
     # genac.evaluate(res)
     # res
     # aaa
-    optjob = simulation.optimize.hpm.OptimizeJob(get_initializer(), get_genac)
+    optjob = simulation.optimize.hpm.hpm.OptimizeJob(get_initializer(), get_genac)
     optjob.algorithm = PSO(
         pop_size=14,
-        sampling=simulation.optimize.hpm.SamplingWithGoodEnoughValues(optjob.initializer),  # LHS(),
+        sampling=simulation.optimize.hpm.hpm.SamplingWithGoodEnoughValues(optjob.initializer),  # LHS(),
         # ref_dirs=ref_dirs
     )
     optjob.run()

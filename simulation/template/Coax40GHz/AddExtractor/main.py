@@ -6,12 +6,12 @@
 # @Software: PyCharm
 
 import simulation.optimize.hpm as hpm
-import simulation.optimize.initialize
+import simulation.task_manager.initialize
 
 from simulation.template.Coax40GHz.main import Coax40GHzSim
 
 initial_csv = r"F:\changeworld\HPMCalc\simulation\template\Coax40GHz\AddExtractor\Initialize2.csv"
-initializer = simulation.optimize.initialize.Initializer(initial_csv)
+initializer = simulation.task_manager.initialize.Initializer(initial_csv)
 
 
 def get_coax40GHzsim():

@@ -8,8 +8,7 @@
 import matplotlib
 
 matplotlib.use('tkagg')
-from simulation.optimize.hpm import *
-from simulation.optimize.initialize import Initializer
+from simulation.task_manager.initialize import Initializer
 from concurrent.futures import ThreadPoolExecutor
 
 lock = Lock()

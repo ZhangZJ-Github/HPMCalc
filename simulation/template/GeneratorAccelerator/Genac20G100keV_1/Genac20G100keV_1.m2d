@@ -366,10 +366,11 @@ t2 = t1 + 10e-9;
 !     ((exp(t/trise)-1)/(exp(t1/trise)-1)*step(t1,t)
 !     +step(t, t1)*step(t2,t)
 !     +exp(-(t-t2)/tdown)*step(t,t2));
-FUNCTION f(t) = +abs(Vinput)*
-    (SMOOTH_RAMP(t/t1)*step(t1,t)
-    +step(t, t1)*step(t2,t)
-    +exp(-(t-t2)/tdown)*step(t,t2));
+! FUNCTION f(t) = +abs(Vinput)*
+!     (SMOOTH_RAMP(t/t1)*step(t1,t)
+!     +step(t, t1)*step(t2,t)
+!     +exp(-(t-t2)/tdown)*step(t,t2));
+FUNCTION f(t) = +abs(Vinput);
 
 t = t2+10*tdown;
 temp0 = step(t1,t)*(exp(t/trise)-1)/(exp(t1/trise)-1);
@@ -530,7 +531,7 @@ do i = 1, coil.N;
     coils AXIS x1 coil.'i' coil.R coil.Current;
 ENDDO;
 
-runtime = t2 + 0*5*tdown;
+runtime = 15e-9;!t2 + 0*5*tdown;
 MAXWELL BIASED;
 MODE TM;
 DURATION runtime;
