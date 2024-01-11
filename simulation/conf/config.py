@@ -67,5 +67,5 @@ class Config:
 
 
 if __name__ == '__main__':
-    # Config({}).to_json_file() # 生成默认的配置文件
-    cfg = Config.read_json_file()
+    Config({}).to_json_file() # 生成默认的配置文件
+    # cfg = Config.read_json_file()

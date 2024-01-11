@@ -140,7 +140,7 @@ class TaskBase(ABC):
                 axis=1)
             m2d_paths = df[self.Colname.path][mask]
             if m2d_paths.any():
-                logger.info("找到了之前的记录！\n%s => %s" % (params, m2d_paths.values[0]))
+                logger.info("找到了之前的记录！\n%s" % InputFileTemplateBase.FileGenerationRecord(params, m2d_paths.values[0]))
                 return m2d_paths.values[0]
             return ''
 
@@ -178,7 +178,7 @@ class TaskBase(ABC):
         m2d_path = self.template.generate_and_to_disk({key: str(param_set[key])
                                                        for key in param_set})
         self.last_generated_m2d_path = m2d_path
-        logger.info("当前参数：%s => %s" % (param_set, m2d_path))
+        logger.info("当前参数：%s" % InputFileTemplateBase.FileGenerationRecord(param_set, m2d_path))
         self.simulation_executor.run(m2d_path)
         return self.log_and_info(param_set, m2d_path)
 
@@ -225,6 +225,26 @@ class TaskBase(ABC):
 
         for m2d_path in m2d_paths_to_delete:
             self.simulation_executor.delete_result(m2d_path)
+
+    def recorver_log_df_from_log_text(self,text:str):
+        """
+        用于从log.txt中截取的内容中建立log.csv
+        :param text:
+        :return:
+        """
+        lines = text.splitlines(keepends=False)
+        for line in lines:
+            re_res =  re.findall(InputFileTemplateBase.FileGenerationRecord.PATTERN,line)
+            if re_res:
+                for each in re_res:
+                    record = InputFileTemplateBase.FileGenerationRecord.from_str(each)
+                    # time = datetime.datetime.strptime(line[:len("2024-01-11 13:50:59")], "%Y-%m-%d %H:%M:%S", )
+                    self.log_and_info(record.replace_rules,record.file_path)
+                    pass
+
+
+
+
 
 
 class MAGICTaskBase(TaskBase):
