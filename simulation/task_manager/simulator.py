@@ -125,7 +125,7 @@ class GeneralParticleTracerSim(SimulationExecutor):
     def run(self, GPT_input_file_path: str, *args, **kwargs):
         self.run_one_line_cmd_command(GPT_input_file_path)
 
-    def run_one_line_cmd_command(self, one_line_cmd_command:str):
+    def run_one_line_cmd_command(self, one_line_cmd_command: str):
         logger.info("Run command: %s" % one_line_cmd_command)
         os.system(one_line_cmd_command)
 
@@ -156,20 +156,48 @@ class GeneralParticleTracerSim(SimulationExecutor):
         :return:
         """
 
+
 default_gptsim = GeneralParticleTracerSim()
-def csv_to_gdf(csv_name:str, ):
+
+
+def csv_to_gdf(csv_name: str, ):
     filename_noext = os.path.splitext(csv_name)[0]
-    gdf_name ='%s.gdf'%filename_noext
+    gdf_name = '%s.gdf' % filename_noext
     cmd = 'asci2gdf -o %s %s' % (gdf_name, csv_name)
     logger.debug(cmd)
     default_gptsim.run_one_line_cmd_command(cmd)
     return gdf_name
 
 
+def df_to_gdf(df, gdf_name: str, delete_temp_file=True):
+    csv_name = os.path.splitext(gdf_name)[0] + '.txt'
+    df.to_csv(csv_name, index=False, sep='\t')
+    csv_to_gdf(csv_name)
+    if delete_temp_file:
+        os.remove(csv_name)
+
+
 class InputFileTemplateBase(ABC):
     """
     各类模拟软件所需的输入文件模板
     """
+
+    class FileGenerationRecord:
+        PATTERN = '\{.+\} => .+'
+        def __init__(self, replace_rules: dict, file_path: str):
+            self.replace_rules = replace_rules
+            self.file_path = file_path
+
+        def __str__(self):
+            return '%s => %s\n' % (self.replace_rules, self.file_path)
+
+        @staticmethod
+        def from_str(text: str):
+            _reprules, filepath = text.split(' => ')
+            import json
+            reprules = json.loads(_reprules.replace("'", '"'), )
+            return InputFileTemplateBase.FileGenerationRecord(reprules, filepath)
+
 
     def __init__(self, filename, working_dir: str, lock=Lock(), variable_pattern=r"%[\w.]+%",
                  encoding='utf-8'  # or 'gbk'
@@ -251,3 +279,10 @@ class MagicTemplate(InputFileTemplateBase):
             variable_pattern=self.VARIABLE_PATTERN,
             encoding=self.M2D_ENCODING
         )
+
+
+if __name__ == '__main__':
+    test_log = r"""2024-01-10 16:00:12,405 - File "D:\hpmcalc-master\simulation\task_manager\task.py", line 253 - INFO: 当前参数：{'%Current%': 9000, 'comment': ''} => F:\TTO_40GHz\optimize\0110\TT0_40GHz_template4_20240110_160012_30.m2d"""
+    text = r"""{'%Current%': 9000, 'comment': ''} => F:\TTO_40GHz\optimize\0110\TT0_40GHz_template4_20240110_160012_30.m2d"""
+    record = InputFileTemplateBase.FileGenerationRecord.from_str(text)
+    str(record)

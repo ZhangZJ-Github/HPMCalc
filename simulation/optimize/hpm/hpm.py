@@ -407,6 +407,17 @@ class MaunualJOb(JobBase):
 
 
 if __name__ == '__main__':
+
+
+
+    log_text =''
+    with open ('test_log.txt','r',encoding='utf-8')as f:
+        log_text = f.read()
+
+    mytask =HPMSim( __file__,'.',)
+    mytask.recorver_log_df_from_log_text(log_text)
+
+    aaaa
     # get_hpsim().re_evaluate()
     # scores = HPMSim.avg_power_score(0.5e9, 1e9), HPMSim.freq_accuracy_score(numpy.array([[0, 1e6], [14e9, 1e5]]), 40e9,
     #                                                                         .1e9)
