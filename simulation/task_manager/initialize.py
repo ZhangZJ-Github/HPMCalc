@@ -9,13 +9,17 @@ import typing
 
 import pandas
 
-import simulation.task_manager.task
+import simulation.task_manager._base
 
 
 class Initializer:
     def __init__(self, filename):
+        # TODO: 处理表中无实际内容的情况
+        if not os.path.exists(filename):
+            self.make_new_initial_csv(filename,)
+            raise RuntimeError('用于初始化的"%s"不存在，请手动填写其内容，或指定其他初始化文件'%(filename))
         self.filename = filename
-        initial_df = pandas.read_csv(filename, encoding=simulation.task_manager.task.CSV_ENCODING)
+        initial_df = pandas.read_csv(filename, encoding=simulation.task_manager._base.CSV_ENCODING)
         self.initial_df = initial_df[initial_df.columns[1:]]  # 去除备注列
         self.N_initial = len(self.initial_df) - 5
         self.init_params: typing.List[typing.Dict[str, float]] = [
@@ -34,8 +38,9 @@ class Initializer:
         self.__init__(self.filename)
 
     @staticmethod
-    def make_new_initial_csv(filename, simtask: simulation.task_manager.task.MAGICTaskBase):
-        _df = pandas.DataFrame(columns=list(simtask.template.get_variables()))
+    def make_new_initial_csv(filename, variables: typing.List[str] = None):
+        if variables is None: variables = []
+        _df = pandas.DataFrame(columns=list(variables))
         row_names = """备注
 初始值
 下界
@@ -44,5 +49,9 @@ class Initializer:
 计算偏微分的步长
 单位步长""".split('\n')
         _df = pandas.concat([pandas.DataFrame({row_names[0]: row_names[1:]}), _df])
-        _df.to_csv(filename, index=False, encoding=simulation.task_manager.task.CSV_ENCODING)
+        _df.to_csv(filename, index=False, encoding=simulation.task_manager._base.CSV_ENCODING)
         os.system("start %s" % filename)
+
+
+if __name__ == '__main__':
+    initializer = Initializer.make_new_initial_csv('initial.temp.csv')

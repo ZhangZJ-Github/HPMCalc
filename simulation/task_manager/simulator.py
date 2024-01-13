@@ -184,6 +184,7 @@ class InputFileTemplateBase(ABC):
 
     class FileGenerationRecord:
         PATTERN = '\{.+\} => .+'
+
         def __init__(self, replace_rules: dict, file_path: str):
             self.replace_rules = replace_rules
             self.file_path = file_path
@@ -198,7 +199,6 @@ class InputFileTemplateBase(ABC):
             reprules = json.loads(_reprules.replace("'", '"'), )
             return InputFileTemplateBase.FileGenerationRecord(reprules, filepath)
 
-
     def __init__(self, filename, working_dir: str, lock=Lock(), variable_pattern=r"%[\w.]+%",
                  encoding='utf-8'  # or 'gbk'
                  ):
@@ -208,11 +208,12 @@ class InputFileTemplateBase(ABC):
         :param variable_pattern: 模板中待替换的字符串的形式（用正则表达式表示）
         :param lock:
         """
-        self.filename = filename
+        self.filename = os.path.abspath(filename)
         self.working_dir = working_dir
+        self._filepath_prefix, self._ext = os.path.splitext(self.filename)
         self.output_prefix = os.path.join(
             self.working_dir,
-            os.path.split(os.path.splitext(self.filename)[0])[1])
+            os.path.split(self._filepath_prefix)[1])
         self.lock = lock
         self.variable_pattern = variable_pattern
         self.encoding = encoding
@@ -257,11 +258,19 @@ class InputFileTemplateBase(ABC):
         timestamp_ns = time.time_ns()
         time.sleep(0.1)
         self.lock.release()
-        return self.output_prefix + datetime.datetime.fromtimestamp(
-            timestamp_ns // 1e9).strftime("_%Y%m%d_%H%M%S_") + ("%02d.m2d" % (
+        return self.output_prefix + self.unique_str() + self._ext
+
+    @staticmethod
+    def unique_str():
+        timestamp_ns = time.time_ns()
+        time.sleep(0.1)
+        # self.lock.release()
+        return datetime.datetime.fromtimestamp(
+            timestamp_ns // 1e9).strftime("_%Y%m%d_%H%M%S_") + ("%02d" % (
                 (timestamp_ns % 1e9) // 1e7))
 
-    def generate_and_to_disk(self, replace_rules: dict):
+    def generate_and_to_disk(self, _replace_rules: typing.Dict[str, typing.Any] ) -> str:
+        replace_rules = {key: str(_replace_rules[key]) for key in _replace_rules}
         file_path = self.new_file_name()
         with open(file_path, 'w', encoding=self.encoding) as f:
             f.write(self.generate(replace_rules))

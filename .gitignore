@@ -11,3 +11,5 @@ dependencies
 *__pycache__
 *log.txt
 *.pytest_cache
+*.gdf
+pygpt
