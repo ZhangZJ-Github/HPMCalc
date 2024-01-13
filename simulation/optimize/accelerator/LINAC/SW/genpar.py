@@ -4,7 +4,6 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : genpar.py
 # @Software: PyCharm
-import os
 from abc import ABC, abstractmethod
 
 import matplotlib
@@ -17,7 +16,7 @@ import matplotlib.pyplot as plt
 
 plt.ion()
 import common
-from simulation.task_manager.simulator import csv_to_gdf
+from simulation.task_manager.simulator import df_to_gdf
 
 
 class Distribution(ABC):
@@ -66,9 +65,7 @@ class RingShapedCathode(Distribution):
         particles_df['z'] = z_emit
         particles_df['q'] = self.m
         particles_df['nmacro'] = numpy.abs(I * dt_emit / self.q / nps)
-        csv_name = os.path.splitext(filename)[0] + '.txt'
-        particles_df.to_csv(csv_name, index=False, sep='\t')
-        csv_to_gdf(csv_name)
+        df_to_gdf(particles_df, filename)
         return particles_df
 
 

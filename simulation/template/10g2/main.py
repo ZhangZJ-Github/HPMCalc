@@ -15,8 +15,8 @@ from filenametool import ExtTool
 from pymoo.algorithms.soo.nonconvex.pso import PSO
 from scipy.signal import argrelextrema
 
-import simulation.optimize.hpm
-from simulation.optimize.hpm import HPMSimWithInitializer
+import simulation.optimize.hpm.hpm
+from simulation.optimize.hpm.hpm import HPMSimWithInitializer
 from simulation.task_manager.initialize import Initializer
 
 initialize_csv = r'initialize.csv'

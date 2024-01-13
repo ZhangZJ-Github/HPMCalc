@@ -1,0 +1,40 @@
+f = 9.30e9;
+E0 = 50e3;
+gamma = 1+|qe|*E0 /(me*c^2);
+beta = sqrt(1 - 1/gamma^2);
+nps = 360;
+# zend = 500e-3;
+zend = 1/f * beta*c;
+Qtot = -100e-3 * 200e-3 / c;
+# rout = 1e-3;
+rout = 0;
+# setFile("beam", "electrons.gdf");
+
+
+setparticles("beam",nps,me,qe,Qtot);
+setrxydist("beam","u",rout/2,rout);
+setphidist("beam","u", 0, 2*PI);
+setzdist("beam","u",(0-zend)/2,zend);
+setGdist("beam","u", gamma, 0);
+
+
+map1D_TM("wcs","I","F:\changeworld\HPMCalc\simulation\optimize\accelerator\LINAC\SW\Ez1D.gdf","z","Ez",100e6,0,2*PI*f);
+solenoid_z0 = -50e-3;
+solenoid_zend = 200e-3;
+# bzsolenoid("wcs","z", (solenoid_z0+solenoid_zend)/2,40e-3,(solenoid_zend-solenoid_z0),5e5);
+# bzsolenoid("wcs","z", 125e-3,40e-3,(solenoid_zend-solenoid_z0),5e5);
+
+setrmacro("beam", 0.1e-6);
+# 几乎无区别
+# spacecharge3Dmesh() ; 
+
+tend = 2e-9;
+# TMAX = 10E-9;
+tout(0, tend, tend / 500);
+# snapshot(0, tend, tend / 500);
+# Gminmax("wcs","I",500e-3,1.01,10086111997) ;
+# rmax("wcs","I",30e-3) ;
+z_screen0 = -10e-3;
+z_lastscreen = 150e-3;
+# screen("wcs","I",z_screen0,z_lastscreen, (z_lastscreen-z_screen0) / 100);
+

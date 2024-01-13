@@ -29,13 +29,11 @@ df_extrcav = pandas.DataFrame()
 df_sws1 = pandas.DataFrame()
 for i in logdf.index[:]:
     grd = grd_parser.GRD(logdf['m2d_path'][i][:-3] + 'grd')
-    fig1.gca().plot(*grd.obs[extrcav_Ez_FFT_title]['data'].values.T, label=logdf["%sws1.N%"][i],  # alpha=0.3
-                    )
+    fig1.gca().plot_AppleGate_diagram()
     df_extrcav['freq/GHz %sws.N%' + '=%d' % (logdf["%sws1.N%"][i])] = grd.obs[extrcav_Ez_FFT_title]['data'][0]
     df_extrcav['Ez Mag. %sws.N%' + '=%d' % (logdf["%sws1.N%"][i])] = grd.obs[extrcav_Ez_FFT_title]['data'][1]
     if Ez_sws1_slot1_title in grd.obs.keys():
-        fig2.gca().plot(*grd.obs[Ez_sws1_slot1_title]['data'].values.T, label=logdf["%sws1.N%"][i],  # alpha=0.3
-                        )
+        fig2.gca().plot_AppleGate_diagram()
         df_sws1['freq/GHz %sws.N%' + '=%d' % (logdf["%sws1.N%"][i])] = grd.obs[Ez_sws1_slot1_title]['data'][0]
         df_sws1['Ez Mag. %sws.N%' + '=%d' % (logdf["%sws1.N%"][i])] = grd.obs[Ez_sws1_slot1_title]['data'][1]
 

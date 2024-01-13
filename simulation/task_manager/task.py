@@ -9,15 +9,17 @@ import os.path
 import os.path
 
 import matplotlib
+import numpy
 
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import pandas
 from deprecated.sphinx import deprecated
 from simulation.task_manager.simulator import *
+from simulation.task_manager._base import CSV_ENCODING
+from simulation.task_manager.initialize import Initializer
 
 # import simulation.task_manager.manual_task
-CSV_ENCODING = 'gbk'
 cfg = Config.read_json_file()
 
 
@@ -32,13 +34,14 @@ class TaskBase(ABC):
                  template: InputFileTemplateBase,
                  simulation_executor: SimulationExecutor = MAGICSim(),
                  lock: Lock = Lock(),
+                 initializer: Initializer = None
                  ):
         self.template = template
         self.log_file_name = os.path.join(
             template.working_dir,
             os.path.split(template.filename)[1] + ".log.csv")
         self.simulation_executor = simulation_executor
-
+        self.initializer = initializer
         # if not os.path.exists(self.log_file_name):
         # self.log_df = pandas.DataFrame(#columns=list(self.template.get_variables())
         #                                # + [self.colname_path,self.colname_score]
@@ -106,10 +109,15 @@ class TaskBase(ABC):
         return pandas.read_csv(self.log_file_name, encoding=CSV_ENCODING)
 
     @abstractmethod
-    def evaluate(self, res: dict):
-        pass
+    def evaluate(self, res: dict) -> float:
+        """
+        计算res的得分
+        请在子类中实现此方法。
+        :param res:
+        :return:
+        """
+        return 1.0
 
-    @abstractmethod
     def params_check(self, params: dict) -> bool:
         """
         检查输入参数是否合法，若不合法，直接修改传入的字典。
@@ -117,7 +125,17 @@ class TaskBase(ABC):
         :param params:
         :return: True if 修改成功
         """
-        pass
+        if self.initializer is None: return True
+        for key in self.initializer.init_params_df.columns:
+            # if key.startswith('%'):
+            if key in params:
+                precision = self.initializer.precision_df[key]
+                if numpy.isnan(precision): continue  # 为nan表示不做截断
+                if numpy.isnan(params[key]): raise RuntimeError
+                params[key] = int(
+                    numpy.round(params[key] / precision)) * precision  # TODO: 检查是否仍会出现形如0.03000000000000001这类数字
+                if numpy.isnan(params[key]): raise RuntimeError
+        return True
 
     def find_old_res(self, params: dict, precisions: dict = {}) -> str:
         # TODO: 检查有效性
@@ -129,9 +147,11 @@ class TaskBase(ABC):
             # logger.info('self.lock.released')
 
             numeric_params = {}
-            for key in params:
-                if key.startswith('%'):
-                    numeric_params[key] = params[key]
+            # for key in params:
+            for key in set(precisions.keys()).union(set(params.keys())):
+                # if key.startswith('%'):
+                v = params[key]
+                if numpy.isreal(v): numeric_params[key] = params[key]
 
             df_this_numeric_params = pandas.DataFrame(numeric_params, index=df.index)
             df_precision = pandas.DataFrame({key: precisions.get(key, 0) for key in df_this_numeric_params.columns},
@@ -174,9 +194,7 @@ class TaskBase(ABC):
 
         if old_m2d_path:
             return self.log_and_info(param_set, old_m2d_path)
-
-        m2d_path = self.template.generate_and_to_disk({key: str(param_set[key])
-                                                       for key in param_set})
+        m2d_path = self.template.generate_and_to_disk(param_set)
         self.last_generated_m2d_path = m2d_path
         logger.info("当前参数：%s" % InputFileTemplateBase.FileGenerationRecord(param_set, m2d_path))
         self.simulation_executor.run(m2d_path)
@@ -212,7 +230,6 @@ class TaskBase(ABC):
 
         self.rewrite_log_csv(log_df)
 
-
     def clean_working_dir(self, score_threshold):
         """
         删除文件夹中不必要的（低分）结果
@@ -226,7 +243,7 @@ class TaskBase(ABC):
         for m2d_path in m2d_paths_to_delete:
             self.simulation_executor.delete_result(m2d_path)
 
-    def recorver_log_df_from_log_text(self,text:str):
+    def recorver_log_df_from_log_text(self, text: str):
         """
         用于从log.txt中截取的内容中建立log.csv
         :param text:
@@ -234,17 +251,13 @@ class TaskBase(ABC):
         """
         lines = text.splitlines(keepends=False)
         for line in lines:
-            re_res =  re.findall(InputFileTemplateBase.FileGenerationRecord.PATTERN,line)
+            re_res = re.findall(InputFileTemplateBase.FileGenerationRecord.PATTERN, line)
             if re_res:
                 for each in re_res:
                     record = InputFileTemplateBase.FileGenerationRecord.from_str(each)
                     # time = datetime.datetime.strptime(line[:len("2024-01-11 13:50:59")], "%Y-%m-%d %H:%M:%S", )
-                    self.log_and_info(record.replace_rules,record.file_path)
+                    self.log_and_info(record.replace_rules, record.file_path)
                     pass
-
-
-
-
 
 
 class MAGICTaskBase(TaskBase):
