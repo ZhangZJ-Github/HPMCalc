@@ -62,4 +62,5 @@ class Initializer:
 
 
 if __name__ == '__main__':
-    initializer = Initializer.make_new_initial_csv('initial.temp.csv')
+    from simulation.task_manager.simulator import MagicTemplate
+    initializer = Initializer.make_new_initial_csv('initial.csv',MagicTemplate(r'F:\changeworld\HPMCalc\simulation\template\10g2\template.m2d','.').get_variables())
