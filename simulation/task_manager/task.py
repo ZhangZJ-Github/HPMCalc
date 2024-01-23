@@ -23,7 +23,7 @@ from simulation.task_manager.initialize import Initializer
 cfg = Config.read_json_file()
 
 
-class TaskBase(ABC):
+class LoggedTask(ABC):
     class Colname:
         score = "score"
         path = "m2d_path"
@@ -31,16 +31,13 @@ class TaskBase(ABC):
         comment = 'comment'
 
     def __init__(self,
-                 template: InputFileTemplateBase,
-                 simulation_executor: SimulationExecutor = MAGICSim(),
                  lock: Lock = Lock(),
-                 initializer: Initializer = None
+                 initializer: Initializer = None,
+                 log_file_name='default.log.csv'
                  ):
-        self.template = template
-        self.log_file_name = os.path.join(
-            template.working_dir,
-            os.path.split(template.filename)[1] + ".log.csv")
-        self.simulation_executor = simulation_executor
+        # self.template = template
+        self.log_file_name = log_file_name
+        # self.simulation_executor = simulation_executor
         self.initializer = initializer
         # if not os.path.exists(self.log_file_name):
         # self.log_df = pandas.DataFrame(#columns=list(self.template.get_variables())
@@ -54,7 +51,7 @@ class TaskBase(ABC):
 
         # else:
         #     self.log_df = pandas.read_csv(self.log_file_name,encoding='gbk')
-        logger.info("使用模板：%s" % self.template)
+        # logger.info("使用模板：%s" % self.template)
 
     def save_log_csv(self):
         logger.info("====为%s加锁====" % self.log_file_name)
@@ -94,9 +91,8 @@ class TaskBase(ABC):
 
         newdata.update(res)
         # self.load_log_csv()
-        self.log_df = pandas.DataFrame.from_dict(
-            {key: [newdata[key]]
-             for key in newdata})
+        self.log_df = pandas.DataFrame(
+            newdata,index = [0])
         # self.log_df.loc[len(self.log_df)] = numpy.nan
         # for key in newdata:
         #     if key not in self.log_df.columns:
@@ -137,6 +133,135 @@ class TaskBase(ABC):
                 if numpy.isnan(params[key]): raise RuntimeError
         return True
 
+
+
+    def log_and_info(self, param_set, m2d_path):
+        try:
+            log_df = self.log(param_set, m2d_path)
+            last_logged_data = log_df.iloc[len(log_df) - 1]
+            logger.info("\n%s" % str(last_logged_data))
+            score = last_logged_data[self.Colname.score]
+            logger.info('%s\nscore = %s' % (InputFileTemplateBase.FileGenerationRecord(param_set,last_logged_data[self.Colname.path]), score))
+            return score
+        except (KeyError, FileNotFoundError, TypeError, IndexError,
+                pandas.errors.ParserError, PermissionError) as e:
+            logger.warning("记录结果时报错，已忽略：\n%s" % e)
+            return 0.
+
+    @abstractmethod
+    def run(self, param_set: dict) -> str:
+        """
+        :param param_set:
+        :return: path of some important and unique file related to this run.
+        return '' if there is no need to generate any immediate file.
+        """
+        pass
+
+    def update(self, param_set: dict, comment: str = ''):
+        """
+        按照给定的参数运行模拟，自动获取结果，更新log
+        :param param_set:
+        :return: 评分
+        """
+        param_set[self.Colname.comment] = comment
+        params_check_status = self.params_check(param_set)
+        if not params_check_status:
+            logger.warning("无效参数：%s" % (param_set))
+            return 0.
+        # logger.info('Finding old result...')
+        # old_m2d_path = self.find_old_res(param_set)
+        # logger.info("old_m2d_path=%s" % old_m2d_path)
+        #
+        # if old_m2d_path:
+        #     return self.log_and_info(param_set, old_m2d_path)
+        # m2d_path = self.template.generate_and_to_disk(param_set)
+        # self.last_generated_m2d_path = m2d_path
+        # logger.info("当前参数：%s" % InputFileTemplateBase.FileGenerationRecord(param_set, m2d_path))
+        # self.simulation_executor.run(m2d_path)
+        path = self.run(param_set)
+        return self.log_and_info(param_set, path)
+
+    @abstractmethod
+    def get_res(self, m2d_path: str) -> dict:
+        """
+        获取用户关心的数据
+        :param m2d_path:
+        :return:
+        """
+        return dict()
+
+    def re_evaluate(self):
+        """
+        对log.csv中的每条记录重新打分
+        :return:
+        """
+        # 一般不会并行执行，因此不加锁
+        log_df = self.load_log()
+        for i in range(len(log_df)):
+            path = log_df[self.Colname.path][i]
+
+            res = self.get_res(path)
+            score = self.evaluate(res)
+            # log_df[self.colname_score] [i]= score
+            res[self.Colname.score] = score
+            for key in res:
+                if key not in log_df.columns:
+                    log_df[key] = pandas.NA
+                log_df[key][i] = res[key]
+
+        self.rewrite_log_csv(log_df)
+
+
+    def recorver_log_df_from_log_text(self, text: str):
+        """
+        用于从log.txt中截取的内容中建立log.csv
+        :param text:
+        :return:
+        """
+        lines = text.splitlines(keepends=False)
+        for line in lines:
+            re_res = re.findall(InputFileTemplateBase.FileGenerationRecord.PATTERN, line)
+            if re_res:
+                for each in re_res:
+                    record = InputFileTemplateBase.FileGenerationRecord.from_str(each)
+                    # time = datetime.datetime.strptime(line[:len("2024-01-11 13:50:59")], "%Y-%m-%d %H:%M:%S", )
+                    self.log_and_info(record.replace_rules, record.file_path)
+                    pass
+
+
+class CachedTask(LoggedTask):
+    class Colname:
+        score = "score"
+        path = "m2d_path"
+        timestamp = 'timestamp'
+        comment = 'comment'
+
+    def __init__(self,
+                 template: InputFileTemplateBase,
+                 simulation_executor: SimulationExecutor = MAGICSim(),
+                 lock: Lock = Lock(),
+                 initializer: Initializer = None
+                 ):
+        super(CachedTask, self).__init__(lock, initializer, os.path.join(
+            template.working_dir,
+            os.path.split(template.filename)[1] + ".log.csv"))
+        self.template = template
+        self.simulation_executor = simulation_executor
+        # if not os.path.exists(self.log_file_name):
+        # self.log_df = pandas.DataFrame(#columns=list(self.template.get_variables())
+        #                                # + [self.colname_path,self.colname_score]
+        #                                )
+
+        self.lock = lock
+        # self.lock.acquire()
+        # self.load_log_csv()
+        # self.lock.release()
+
+        # else:
+        #     self.log_df = pandas.read_csv(self.log_file_name,encoding='gbk')
+        logger.info("使用模板：%s" % self.template)
+
+
     def find_old_res(self, params: dict, precisions: dict = {}) -> str:
         # TODO: 检查有效性
         if os.path.exists(self.log_file_name):
@@ -176,6 +301,12 @@ class TaskBase(ABC):
                 pandas.errors.ParserError, PermissionError) as e:
             logger.warning("记录结果时报错，已忽略：\n%s" % e)
             return 0.
+    def run(self, param_set: dict) -> str:
+        m2d_path = self.template.generate_and_to_disk(param_set)
+        self.last_generated_m2d_path = m2d_path
+        logger.info("当前参数：%s" % InputFileTemplateBase.FileGenerationRecord(param_set, m2d_path))
+        self.simulation_executor.run(m2d_path)
+        return m2d_path
 
     def update(self, param_set: dict, comment: str = ''):
         """
@@ -194,41 +325,9 @@ class TaskBase(ABC):
 
         if old_m2d_path:
             return self.log_and_info(param_set, old_m2d_path)
-        m2d_path = self.template.generate_and_to_disk(param_set)
-        self.last_generated_m2d_path = m2d_path
-        logger.info("当前参数：%s" % InputFileTemplateBase.FileGenerationRecord(param_set, m2d_path))
-        self.simulation_executor.run(m2d_path)
+        m2d_path = self.run(param_set)
         return self.log_and_info(param_set, m2d_path)
 
-    @abstractmethod
-    def get_res(self, m2d_path: str) -> dict:
-        """
-        获取用户关心的数据
-        :param m2d_path:
-        :return:
-        """
-        return dict()
-
-    def re_evaluate(self):
-        """
-        对log.csv中的每条记录重新打分
-        :return:
-        """
-        # 一般不会并行执行，因此不加锁
-        log_df = self.load_log()
-        for i in range(len(log_df)):
-            path = log_df[self.Colname.path][i]
-
-            res = self.get_res(path)
-            score = self.evaluate(res)
-            # log_df[self.colname_score] [i]= score
-            res[self.Colname.score] = score
-            for key in res:
-                if key not in log_df.columns:
-                    log_df[key] = pandas.NA
-                log_df[key][i] = res[key]
-
-        self.rewrite_log_csv(log_df)
 
     def clean_working_dir(self, score_threshold):
         """
@@ -243,24 +342,8 @@ class TaskBase(ABC):
         for m2d_path in m2d_paths_to_delete:
             self.simulation_executor.delete_result(m2d_path)
 
-    def recorver_log_df_from_log_text(self, text: str):
-        """
-        用于从log.txt中截取的内容中建立log.csv
-        :param text:
-        :return:
-        """
-        lines = text.splitlines(keepends=False)
-        for line in lines:
-            re_res = re.findall(InputFileTemplateBase.FileGenerationRecord.PATTERN, line)
-            if re_res:
-                for each in re_res:
-                    record = InputFileTemplateBase.FileGenerationRecord.from_str(each)
-                    # time = datetime.datetime.strptime(line[:len("2024-01-11 13:50:59")], "%Y-%m-%d %H:%M:%S", )
-                    self.log_and_info(record.replace_rules, record.file_path)
-                    pass
 
-
-class MAGICTaskBase(TaskBase):
+class MAGICTaskBase(CachedTask):
     MAGIC_SOLVER_PATH = MAGICSim.EXECUTOR_PATH
 
     def __init__(self,

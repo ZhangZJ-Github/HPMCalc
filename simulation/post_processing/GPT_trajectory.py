@@ -105,7 +105,8 @@ class GPTTraj:
 
     def plot_AppleGate_diagram(self, ax: plt.Axes):
         for id in self.dfs:
-            ax.plot(*self.dfs[id][['z', 'time']].values.T, label=id)
+            ax.plot(*self.dfs[id][['z', 'phi']].values.T, label=id)
+
 
     def time_across_screen(self, z_screen) -> typing.Dict[int, typing.List[float]]:
         # bounds = []

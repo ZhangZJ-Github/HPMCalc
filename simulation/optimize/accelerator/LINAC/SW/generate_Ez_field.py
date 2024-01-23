@@ -55,13 +55,14 @@ class CellEzGenerator(EzGeneratorBase):
     非端部(即，不处于首尾两端)的CAC单元的电场
     这类电场有明确的波节、波腹位置，电场几乎对称
     """
-    COUPLING_X = 10
 
-    def __init__(self, beta, Ezmax, f, dz_acc, sigmaz_coupling):
+    def __init__(self, beta, Ezmax, f, dz_acc, sigmaz_coupling,# n_sigmaz_coupling: float
+                 ):
         super(CellEzGenerator, self).__init__()
         self.beta = beta
         assert (dz_acc >= 0 and f > 0 and
-                sigmaz_coupling > 0 and 0 < beta <= 1)
+                sigmaz_coupling > 0 and 0 < beta <= 1 #and n_sigmaz_coupling > 0
+                )
 
         self.Ezmax = Ezmax
         self.f = f
@@ -71,9 +72,11 @@ class CellEzGenerator(EzGeneratorBase):
         # self.dz_coupling = self.L- self.dz_acc
         # self.Ez: typing.Callable[[numpy.ndarray], numpy.ndarray] = numpy.vectorize(self._Ez)
         self.default_zs = numpy.linspace(-self.L / 2, +self.L / 2, 100)
+        self.n_sigmaz_coupling = 10#n_sigmaz_coupling
+
         self.default_Es = self.Ez(self.default_zs)
-        self.Ez_Fourier_approx: typing.Callable[
-            [float], float] = self._Fourier_series_approximation()
+        # self.Ez_Fourier_approx: typing.Callable[
+        #     [float], float] = self._Fourier_series_approximation()
 
     def _Ez(self, z):
         """
@@ -87,11 +90,11 @@ class CellEzGenerator(EzGeneratorBase):
         if numpy.abs(z) < self.dz_acc / 2:
             shape = 1
         elif numpy.abs(z) < self.L / 2:  # 处于电场上升沿
-            shape = ((sigmoid((-numpy.abs(z) + self.L / 2) / self.sigmaz_coupling - self.COUPLING_X) - sigmoid(
-                -self.COUPLING_X))
+            shape = ((sigmoid((-numpy.abs(z) + self.L / 2) / self.sigmaz_coupling - self.n_sigmaz_coupling) - sigmoid(
+                -self.n_sigmaz_coupling))
                      /
-                     (sigmoid((self.L / 2 - self.dz_acc / 2) / self.sigmaz_coupling - self.COUPLING_X) - sigmoid(
-                         -self.COUPLING_X))
+                     (sigmoid((self.L / 2 - self.dz_acc / 2) / self.sigmaz_coupling - self.n_sigmaz_coupling) - sigmoid(
+                         -self.n_sigmaz_coupling))
                      )
         return shape
 
@@ -102,9 +105,14 @@ class CellEzGenerator(EzGeneratorBase):
 
 
 class FirstCellEzGenerator(CellEzGenerator):
-    def __init__(self, beta, Ezmax, f, dz_acc, sigmaz_coupling_1, sigmaz_coupling_2):
+    def __init__(self, beta, Ezmax, f, dz_acc, sigmaz_coupling_1,# n_sigmaz_coupling_1,
+                 sigmaz_coupling_2, #n_sigmaz_coupling_2
+                 ):
         self.sigmaz_coupling_1 = sigmaz_coupling_1
-        super(FirstCellEzGenerator, self).__init__(beta, Ezmax, f, dz_acc, sigmaz_coupling_2)
+        self.n_sigmaz_coupling_1 = 10 #n_sigmaz_coupling_1
+        super(FirstCellEzGenerator, self).__init__(beta, Ezmax, f, dz_acc, sigmaz_coupling_2, #n_sigmaz_coupling_2
+                                                   )
+        # self.n_sigmaz_coupling = n_sigmaz_coupling_1
 
     def _Fourier_series_approximation(self, ):
         self.default_zs = numpy.linspace(-self.L * 3, +self.L / 2, 100)
@@ -114,26 +122,32 @@ class FirstCellEzGenerator(CellEzGenerator):
     def _Ez_normalized(self, z):
         shape = super(FirstCellEzGenerator, self)._Ez_normalized(z)
         if z < -self.dz_acc / 2:
-            shape = ((sigmoid((-numpy.abs(z) + self.L / 2) / self.sigmaz_coupling_1 - self.COUPLING_X) - sigmoid(
-                -self.COUPLING_X) * 0)
+            shape = ((sigmoid(
+                (-numpy.abs(z) + self.L / 2) / self.sigmaz_coupling_1 - self.n_sigmaz_coupling_1) - sigmoid(
+                -self.n_sigmaz_coupling_1) * 0)
                      /
-                     (sigmoid((self.L / 2 - self.dz_acc / 2) / self.sigmaz_coupling_1 - self.COUPLING_X) - sigmoid(
-                         -self.COUPLING_X) * 0)
+                     (sigmoid(
+                         (self.L / 2 - self.dz_acc / 2) / self.sigmaz_coupling_1 - self.n_sigmaz_coupling_1) - sigmoid(
+                         -self.n_sigmaz_coupling_1) * 0)
                      )
         return shape
 
 
 class LastCellEzGenerator(FirstCellEzGenerator):
-    def __init__(self, beta, Ezmax, f, dz_acc, sigmaz_coupling_1, sigmaz_coupling_2):
-        super(LastCellEzGenerator, self).__init__(beta, Ezmax, f, dz_acc, sigmaz_coupling_2, sigmaz_coupling_1)
-        self.sigmaz_coupling_1 = sigmaz_coupling_1
+    def __init__(self, beta, Ezmax, f, dz_acc, sigmaz_coupling_1,  # n_sigmaz_coupling_1,
+                 sigmaz_coupling_2,  # n_sigmaz_coupling_2
+                 ):
+        super(LastCellEzGenerator, self).__init__(beta, Ezmax, f, dz_acc, sigmaz_coupling_2,  # n_sigmaz_coupling_2,
+                                                  sigmaz_coupling_1,  # n_sigmaz_coupling_1
+                                                  )
+        # self.sigmaz_coupling_1 = sigmaz_coupling_1
 
     def _Ez_normalized(self, z):
         return super(LastCellEzGenerator, self)._Ez_normalized(-z)
 
 
 class CavChainEzGenerator(EzGeneratorBase):
-    def __init__(self, cell_chain: typing.List[CellEzGenerator], z_1st_cell_Ez_peak: float = None):
+    def __init__(self, cell_chain: typing.List[CellEzGenerator], z_1st_cell_Ez_peak: float = None, ):
         """
 
         :param cell_chain:
@@ -176,6 +190,7 @@ class CavChainEzGenerator(EzGeneratorBase):
              N_params_per_first_cell + (i + 1) * N_params_per_normal_cell])
             for i in range(N_normal_cells)]
         return CavChainEzGenerator([fc, *ncs, lc], z_1st_cell_Ez_peak)
+
     def param_names_1D_to_build_cell_chain(self):
         """
                 :return: 构建本对象所需的所有基本参数
@@ -185,6 +200,7 @@ class CavChainEzGenerator(EzGeneratorBase):
             param_names += ['cells[%d].%s' % (i, param_name) for param_name in
                             (inspect.signature(cell.__init__).parameters)]
         return param_names
+
     def param_names_1D(self):
         """
         :return: 构建本对象所需的所有基本参数
@@ -194,45 +210,38 @@ class CavChainEzGenerator(EzGeneratorBase):
 
 if __name__ == '__main__':
     plt.ion()
-    arr = numpy.array((
-            0.5, 113e6, 9.3e9, 1e-3, 3e-3, 3e-3,
-            0.75, -165e6, 9.3e9, 3e-3, 2e-3,
-            0.9, 186e6, 9.3e9, 6e-3, 1e-3,
-            1, -210e6, 9.3e9, 6e-3, 1e-3,
-            1, 210e6, 9.3e9, 8e-3, 1e-3,
-            1, -210e6, 9.3e9, 8e-3, 1e-3,
-            1, 210e6, 9.3e9, 8e-3, 1e-3,
-            1, -210e6, 9.3e9, 8e-3, 1e-3, 1e-3
-        ))
+    arr = numpy.array((0.656535985,0.517152954,9299704018,0.001821529,0.001730694,0.001393273,0.758308151,-0.742903312,9299937096,0.002774948,0.001646869,0.900758366,0.86382351,9299903266,0.004591892,0.002049264,0.997980363,-0.971443468,9299348330,0.006425466,0.0018265,1,0.974428682,9299000000,0.006667525,0.001639259,0.999781993,-0.978029256,9299044824,0.006680035,0.001622029,1,0.982519568,9299000000,0.006426291,0.001820985,1,-0.968968812,9299000000,0.006455776,0.001941463,0.001507043
+                       ))
+    #
+    # arr = numpy.array((0.5,113000000.0,9300000000.0,0.001,0.003,0.003,0.75,-165000000.0,9300000000.0,0.003,0.002,0.9,186000000.0,9300000000.0,0.006,0.001,1.0,-210000000.0,9300000000.0,0.006,0.001,1.0,210000000.0,9300000000.0,0.008,0.001,1.0,-210000000.0,9300000000.0,0.008,0.001,1.0,210000000.0,9300000000.0,0.008,0.001,1.0,-210000000.0,9300000000.0,0.008,0.001,0.001
+    #     ))
+    f = 9.3e9
+
     cells = CavChainEzGenerator.from_1D_array(
         arr,
         13.6e-3)
-    logger.info(cells.param_names_1D_to_build_cell_chain())
-    pandas.DataFrame(#data=arr,columns=cells.param_names_1D_to_build_cell_chain()
-        {key:[arr[i]] for i ,key in enumerate(cells.param_names_1D_to_build_cell_chain())}
-                     ).to_csv('initial.temp.csv',index = False)
-    asaaaa
+    # asaaaa
 
     # nonend_Ez_generator = LastCellEzGenerator(0.5, 100e6, 9.3e9, 1e-3, 1e-3, 1e-3
     #                                           )
     # zs = numpy.linspace(-nonend_Ez_generator.L / 1.5, nonend_Ez_generator.L / 1.5, 100)
     # plt.figure()
     # plt.plot(zs, nonend_Ez_generator.Ez(zs))
-    cells2 = CavChainEzGenerator([
-        FirstCellEzGenerator(0.5, 113e6, 9.3e9, 1e-3, 3e-3, 3e-3),
-        CellEzGenerator(0.75, -165e6, 9.3e9, 3e-3, 2e-3, ),
-        CellEzGenerator(0.9, 186e6, 9.3e9, 6e-3, 1e-3, ),
-        CellEzGenerator(1, -210e6, 9.3e9, 6e-3, 1e-3, ),
-        CellEzGenerator(1, 210e6, 9.3e9, 8e-3, 1e-3, ),
-        CellEzGenerator(1, -210e6, 9.3e9, 8e-3, 1e-3, ),
-        CellEzGenerator(1, 210e6, 9.3e9, 8e-3, 1e-3, ),
-        LastCellEzGenerator(1, 210e6, 9.3e9, 8e-3, 1e-3, 1e-3)
-
-    ], 13.6e-3)
+    # cells = CavChainEzGenerator([
+    #     FirstCellEzGenerator(0.5, 113e6, 9.3e9, 1e-3, 3e-3,10., 3e-3,10.),
+    #     CellEzGenerator(0.75, -165e6, 9.3e9, 3e-3, 2e-3, 10),
+    #     CellEzGenerator(0.9, 186e6, 9.3e9, 6e-3, 1e-3, 10),
+    #     CellEzGenerator(1, -210e6, 9.3e9, 6e-3, 1e-3, 10),
+    #     CellEzGenerator(1, 210e6, 9.3e9, 8e-3, 1e-3, 10),
+    #     CellEzGenerator(1, -210e6, 9.3e9, 8e-3, 1e-3, 10),
+    #     CellEzGenerator(1, 210e6, 9.3e9, 8e-3, 1e-3, 10),
+    #     LastCellEzGenerator(1, -210e6, 9.3e9, 8e-3, 1e-3,10, 1e-3,10)
+    #
+    # ], 13.6e-3)
     zs = numpy.linspace(cells.zmids[0] - 2 * cells.cell_chain[0].L, cells.zmids[-1] + cells.cell_chain[-1].L, 1000)
     Ez = cells.Ez(zs)
-    Ez /= Ez.max()
-    df = pandas.DataFrame({'z': zs, 'Ez': Ez / Ez.max()})
+    # Ez /= Ez.max()
+    df = pandas.DataFrame({'z': zs, 'Ez': Ez})
     df_to_gdf(df, 'Ez1D.gdf')
 
     CST_data = pandas.read_csv(r"E:\GeneratorAccelerator\Genac\BiPeriodicSWLINAC\BiPeriodicSWEz.txt", sep=r'\s+',
@@ -240,6 +249,35 @@ if __name__ == '__main__':
                                , skiprows=3, )
     CST_data[0] *= 1e-3
     CST_data[1] /= CST_data[1].max()
+    paramname_list = cells.param_names_1D_to_build_cell_chain()
+    _mask_without_f = numpy.array(
+        [(False if paramname.endswith('.f') else True) for i, paramname in enumerate(paramname_list)])
+    _mask_without_beta = numpy.array(
+        [(False if paramname.endswith('.beta') else True) for i, paramname in enumerate(paramname_list)])
+    _mask_without_dz_acc = numpy.array(
+        [(False if paramname.endswith('.dz_acc') else True) for i, paramname in enumerate(paramname_list)])
+    _mask_without_sigmaz_coupling = numpy.array(
+        [(False if '.sigmaz_coupling' in paramname else True) for i, paramname in enumerate(paramname_list)])
+    _mask_without_n_sigmaz_coupling = numpy.array(
+        [(False if '.n_sigmaz_coupling' in paramname else True) for i, paramname in enumerate(paramname_list)])
+
+    _bounds = numpy.zeros((_mask_without_f.shape[0], 2))
+    _bounds[:, 0] = -numpy.inf
+    _bounds[:, 1] = numpy.inf
+    _bounds[~_mask_without_f] = (9.299e9, 9.301e9)
+    _bounds[~_mask_without_beta] = (0.0001, 1)
+    _bounds[~_mask_without_dz_acc] = (0.00001, numpy.inf)
+    _bounds[~_mask_without_sigmaz_coupling] = (0.00001, numpy.inf)
+    _bounds[~_mask_without_n_sigmaz_coupling] = (9.99, 10.01)
+    arr[~_mask_without_n_sigmaz_coupling] = 10
+
+    arr, pcov = curve_fit(lambda z, *arr: CavChainEzGenerator.from_1D_array(arr, 13.6e-3).Ez(z), *CST_data.values.T,
+                          arr, bounds=_bounds.T)
+    logger.info(cells.param_names_1D_to_build_cell_chain())
+    pandas.DataFrame(  # data=arr,columns=cells.param_names_1D_to_build_cell_chain()
+        {key: [arr[i]] for i, key in enumerate(cells.param_names_1D_to_build_cell_chain())}
+    ).to_csv('initial.temp.csv', index=False)
+    # aaaaaa
     CST_data.columns = ['z', 'Ez']
 
     plt.figure()
@@ -247,10 +285,12 @@ if __name__ == '__main__':
     plt.plot(*CST_data.values.T, label='CST')
     plt.legend()
 
-    plt.figure()
-    i = 1
-    plt.plot(cells.cell_chain[i].default_zs, cells.cell_chain[i].default_Es, label='Original')
-    plt.plot(cells.cell_chain[i].default_zs,
-             cells.cell_chain[i].Ez_Fourier_approx(cells.cell_chain[i].default_zs),
-             label='Fourier approximation')
-    plt.legend()
+
+
+    # plt.figure()
+    # i = 1
+    # plt.plot(cells.cell_chain[i].default_zs, cells.cell_chain[i].default_Es, label='Original')
+    # plt.plot(cells.cell_chain[i].default_zs,
+    #          cells.cell_chain[i].Ez_Fourier_approx(cells.cell_chain[i].default_zs),
+    #          label='Fourier approximation')
+    # plt.legend()

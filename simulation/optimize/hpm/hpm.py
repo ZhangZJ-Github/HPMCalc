@@ -40,7 +40,6 @@ import numpy
 from threading import Lock
 import shutil
 from pymoo.optimize import minimize
-from simulation.task_manager.task import TaskBase
 
 
 class HPMSim(MAGICTaskBase):
@@ -303,6 +302,7 @@ class MyProblem(ElementwiseProblem):
                  method_to_get_hpm: typing.Callable[[], HPMSim],
                  *args, **kwargs,
                  ):
+
         super(MyProblem, self, ).__init__(*args, n_var=len(initializer.initial_df.columns),
                                           n_obj=1,
                                           n_ieq_constr=0,  # TTOParamPreProcessor.N_constraint_le,
@@ -314,7 +314,8 @@ class MyProblem(ElementwiseProblem):
         self.method_to_get_hpm = method_to_get_hpm
         logger.info(self.elementwise)
         logger.info(self.elementwise_runner)
-        self.copy_template_and_initialize_csv_to_working_dir = kwargs.get('copy_template_and_initialize_csv_to_working_dir', True)
+        self.copy_template_and_initialize_csv_to_working_dir = kwargs.get(
+            'copy_template_and_initialize_csv_to_working_dir', True)
 
     def bad_res(self, out):
         out['F'] = [self.BIG_NUM] * self.n_obj
@@ -326,7 +327,7 @@ class MyProblem(ElementwiseProblem):
         if self.copy_template_and_initialize_csv_to_working_dir:
             hpmsim.template.copy_template_to_working_dir()
             shutil.copy(self.initializer.filename,
-                    os.path.join(hpmsim.template.working_dir, os.path.split(self.initializer.filename)[1]))
+                        os.path.join(hpmsim.template.working_dir, os.path.split(self.initializer.filename)[1]))
 
         # out['G'] = [constr(x) for constr in constraint_ueq]
         # if numpy.any(numpy.array(out['G']) > 0):
@@ -354,9 +355,12 @@ class MyProblem(ElementwiseProblem):
         return
 
 
+from simulation.task_manager.task import LoggedTask
+
+
 class JobBase:
     def __init__(self, initializer: simulation.task_manager.initialize.Initializer,
-                 method_to_get_HPMSimWithInitializer_object: typing.Callable[[], TaskBase]):
+                 method_to_get_HPMSimWithInitializer_object: typing.Callable[[], LoggedTask]):
         """
                 :param initializer:
                 :param method_to_get_HPMSimWithInitializer_object:
@@ -368,23 +372,23 @@ class JobBase:
 
 class OptimizeJob(JobBase):
     def __init__(self, initializer: simulation.task_manager.initialize.Initializer,
-                 method_to_get_HPMSimWithInitializer_object: typing.Callable[[], TaskBase],
+                 method_to_get_HPMSimWithInitializer_object: typing.Callable[[], LoggedTask],
                  ):
         super(OptimizeJob, self).__init__(initializer, method_to_get_HPMSimWithInitializer_object)
         # first_sampling = True
         self.algorithm = PSO(
             pop_size=49,
-            sampling=self.initializer.init_params_df.values if self.initializer.N_initial else LHS(),
+            sampling=(SamplingWithGoodEnoughValues(self.initializer) if self.initializer.N_initial else LHS()),
             # ref_dirs=ref_dirs
         )
 
-    def run(self, n_threads=7, copy_template_and_initialize_csv_to_working_dir= True):
+    def run(self, n_threads=7, copy_template_and_initialize_csv_to_working_dir=True):
         pool = ThreadPool(n_threads)
         runner = StarmapParallelization(pool.starmap)
         res = minimize(
             MyProblem(self.initializer, method_to_get_hpm=self.method_to_get_HPMSimWithInitializer_object,
                       elementwise_runner=runner,
-                      copy_template_and_initialize_csv_to_working_dir= copy_template_and_initialize_csv_to_working_dir
+                      copy_template_and_initialize_csv_to_working_dir=copy_template_and_initialize_csv_to_working_dir
                       ),
             self.algorithm,
             seed=1,
