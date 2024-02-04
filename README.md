@@ -3,8 +3,12 @@
 ## 依赖
 
 - [ ] MAGIC: 一种Particle-In-Cell模拟软件，Ref: Goplen B, Ludeking L, Smith D, et al. User-configurable MAGIC for electromagnetic PIC calculations\[J\]. Computer Physics Communications, 1995, 87(1-2): 54-86.
-- [ ] [pyMagicTools](https://gitee.com/zhangzj-gitee/MagicTools): 用于解析MAGIC结果文件的Python库
-- [ ] General Particle Tracer （可选） ：一种粒子追踪框架
+- [ ] [pyMagicTools](https://gitee.com/zhangzj-gitee/MagicTools): 用于解析MAGIC结果文件的Python库。
+
+以下依赖软件、库主要用于粒子加速器的设计，若仅考虑微波源设计则暂时不用：
+- [ ] General Particle Tracer (简称：GPT) ：一种粒子追踪框架。
+- [ ] [pygpt](https://gitlab.com/sgeer/pygpt): Python parser for GPT output files (.gdf). This code is developed by Bas van der Geer, the author of General Particle Tracer.
+- [ ] CST
 ## 配置
 运行[simulation/conf/config.py](simulation/conf/config.py)生成本地配置（./simulation/conf/config.json）。
 此操作会覆盖目录下现有的config.json，因此建议操作前先复制或重命名该文件。
