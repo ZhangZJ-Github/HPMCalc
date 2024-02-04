@@ -10,6 +10,7 @@ import typing
 import pandas
 
 import simulation.task_manager._base
+from simulation.task_manager.simulator import InputFileTemplateBase, MagicTemplate
 
 
 class Initializer:
@@ -60,7 +61,12 @@ class Initializer:
         _df.to_csv(filename, index=False, encoding=simulation.task_manager._base.CSV_ENCODING)
         os.system("start %s" % filename)
 
+    @staticmethod
+    def make_new_initial_csv_from_template(csv_path: str, inputfile_template_path: str):
+        Initializer.make_new_initial_csv(
+            csv_path,
+            InputFileTemplateBase(inputfile_template_path, '.').get_variables())
+
 
 if __name__ == '__main__':
-    from simulation.task_manager.simulator import MagicTemplate
-    initializer = Initializer.make_new_initial_csv('initial.csv',MagicTemplate(r'F:\changeworld\HPMCalc\simulation\template\10g2\template.m2d','.').get_variables())
+    initializer = Initializer('initial.csv')
