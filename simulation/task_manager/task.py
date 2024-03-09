@@ -7,6 +7,7 @@
 
 import os.path
 import os.path
+# import typing_extensions
 
 import matplotlib
 import numpy
@@ -15,6 +16,7 @@ matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import pandas
 from deprecated.sphinx import deprecated
+# from typing_extensions import deprecated
 from simulation.task_manager.simulator import *
 from simulation.task_manager._base import CSV_ENCODING
 from simulation.task_manager.initialize import Initializer
@@ -358,7 +360,7 @@ class MAGICTaskBase(CachedTask):
 class ManualTask:
     MAGIC_SOLVER_PATH = MAGICTaskBase.MAGIC_SOLVER_PATH
 
-    @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
+    # @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
     def __init__(self, children_sldprt_name, m2d_template_name,
                  replace_marker: str, folder_and_prefix, parent_sldprt_name,
                  description):
@@ -370,7 +372,7 @@ class ManualTask:
         self.description = description
         self.replace_marker = replace_marker
 
-    @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
+    # @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
     def run(self, ax=plt.gca()):
         import sw_to_MAGIC_commands
         os.makedirs(self.folder, exist_ok=True)

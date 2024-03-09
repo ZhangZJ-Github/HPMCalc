@@ -113,16 +113,18 @@ class GPTTraj:
         across_ts: typing.Dict[int, typing.List[float]] = {}
 
         for id in self.dfs:
-            curve_z_time = LineString(self.dfs[id][[self.NeededFields_d.z.name, self.NeededFields_d.time.name]].values)
-            # plt.plot(*curve_phi_z.xy)
-            line = LineString(numpy.array(((z_screen,) * 2, curve_z_time.bounds[1::2]), ).T)
-            intersections = curve_z_time.intersection(line)
-            if isinstance(intersections, shapely.geometry.Point):
-                across_ts[id] = [intersections.y]
+            try:
+                curve_z_time = LineString(self.dfs[id][[self.NeededFields_d.z.name, self.NeededFields_d.time.name]].values)
+                # plt.plot(*curve_phi_z.xy)
+                line = LineString(numpy.array(((z_screen,) * 2, curve_z_time.bounds[1::2]), ).T)
+                intersections = curve_z_time.intersection(line)
+                if isinstance(intersections, shapely.geometry.Point):
+                    across_ts[id] = [intersections.y]
 
-            elif isinstance(intersections, shapely.geometry.MultiPoint):
-                across_ts[id] = [intersection.y for intersection in intersections]
-
+                elif isinstance(intersections, shapely.geometry.MultiPoint):
+                    across_ts[id] = [intersection.y for intersection in intersections]
+            except shapely.errors.GEOSException as e:
+                logger.warning("忽略了id = %d的粒子轨迹，因为这条轨迹只包含一个点，可能是刚发射的粒子。"%id)
         return across_ts
 
     def interpolate_at_screen(self, z_screen):
