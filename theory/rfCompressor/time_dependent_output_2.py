@@ -113,6 +113,7 @@ S23_3D_interpolator_charging = lambda f: numpy.piecewise(f, [numpy.real(f) >= 0,
                                                           ])
 
 t = numpy.linspace(-10e-9, 40e-9, 100000)
+eta_OM_max = []
 dt = t[1] - t[0]
 
 # Dt_left = 0.52e-9
@@ -138,23 +139,21 @@ impulse_response_33 = ifft(S33_3D_interpolator(freqs.astype(complex) / 1e9))[:le
 
 impulse_response_23_charging = ifft(S23_3D_interpolator_charging(freqs.astype(complex) / 1e9))[:len(t) // 2]
 impulse_response_33_charging = ifft(S33_3D_interpolator_charging(freqs.astype(complex) / 1e9))[:len(t) // 2]
-angle_S33_charging =numpy.angle(S33_3D_interpolator_charging(complex(f_target) /1e9))#+0.7
+angle_S33_charging =numpy.angle(S33_3D_interpolator_charging(complex(f_target) /1e9))
 # 修正相位：在一个RF周期内微调，使其满足S参数的约束，而几乎不影响幅值。
 T_RF = (1/f_target)
-Dt_lefts = numpy.array((*numpy.arange(0.2e-9, 1e-9, 0.2e-9),*numpy.arange(1e-9,10e-9,1e-9)))
+Dt_lefts = numpy.array((*numpy.arange(0.1e-9, 1e-9, 0.2e-9),*numpy.arange(1e-9,10e-9,1e-9)))
 Dt_lefts =( Dt_lefts//T_RF)*T_RF + angle_S33_charging/(2*numpy.pi) * T_RF
 
 recorded_o23 = []
 def get_ts(signal: numpy.ndarray, t_start=t[0], dt=dt):
     N = len(signal)
     return numpy.linspace(t_start, t_start + N * dt, N)
-t0 = -10e-9
+trusted_signal =lambda df:( df[0]>1.2)
 for i, Dt_left in enumerate(Dt_lefts):
+    t = numpy.arange(0 - 10e-9, 0 , dt)
 
-    t = numpy.arange(t0, 0 , dt)
-
-    i3_charging = numpy.piecewise(t, [(t >t0# -10e-9
-                                       ) & (t < 0), ], [lambda t: numpy.sin(2 * numpy.pi * f_target * t), 0])
+    i3_charging = numpy.piecewise(t, [(t > -10e-9) & (t < 0), ], [lambda t: numpy.sin(2 * numpy.pi * f_target * t), 0])
     # i3_discharging =numpy.piecewise(t, [(t>0),], [lambda t:numpy.sin(2*numpy.pi*f_target*(t)) ,0])
 
     # plt.figure()
@@ -173,14 +172,12 @@ for i, Dt_left in enumerate(Dt_lefts):
         # i3_discharging = numpy.hstack([i3_discharging,o33[:len(t)][-int(Dt_left//dt):]])
         t = numpy.arange(t[0], t[-1] + Dt_left, dt)
         # o33 = scipy.signal.convolve(i3_discharging, impulse_response_33, )
-    o23_charging = scipy.signal.convolve(i3_charging, impulse_response_23_charging, )
-    o23_discharging =scipy.signal.convolve(i3_discharging, impulse_response_23, )
-    o23 =  numpy.pad(o23_charging,
-                            (0, len(o23_discharging) - len(o23_charging)), 'constant',
-                            constant_values=(0, 0)) + o23_discharging
+
+    o23 = scipy.signal.convolve(i3_discharging, impulse_response_23, )
     df_i3_discharging = to_df(numpy.vstack((get_ts(i3_discharging) * 1e9, i3_discharging)).T.astype(float))
     df_o33 = to_df(numpy.vstack((t * 1e9, o33.real[:len(t)])).T.astype(float))
     df_o23 = to_df(numpy.vstack((t * 1e9, o23.real[:len(t)])).T.astype(float))
+    eta_OM_max.append(2 * df_o23[trusted_signal(df_o23)][key_interpolated_periodic_avg_square].max())
     # plt.figure()
     # plt.plot(get_ts(i3_charging), i3_charging)
     # plt.plot(get_ts(o33_from_convolve_charging),o33_from_convolve_charging)
@@ -190,12 +187,8 @@ for i, Dt_left in enumerate(Dt_lefts):
     recorded_o23.append(df_o23)
     logger.info(i)
 
-trusted_signal =lambda df:( df[0]>0)
-eta_OM_max = []
 
-for i, df_o23 in enumerate(recorded_o23):
-    eta_OM_max.append(2 * df_o23[trusted_signal(df_o23)][key_interpolated_periodic_avg_square].max())
-eta_OM_max = numpy.array(eta_OM_max)
+
 
 plt.figure()
 # plt.plot(t,i3_charging)
@@ -277,18 +270,17 @@ for i, df_o23_ in enumerate(recorded_o23):
     # shapely.lib.intersection_all([ls,ls2])
     # arr_intersected_pts.append(intersected_pts)
 
-out_pulse_duration = numpy.array(out_pulse_duration)
+
 
 (eta_inf, tau, Dt_right),cov = curve_fit(   _func_eta_OM_peak, Dt_lefts, eta_OM_max ,p0= [0.88,3e-9,0.5e-9])
 fig,axs = plt.subplots(4,1 ,figsize=(4,6),constrained_layout = True,sharex= True)
-axs[0].plot(1e9*Dt_lefts,out_pulse_duration,'.',label = "output pulse duration" )
+axs[0].plot(1e9*Dt_lefts,out_pulse_duration,'.-',label = "output pulse duration" )
 axs[0].set_ylabel ("duration (ns)")
 _func_out_pulse_duration = lambda Dt_left,a,Dt_OM:a * Dt_left+Dt_OM
-__filter= Dt_lefts>1e-9
-(a,Dt_OM2,),cov = curve_fit(_func_out_pulse_duration, Dt_lefts[__filter]*1e9, out_pulse_duration[__filter])
+(a,Dt_OM2,),cov = curve_fit(_func_out_pulse_duration, Dt_lefts*1e9, out_pulse_duration)
 __Dt_lefts = numpy.linspace(-0.e-9, max(Dt_lefts),1000)
 axs[0].plot(1e9*__Dt_lefts, _func_out_pulse_duration( __Dt_lefts*1e9,a, Dt_OM2),'--',label = r"$%.2f (\Delta t + %.2f~\rm ns)$"%(a,Dt_OM2 /a))
-axs[1].plot(1e9*Dt_lefts, eta_OM_max,'.',label = "$\eta_{OM, peak}$")
+axs[1].plot(1e9*Dt_lefts, eta_OM_max,'.-',label = "$\eta_{OM, peak}$")
 axs[1].plot(1e9*__Dt_lefts, _func_eta_OM_peak(__Dt_lefts,eta_inf, tau, Dt_right),'--',label = r"$%.3f [1-exp(-\frac{t+ %.2f\ \rm{ns}}{%.2f\ \rm{ns}})]^2$"%(eta_inf, Dt_right*1e9, tau*1e9,))
 # axs[0].plot(df_test_01[0],df_test_01[key_interpolated_periodic_avg_square]*2 ,label = 'convolve')
 
