@@ -112,8 +112,8 @@ S23_3D_interpolator_charging = lambda f: numpy.piecewise(f, [numpy.real(f) >= 0,
                                                                                  left=0, right=0)
                                                           ])
 
-t = numpy.linspace(-10e-9, 40e-9, 100000)
-dt = t[1] - t[0]
+# t = numpy.linspace(-10e-9, 40e-9, 100000)
+dt = 5e-13#t[1] - t[0]
 
 # Dt_left = 0.52e-9
 
@@ -128,27 +128,28 @@ dt = t[1] - t[0]
 #     new_signal = numpy.interp(time - Dt, time, signal )
 #     return new_signal
 
-i3 = numpy.piecewise(t, [(t > 0) & (t < 10e-9), ], [lambda t: numpy.sin(2 * numpy.pi * f_target * t), 0])
-i3_fft = fft(i3)
+# i3 = numpy.piecewise(t, [(t > 0) & (t < 10e-9), ], [lambda t: numpy.sin(2 * numpy.pi * f_target * t), 0])
+# i3_fft = fft(i3)
+Nfreqs = 100000
+freqs = fftfreq(Nfreqs, dt)
 
-freqs = fftfreq(len(t), t[1] - t[0])
+impulse_response_23 = ifft(S23_3D_interpolator(freqs.astype(complex) / 1e9))[:Nfreqs // 2]
+impulse_response_33 = ifft(S33_3D_interpolator(freqs.astype(complex) / 1e9))[:Nfreqs // 2]
 
-impulse_response_23 = ifft(S23_3D_interpolator(freqs.astype(complex) / 1e9))[:len(t) // 2]
-impulse_response_33 = ifft(S33_3D_interpolator(freqs.astype(complex) / 1e9))[:len(t) // 2]
-
-impulse_response_23_charging = ifft(S23_3D_interpolator_charging(freqs.astype(complex) / 1e9))[:len(t) // 2]
-impulse_response_33_charging = ifft(S33_3D_interpolator_charging(freqs.astype(complex) / 1e9))[:len(t) // 2]
+impulse_response_23_charging = ifft(S23_3D_interpolator_charging(freqs.astype(complex) / 1e9))[:Nfreqs // 2]
+impulse_response_33_charging = ifft(S33_3D_interpolator_charging(freqs.astype(complex) / 1e9))[:Nfreqs // 2]
 angle_S33_charging =numpy.angle(S33_3D_interpolator_charging(complex(f_target) /1e9))#+0.7
 # 修正相位：在一个RF周期内微调，使其满足S参数的约束，而几乎不影响幅值。
 T_RF = (1/f_target)
-Dt_lefts = numpy.array((*numpy.arange(0.2e-9, 1e-9, 0.2e-9),*numpy.arange(1e-9,10e-9,1e-9)))
+Dt_lefts = numpy.array((*numpy.arange(0.2e-9, 1e-9, 0.2e-9),*numpy.arange(1e-9,10e-9,1e-9),20e-9))
 Dt_lefts =( Dt_lefts//T_RF)*T_RF + angle_S33_charging/(2*numpy.pi) * T_RF
 
 recorded_o23 = []
-def get_ts(signal: numpy.ndarray, t_start=t[0], dt=dt):
+t0 = -max(Dt_lefts)*2
+
+def get_ts(signal: numpy.ndarray, t_start=t0, dt=dt):
     N = len(signal)
     return numpy.linspace(t_start, t_start + N * dt, N)
-t0 = -10e-9
 for i, Dt_left in enumerate(Dt_lefts):
 
     t = numpy.arange(t0, 0 , dt)
@@ -160,7 +161,7 @@ for i, Dt_left in enumerate(Dt_lefts):
     # plt.figure()
     o33_from_convolve_charging = scipy.signal.convolve(i3_charging, impulse_response_33_charging, )
     o33 = o33_from_convolve_charging
-    while t[-1] < 40e-9:
+    while t[-1] < 100e-9:
         i3_discharging = numpy.piecewise(t, [t > 0, ], [lambda t: numpy.interp(t - Dt_left, get_ts(o33), o33), 0])
         o33_from_convolve_discharging = scipy.signal.convolve(i3_discharging, impulse_response_33, )
         if len(o33_from_convolve_discharging) - len(o33_from_convolve_charging) > 0:
@@ -179,8 +180,8 @@ for i, Dt_left in enumerate(Dt_lefts):
                             (0, len(o23_discharging) - len(o23_charging)), 'constant',
                             constant_values=(0, 0)) + o23_discharging
     df_i3_discharging = to_df(numpy.vstack((get_ts(i3_discharging) * 1e9, i3_discharging)).T.astype(float))
-    df_o33 = to_df(numpy.vstack((t * 1e9, o33.real[:len(t)])).T.astype(float))
-    df_o23 = to_df(numpy.vstack((t * 1e9, o23.real[:len(t)])).T.astype(float))
+    df_o33 = to_df(numpy.vstack((get_ts(o33,)* 1e9, o33.real)).T.astype(float))
+    df_o23 = to_df(numpy.vstack((get_ts(o23) * 1e9, o23.real)).T.astype(float))
     # plt.figure()
     # plt.plot(get_ts(i3_charging), i3_charging)
     # plt.plot(get_ts(o33_from_convolve_charging),o33_from_convolve_charging)
@@ -200,15 +201,8 @@ eta_OM_max = numpy.array(eta_OM_max)
 plt.figure()
 # plt.plot(t,i3_charging)
 plt.plot(get_ts(i3_discharging), i3_discharging, label='i3')
-plt.plot(t, o33[:len(t)], label='o33')
-plt.plot(t, o23[:len(t)], label='o23')
-plt.legend()
-
-plt.figure()
-# plt.plot(t,i3_charging)
-plt.plot(get_ts(i3_discharging), i3_discharging ** 2, label='i3**2')
-plt.plot(t, (o33 ** 2)[:len(t)], label='o33**2')
-plt.plot(t, (o23 ** 2)[:len(t)], label='o23**2')
+plt.plot(get_ts(o33), o33, label='o33')
+plt.plot(get_ts(o23), o23, label='o23')
 plt.legend()
 
 plt.figure()
@@ -314,8 +308,3 @@ plt.savefig("G_vs_Delta_t.eps")
 
 
 
-plt.figure()
-plt.plot(t*1e9+10,test_01[:len(t)],label = 'convolve')
-plt.plot(sig_o23[:,0],sig_o23[:,1],label = 'copy')
-plt.plot(df['time/ns'], df['signal'],label = 'from csv')
-plt.legend()
