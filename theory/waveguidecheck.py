@@ -243,7 +243,7 @@ for j in range(3):
     cross_pts = shapely.LineString(curve_data[~numpy.isnan(curve_data).any(axis=1)]).intersection(
         shapely.LineString(driver_data[~numpy.isnan(driver_data).any(axis=1)]))
     print(cross_pts)
-    plt.scatter(*cross_pts.xy, label='intersection: (%.2f, %.2f)' % (cross_pts.x, cross_pts.y))
+    plt.scatter(*cross_pts.xy, label='intersection: (%.2f, %.2f)' % (cross_pts.xs, cross_pts.ys))
 plt.xlabel(r'$k_{z0} p/(2 \pi)$')
 plt.ylabel(r'f / GHz')
 plt.legend()

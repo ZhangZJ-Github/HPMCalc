@@ -114,7 +114,7 @@ class Compressor:
 
         o33_from_convolve_charging = scipy.signal.convolve(i3_charging, self.om_charging.S11.impulse_response)
         o33 = o33_from_convolve_charging
-        while t[-1] < tend:
+        while  t[-1] - Dt_MESS < tend:
             i3_discharging = numpy.piecewise(t, [t > t_discharging_start, ],
                                              [lambda t: numpy.interp(t - Dt_MESS, _get_ts(o33), o33), 0])
             o33_from_convolve_discharging = scipy.signal.convolve(i3_discharging,
@@ -125,9 +125,10 @@ class Compressor:
                                 constant_values=(0, 0)) + o33_from_convolve_discharging
                 # logger.info("len(o33_from_convolve_discharging) - len(o33_from_convolve_charging) > 0")
             else:
-
+                raise RuntimeError("It should be len(o33_from_convolve_discharging) - len(o33_from_convolve_charging) >= 0")
                 o33 = o33_from_convolve_charging[:len(o33_from_convolve_discharging)] + o33_from_convolve_discharging
                 # logger.info("else")
+            # if  _get_ts(i3_discharging,) > tend :break
             t = numpy.arange(t[0], t[-1] + Dt_MESS, dt)
 
         o23_charging = scipy.signal.convolve(i3_charging, self.om_charging.S21.impulse_response)
@@ -149,49 +150,55 @@ class Compressor:
         :param Dt_MESS:
         :return:
         """
-        angle_S33_charging = numpy.angle(self.om_charging.S11.S_interpolator(complex(f_target)))  # +0.7
-        T_RF = (1 / (f_target))
+        angle_ = numpy.angle(1 / self.om_charging.S11.S_interpolator(complex(f_target)))  # +0.7
+        T_RF = (1.0 / (f_target))
         # Dt_lefts = numpy.array((*numpy.arange(0.2, 1, 0.2), *numpy.arange(1, 10, 1), 20))
-        return (Dt_MESS // T_RF) * T_RF + angle_S33_charging / (2 * numpy.pi) * T_RF
+        # return (Dt_MESS // T_RF +1 + angle_S33_charging / (2 * numpy.pi) ) * T_RF
+        # logger.info("angle_ = %.2f degree"%(numpy.rad2deg(angle_)))
+        return (Dt_MESS // T_RF + 1 - angle_ / (2 * numpy.pi)) * T_RF
 
+_func_eta_OM_peak = lambda Dt_left, eta_inf, tau, Dt_right: numpy.piecewise(
+        Dt_left, [Dt_left + Dt_right > 0],
+        (lambda Dt_left: eta_inf * (1 - numpy.exp(-(Dt_left + Dt_right) / tau)) ** 2, 0))
 
 if __name__ == '__main__':
     # 需包含放能阶段的S参数
-    proj_3D: cst.results.ProjectFile = cst.results.ProjectFile(
-        r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch_2-1.cst",
+    proj_discharging: cst.results.ProjectFile = cst.results.ProjectFile(
+        r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch_2-1.paramsweep.cst",
         allow_interactive=True)
-    proj_3D_charging: cst.results.ProjectFile = cst.results.ProjectFile(
+    proj_charging: cst.results.ProjectFile = cst.results.ProjectFile(
         r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch_2-1.ES.cst",
         allow_interactive=True)
-    S33_3D = numpy.array(proj_3D.get_3d().get_result_item('1D Results\\S-Parameters\\S3,3', ).get_data())
-    S23_3D = numpy.array(proj_3D.get_3d().get_result_item('1D Results\\S-Parameters\\S2,3', ).get_data())
+    run_id=212#89
+    S33_discharging = numpy.array(proj_discharging.get_3d().get_result_item('1D Results\\S-Parameters\\S3,3', run_id).get_data())
+    S23_discharging = numpy.array(proj_discharging.get_3d().get_result_item('1D Results\\S-Parameters\\S2,3', run_id).get_data())
 
-    S33_3D_charging = numpy.array(
-        proj_3D_charging.get_3d().get_result_item('1D Results\\S-Parameters\\S3,3', ).get_data())
-    S23_3D_charging = numpy.array(
-        proj_3D_charging.get_3d().get_result_item('1D Results\\S-Parameters\\S2,3', ).get_data())
+    S33_charging = numpy.array(
+        proj_charging.get_3d().get_result_item('1D Results\\S-Parameters\\S3,3', ).get_data())
+    S23_charging = numpy.array(
+        proj_charging.get_3d().get_result_item('1D Results\\S-Parameters\\S2,3', ).get_data())
 
     impulse_duration = 50.0
     impulse_dt = 1 / (f_target / 1e9) / 20
     compressor = Compressor(
-        OM_2port(S_param_network(S33_3D_charging, impulse_duration, impulse_dt),
-                 S_param_network(S23_3D_charging, impulse_duration, impulse_dt)),
-        OM_2port(S_param_network(S33_3D, impulse_duration, impulse_dt),
-                 S_param_network(S23_3D, impulse_duration, impulse_dt)), )
+        OM_2port(S_param_network(S33_charging, impulse_duration, impulse_dt),
+                 S_param_network(S23_charging, impulse_duration, impulse_dt)),
+        OM_2port(S_param_network(S33_discharging, impulse_duration, impulse_dt),
+                 S_param_network(S23_discharging, impulse_duration, impulse_dt)), )
 
-    Dt_lefts = compressor.correct_Dt_MESS(
+    arr_Dt_MESS = compressor.correct_Dt_MESS(
         f_target / 1e9,
         numpy.array((*numpy.arange(0.2, 1, 0.2), *numpy.arange(1, 10, 1), 20)))
     recorded_o23 = []
 
-    t_charging_start = -2 * max(max(Dt_lefts), impulse_duration)
+    t_charging_start = -2 * max(max(arr_Dt_MESS), impulse_duration)
     t_discharging_start = 0.0
     tend = 40.0
-    for i, Dt_left in enumerate(Dt_lefts):
+    for i, Dt_MESS in enumerate(arr_Dt_MESS):
         df_i3_charging, df_i3_discharging, df_o33, df_o23 = compressor.run(f_target / 1e9, t_charging_start, 0, tend,
-                                                                           Dt_left)
+                                                                           Dt_MESS)
         recorded_o23.append(df_o23)
-        logger.info("%d, %.2f ns" % (i, Dt_left))
+        logger.info("%d, %.2f ns" % (i, Dt_MESS))
 
     trusted_signal = lambda df: (df[0] > t_discharging_start) & (df[1] < tend)
     eta_OM_max = []
@@ -219,7 +226,7 @@ if __name__ == '__main__':
     plt.legend()
 
     gammadata = numpy.array(
-        proj_3D_charging.get_3d().get_result_item('1D Results\\Port Information\\Gamma\\3(1)').get_data())
+        proj_charging.get_3d().get_result_item('1D Results\\Port Information\\Gamma\\3(1)').get_data())
     v_p = 2 * numpy.pi * f_target / numpy.interp((f_target / 1e9), gammadata[:, 0].real, gammadata[:, 1]).imag
     v_g = C.c ** 2 / v_p
 
@@ -228,7 +235,7 @@ if __name__ == '__main__':
         if i % 2 == 0 or False:
             # plt.plot(df_o23_[0],(numpy.abs(df_o23_[key_complex])**2),label = '$\Delta t$ = %.1f ns ($L_1$ = %.2f m)'%(Dt_lefts[i]/1e-9, Dt_lefts[i]*v_g/2))
             plt.plot(df_o23_[0], df_o23_[key_interpolated_periodic_avg_square] * 2,
-                     label='$\Delta t$ = %.2f ns ($L_1$ = %.2f m)' % (Dt_lefts[i], Dt_lefts[i] * 1e-9 * v_g / 2))
+                     label='$\Delta t$ = %.2f ns ($L_1$ = %.2f m)' % (arr_Dt_MESS[i], arr_Dt_MESS[i] * 1e-9 * v_g / 2))
             # plt.plot(df_o23_[0],(numpy.abs(df_o23_[key_complex])**2),label = '$L_1$ = %.2f m'%( Dt_lefts[i]*v_g/2))
     plt.xlabel('time (ns)')
     plt.ylabel(r'$\eta_{OM}(t)$')
@@ -245,10 +252,8 @@ if __name__ == '__main__':
         return G_OM * 2 * L_OM / v_g / (Dt_lefts + 2 * L_OM / v_g)
 
 
-    G_cav_peak = func_G_cav_peak(Dt_lefts * 1e-9)
-    _func_eta_OM_peak = lambda Dt_left, eta_inf, tau, Dt_right: numpy.piecewise(
-        Dt_left, [Dt_left + Dt_right > 0],
-        (lambda Dt_left: eta_inf * (1 - numpy.exp(-(Dt_left + Dt_right) / tau)) ** 2, 0))
+    G_cav_peak = func_G_cav_peak(arr_Dt_MESS * 1e-9)
+
     df = pandas.read_csv(
         r"F:\changeworld\HPMCalc\theory\rfCompressor\test_SES_switch01.1.cst.results\0218\signals\o23.csv")
 
@@ -257,8 +262,8 @@ if __name__ == '__main__':
                                     numpy.sin(2 * numpy.pi * f_target / 1e9 * t_))
     df_test_01 = to_df(numpy.array((t_, test_01[:len(t_)])).T.real)
     # df_test_01_interpolator = scipy.interpolate.interp1d
-    sig_o23 = numpy.array(
-        proj_3D.get_schematic().get_result_item('Tasks\\Tran1\\TD Signals\\O2,3', ).get_data())
+    # sig_o23 = numpy.array(
+    #     proj_discharging.get_schematic().get_result_item('Tasks\\Tran1\\TD Signals\\O2,3', ).get_data())
 
     out_pulse_duration = []
     # arr_intersected_pts =[]
@@ -280,18 +285,18 @@ if __name__ == '__main__':
 
     out_pulse_duration = numpy.array(out_pulse_duration)
 
-    (eta_inf, tau, Dt_right), cov = curve_fit(_func_eta_OM_peak, Dt_lefts, eta_OM_max, p0=[0.88, 3, 0.5])
+    (eta_inf, tau, Dt_right), cov = curve_fit(_func_eta_OM_peak, arr_Dt_MESS, eta_OM_max, p0=[0.88, 3, 0.5])
     fig, axs = plt.subplots(4, 1, figsize=(4, 6), constrained_layout=True, sharex=True)
-    axs[0].plot(Dt_lefts, out_pulse_duration, '.', label="output pulse duration")
+    axs[0].plot(arr_Dt_MESS, out_pulse_duration, '.', label="output pulse duration")
     axs[0].set_ylabel("duration (ns)")
     _func_out_pulse_duration = lambda Dt_left, a, Dt_OM: a * Dt_left + Dt_OM
-    __filter = Dt_lefts > 1.0
-    (a, Dt_OM2,), cov = curve_fit(_func_out_pulse_duration, Dt_lefts[__filter], out_pulse_duration[__filter])
-    __Dt_lefts = numpy.linspace(-0., max(Dt_lefts), 1000)
-    axs[0].plot(__Dt_lefts, _func_out_pulse_duration(__Dt_lefts, a, Dt_OM2), '--',
+    __filter = arr_Dt_MESS > 1.0
+    (a, Dt_OM2,), cov = curve_fit(_func_out_pulse_duration, arr_Dt_MESS[__filter], out_pulse_duration[__filter])
+    __Dt_MESSs = numpy.linspace(-0., max(arr_Dt_MESS), 1000)
+    axs[0].plot(__Dt_MESSs, _func_out_pulse_duration(__Dt_MESSs, a, Dt_OM2), '--',
                 label=r"$%.2f (\Delta t + %.2f~\rm ns)$" % (a, Dt_OM2 / a))
-    axs[1].plot(Dt_lefts, eta_OM_max, '.', label="$\eta_{OM, peak}$")
-    axs[1].plot(__Dt_lefts, _func_eta_OM_peak(__Dt_lefts, eta_inf, tau, Dt_right), '--',
+    axs[1].plot(arr_Dt_MESS, eta_OM_max, '.', label="$\eta_{OM, peak}$")
+    axs[1].plot(__Dt_MESSs, _func_eta_OM_peak(__Dt_MESSs, eta_inf, tau, Dt_right), '--',
                 label=r"$%.3f [1-exp(-\frac{t+ %.2f\ \rm{ns}}{%.2f\ \rm{ns}})]^2$" % (eta_inf, Dt_right, tau,))
     # axs[0].plot(df_test_01[0],df_test_01[key_interpolated_periodic_avg_square]*2 ,label = 'convolve')
 
@@ -301,14 +306,14 @@ if __name__ == '__main__':
     # axs[0].plot(df_test_01[0], _func_eta_OM_peak(df_test_01[0].values, P23_inf, tau2, Dt_right2), label ='convolve, fitted')
     _func_eta_OM_peak2 = lambda t, Dt: numpy.interp((t + Dt), df_test_01[0],
                                                     2 * df_test_01[key_interpolated_periodic_avg_square])
-    (Dt_OM,), cov = curve_fit(_func_eta_OM_peak2, Dt_lefts, eta_OM_max, p0=[1])
+    (Dt_OM,), cov = curve_fit(_func_eta_OM_peak2, arr_Dt_MESS, eta_OM_max, p0=[1])
     # Dt_OM = 1e-9
     # axs[0].plot(1e9*Dt_lefts,_func_eta_OM_peak2(Dt_lefts,Dt_OM),label = "Dt_OM = %.2f ns"%(1e9*Dt_OM))
     # axs[0].plot(df['time/ns'], df['signal']**2)
 
-    axs[2].plot(__Dt_lefts, func_G_cav_peak(__Dt_lefts * 1e-9), label='$G_{cav,peak}$')
+    axs[2].plot(__Dt_MESSs, func_G_cav_peak(__Dt_MESSs * 1e-9), label='$G_{cav,peak}$')
 
-    axs[3].plot(Dt_lefts, eta_OM_max * G_cav_peak, '.-', label="$G_{OM,peak}$")
+    axs[3].plot(arr_Dt_MESS, eta_OM_max * G_cav_peak, '.-', label="$G_{OM,peak}$")
     # axs[3].plot(1e9*__Dt_lefts, _func_eta_OM_peak(__Dt_lefts,eta_inf, tau, Dt_right)*func_G_cav_peak(__Dt_lefts),'.-',label  = "$G_{OM,peak}$")
 
     for ax in axs: ax.legend()

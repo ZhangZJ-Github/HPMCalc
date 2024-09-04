@@ -10,6 +10,8 @@
 import numpy
 import scipy.constants as C
 from scipy.stats import maxwell
+def gammabeta_to_gamma(gammabeta,):
+    return (1+gammabeta**2)**0.5
 
 def Ek_to_beta(Ek_eV, mass=C.m_e):
     return (1 - 1 / (1 + Ek_eV / (mass * C.c ** 2 / C.eV)) ** 2) ** .5
