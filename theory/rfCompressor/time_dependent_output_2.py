@@ -4,6 +4,7 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : time_dependent_output.py
 # @Software: PyCharm
+import typing
 
 import cst.results
 import matplotlib
@@ -143,6 +144,53 @@ class Compressor:
 
         return df_i3_charging, df_i3_discharging, df_o33, df_o23
 
+    def run_without_MESS(self,f_target, t_charging_start, t_discharging_start, tend,#Dt_MESS, #get_input_signal: typing.Callable[[float],float]
+                         ):
+
+        t0 = t_charging_start
+        dt = self.dt
+
+        _get_ts = lambda signal: get_ts(signal, t0, dt)
+
+        t = numpy.arange(t0, t_discharging_start, dt)
+
+        i3_charging = numpy.piecewise(t, [(t > t0  # -10e-9
+                                           ) & (t < t_discharging_start), ],
+                                      [lambda t: numpy.sin(2 * numpy.pi * f_target * t)
+                                          , 0])
+
+        o33_from_convolve_charging = scipy.signal.convolve(i3_charging, self.om_charging.S11.impulse_response)
+        o33 = o33_from_convolve_charging
+        t = numpy.arange(t0, tend, dt)
+        i3_discharging = numpy.piecewise(t, [t > t_discharging_start, ],
+                                             [lambda t:  numpy.sin(2 * numpy.pi * f_target * t)#numpy.interp(t - Dt_MESS, _get_ts(o33), o33)
+                                                 , 0])
+        o33_from_convolve_discharging = scipy.signal.convolve(i3_discharging,
+                                                              self.om_discharging.S11.impulse_response, )
+        if len(o33_from_convolve_discharging) - len(o33_from_convolve_charging) >= 0:
+            o33 = numpy.pad(o33_from_convolve_charging,
+                            (0, len(o33_from_convolve_discharging) - len(o33_from_convolve_charging)), 'constant',
+                            constant_values=(0, 0)) + o33_from_convolve_discharging
+            # logger.info("len(o33_from_convolve_discharging) - len(o33_from_convolve_charging) > 0")
+        else:
+            raise RuntimeError("It should be len(o33_from_convolve_discharging) - len(o33_from_convolve_charging) >= 0")
+            o33 = o33_from_convolve_charging[:len(o33_from_convolve_discharging)] + o33_from_convolve_discharging
+            # logger.info("else")
+        # if  _get_ts(i3_discharging,) > tend :break
+
+
+        o23_charging = scipy.signal.convolve(i3_charging, self.om_charging.S21.impulse_response)
+        o23_discharging = scipy.signal.convolve(i3_discharging, self.om_discharging.S21.impulse_response)
+        o23 = numpy.pad(o23_charging,
+                        (0, len(o23_discharging) - len(o23_charging)), 'constant',
+                        constant_values=(0, 0)) + o23_discharging
+        df_i3_charging = to_df(numpy.vstack((_get_ts(i3_charging), i3_charging)).T.astype(float), 2 / f_target)
+        df_i3_discharging = to_df(numpy.vstack((_get_ts(i3_discharging), i3_discharging)).T.astype(float), 2 / f_target)
+        df_o33 = to_df(numpy.vstack((get_ts(o33, t0, dt), o33.real)).T.astype(float), 2 / f_target)
+        df_o23 = to_df(numpy.vstack((get_ts(o23, t0, dt), o23.real)).T.astype(float), 2 / f_target)
+
+        return df_i3_charging, df_i3_discharging, df_o33, df_o23
+
     def correct_Dt_MESS(self, f_target, Dt_MESS):
         """
         修正相位：在一个RF周期内微调，使其满足S参数的约束，而几乎不影响幅值。
@@ -162,14 +210,16 @@ _func_eta_OM_peak = lambda Dt_left, eta_inf, tau, Dt_right: numpy.piecewise(
         (lambda Dt_left: eta_inf * (1 - numpy.exp(-(Dt_left + Dt_right) / tau)) ** 2, 0))
 
 if __name__ == '__main__':
+    # aaaa
     # 需包含放能阶段的S参数
     proj_discharging: cst.results.ProjectFile = cst.results.ProjectFile(
-        r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch_2-1.paramsweep.cst",
+        # r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch_2-1.paramsweep.cst",
+        r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch.TapperedSwitchCav.2.paramsweep.cst",
         allow_interactive=True)
     proj_charging: cst.results.ProjectFile = cst.results.ProjectFile(
-        r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch_2-1.ES.cst",
+        proj_discharging.filename [:-len("paramsweep.cst")] + "ES.cst",
         allow_interactive=True)
-    run_id=212#89
+    run_id=9#212#89
     S33_discharging = numpy.array(proj_discharging.get_3d().get_result_item('1D Results\\S-Parameters\\S3,3', run_id).get_data())
     S23_discharging = numpy.array(proj_discharging.get_3d().get_result_item('1D Results\\S-Parameters\\S2,3', run_id).get_data())
 
@@ -178,7 +228,7 @@ if __name__ == '__main__':
     S23_charging = numpy.array(
         proj_charging.get_3d().get_result_item('1D Results\\S-Parameters\\S2,3', ).get_data())
 
-    impulse_duration = 50.0
+    impulse_duration = 100#50.0
     impulse_dt = 1 / (f_target / 1e9) / 20
     compressor = Compressor(
         OM_2port(S_param_network(S33_charging, impulse_duration, impulse_dt),
@@ -194,6 +244,8 @@ if __name__ == '__main__':
     t_charging_start = -2 * max(max(arr_Dt_MESS), impulse_duration)
     t_discharging_start = 0.0
     tend = 40.0
+    df_i3_charging, df_i3_discharging, df_o33, df_o23 = compressor.run_without_MESS(f_target / 1e9, t_charging_start, 0, tend, )
+    aaaaa
     for i, Dt_MESS in enumerate(arr_Dt_MESS):
         df_i3_charging, df_i3_discharging, df_o33, df_o23 = compressor.run(f_target / 1e9, t_charging_start, 0, tend,
                                                                            Dt_MESS)
@@ -210,7 +262,8 @@ if __name__ == '__main__':
     plt.figure()
     plt.plot(df_i3_discharging[0], (df_i3_discharging[1]), label='i3')
     plt.plot(df_o33[0], (df_o33[1]), label='o33')
-    plt.plot(df_o23[0], (df_o23[1]), label='o23', lw=5)
+    plt.plot(df_o23[0], (df_o23[1]), label='o23', #lw=5
+             )
     plt.legend()
 
     plt.figure()
@@ -326,7 +379,15 @@ if __name__ == '__main__':
     plt.plot(ts, sin)
     signal = scipy.signal.convolve(sin, compressor.om_discharging.S21.impulse_response)
     plt.plot(get_ts(signal, ts[0], ts[1] - ts[0]), signal)
+    from theory.rfCompressor._signal import ExponentialRising
+
+    er = ExponentialRising.fit(ts[ts<30],numpy.abs(scipy.signal.hilbert( signal[:len(ts)][ts<30].real)))
+    plt.plot(ts , er.f(ts),label = str(er))
+    plt.legend()
+
 
     plt.figure()
     plt.plot(get_ts(compressor.om_discharging.S21.impulse_response, 0, compressor.dt),
              compressor.om_discharging.S21.impulse_response)
+
+

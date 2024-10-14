@@ -41,7 +41,7 @@ def spectrogram(df):
     plt.pcolormesh(ts, 40e9 / (freqs + 1) / C.c, Sxx, shading='gouraud')
     plt.grid()
     plt.ylabel('phase velocity [c]')
-    plt.xlabel('z [m]')
+    plt.xlabel('zs [m]')
 
     return freqs, ts, Sxx
 

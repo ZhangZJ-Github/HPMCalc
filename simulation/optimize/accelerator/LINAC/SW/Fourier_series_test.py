@@ -27,7 +27,7 @@ def _Fourier_series(t, T0, a,b):
 L0 = 1
 def f1(z):
     # L0= 1
-    # return    numpy.cos(2*numpy.pi *(1/L0+0*0.07*z)*z)+2
+    # return    numpy.cos(2*numpy.pi *(1/L0+0*0.07*zs)*zs)+2
     return 2*(z+5)**2
 zs = numpy.linspace(-5,5, 2000)
 f1s = f1(zs)

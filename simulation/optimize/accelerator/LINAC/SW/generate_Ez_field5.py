@@ -5,73 +5,62 @@
 # @File    : generate_Ez_field.py
 # @Software: PyCharm
 """
-假设耦合腔中电场分布是固定的
+采用矩形波近似
 """
 
 import cst.results
 import matplotlib
-import numpy
 
 matplotlib.use('tkagg')
 
 from generate_Ez_field3 import *
+import scipy.constants as C
 
 
-def get_cell_Ez(z, *args, info=False):
-    args = [1.11293430e+08, 0.00000000e+00, 9.08860255e+06,
-            4.30402940e+06, 2.46703919e+06, 6.14129388e+06,
-            -1.65585753e+08, 0.00000000e+00, -6.88394607e+05,
-            0.00000000e+00, -2.39555098e+06, 0.00000000e+00,
-            2.07058005e+08, 0.00000000e+00, -2.01528712e+07,
-            0.00000000e+00, -8.38582691e+05, 6.11815022e+06,
-            -2.43730909e+08, 0.00000000e+00, 3.79018870e+07,
-            0.00000000e+00, 4.90472588e+04, -1.73606683e+06,
+class RectangularWaveCell(CellBase):
+    def __init__(self, Eeven, dEodd_dz, beta, z0, f):
+        self.dEodd_dz = dEodd_dz  # 奇函数成分
+        self.Eeven = Eeven  # 偶函数成分
+        self.beta = beta
+        self.L = self.beta * C.c / f / 2
+        self.f = f
+        self.z0 = z0
 
-            6.43860468e+07,
-            1.21940308e+01, 1.53274266e+01, 1.92477255e+01, 2.24145041e+01,
-            -7.69452913e-02, -1.18405994e-01, 5.16428385e-02, 2.21121438e-02,
-            1.32450836e+01,
-            6.82870171e+00]
-    AB_ = [[[0, *args[6 * i:6 * i + 3]], [0, *args[6 * i + 3:6 * i + 3 + 3]]] for i in range(4)]
-    AB_ += [list(numpy.array(AB_[-1]) * (-1) ** i) for i in range(1, 5)]
-    AB = numpy.array(AB_)
-    # AB = numpy.array([
-    #     numpy.array(
-    #         [[0, 1.07760157e+08, 0.00000000e+00, 9.08860255e+06],
-    #          [0., 4304029.4, 15149124.45472458, -3620861.27077519]]),
-    #     numpy.array([[ 0, -1.66565974e+08, 0.00000000e+00, 5.91480536e+05],
-    #                  [0., 0., -2114746.85415662, 0.]]),
-    #     numpy.array([
-    #         [ 0, 2.06270470e+08, 0.00000000e+00, -1.80950890e+07],
-    #         [0., 0., -3096882.96679501, 6118150.22]]),
-    #     *[((-1) ** i *
-    #        numpy.array([[ 0, -2.43732818e+08, 0.00000000e+00, 3.79395934e+07],
-    #                     [0., 0., -100533.54918419, -1736066.83]])) for i in
-    #       range(5)]
-    # ])
-    Ezmax_coupling = args[24]  # 60e6
-    # L = [12.837850613347923, 15.172960345156897, 19.441775000094744, *([22.42171383466281] * 5)]
-    L = numpy.array([*args[25:28], *([args[28]] * 5)])
-    L[:2] *=2
-    # zc1 = [-1.954252491983956,-2.9264465635777133,-3.835622311999435,*([-4.629696622892495]*5)]
-    # zc2 =[ 2.1396514036262646,2.857096300881434,3.797384188092191, 4.662991196222726]
-    zc2 = numpy.arccos(Ezmax_coupling / numpy.abs(AB[:, 0, 1])) / (2 * numpy.pi) * numpy.array(L)
-    zc1 = -zc2 + (list(args[29:33]) + [args[32]] * 4)
+    def Ez(self, z: numpy.ndarray):
+        return (lambda z: numpy.piecewise(
+            z,
+            [numpy.abs(z) <= self.L / 2, numpy.abs(z) > self.L / 2],
+            [lambda z: self.dEodd_dz * z + self.Eeven, lambda z: 0])
+                )(z - self.z0)
+
+    @staticmethod
+    def from_true_Ez(Ezdata: numpy.ndarray, f, Delta_phi_z=numpy.pi):
+        """
+        :param Ezdata:  shape (N,2)
+        :return:
+        """
+        z = Ezdata[:, 0]
+        z0 = (z.max() + z.min()) / 2
+        beta = (z.max() - z.min()) / (C.c / f / (2 * numpy.pi / Delta_phi_z))
+        # beta = min((zs.max() - zs.min()) / (C.c / f / 2), 1)
+        dz = numpy.diff(z)
+        Ez = Ezdata[:, 1]
+        Eeven = (lambda z: ((Ez * numpy.cos(2 * numpy.pi * f * z / (beta * C.c)))[1:] * dz).sum() / (
+                (numpy.cos(2 * numpy.pi * f * z / (beta * C.c)))[1:] * dz).sum())(z - z0)
+        dEodd_dz = (lambda z: ((Ez * numpy.sin(2 * numpy.pi * f * z / (beta * C.c)))[1:] * dz).sum() / (
+                (z * numpy.sin(2 * numpy.pi * f * z / (beta * C.c)))[1:] * dz).sum())(z - z0)
+        return RectangularWaveCell(Eeven,  dEodd_dz, beta, z0, f)
 
 
-    cells = [
-        Cell(L[i] , zc1[i], zc2[i], *AB[i])
-        for i in range(len(AB))
-    ]
+class RectangularCellChain:
+    def __init__(self, cells: typing.Iterable[RectangularWaveCell]):
+        self.cells = cells
 
-    z_cells = [args[33]]  # [13.026595942982336]
-    for i in range(1, len(cells)):
-        z_cells.append(z_cells[i - 1] - cells[i].coupling_z1 + cells[i - 1].coupling_z2 + args[34]  # 6.81828404
-                       )
-
-    cc = CellChain(tuple((cells[i], z_cells[i]) for i in range(len(cells))))
-    if info: logger.info(cc)
-    return cc.Ez(z)
+    def Ez(self, z: numpy.ndarray) -> numpy.ndarray:
+        Ez = numpy.zeros(z.shape)
+        for cell in self.cells:
+            Ez += cell.Ez(z)
+        return Ez
 
 
 if __name__ == '__main__':
@@ -83,30 +72,42 @@ if __name__ == '__main__':
     res3d: cst.results.ResultModule = proj.get_3d()
     Ez: cst.results.ResultItem = res3d.get_result_item(r'Tables\1D Results\e_Z (Z)')
     Ezdata = numpy.array(Ez.get_data())
-    # zs= numpy.linspace(-10, 200, 1000)
-    popt = [1.07760157e+08, 0.00000000e+00, 9.08860255e+06,
-            4304029.4, 15149124.45472458, -3620861.27077519,
-            -1.66565974e+08, 0.00000000e+00, 5.91480536e+05,
-            0., -2114746.85415662, 0.,
-            2.06270470e+08, 0.00000000e+00, -1.80950890e+07,
-            0., -3096882.96679501, 6118150.22,
-            -2.43732818e+08, 0.00000000e+00, 3.79395934e+07,
-            0., -100533.54918419, -1736066.83,
-
-            60e6,
-            12.837850613347923, 15.172960345156897, 19.441775000094744, 22.42171383466281,
-            0, 0, 0, 0,
-            13.026595942982336,
-            6.81828404
-            ]
-    # _bounds = numpy.array(p0 * 0.9, p0 * 1.1)
-    # bounds = _bounds.max()
-    # popt, pcov = curve_fit(get_cell_Ez, Ezdata[:, 0], Ezdata[:, 1],
-    #                        p0=popt,  # bounds=numpy.array(p0*0.9,p0*1.1)
-    #                        )
-
-    Ez_fitted = get_cell_Ez(Ezdata[:, 0], *popt, info=True)
     plt.figure()
     plt.plot(*Ezdata.T, label='CST')
-    plt.plot(Ezdata[:, 0], Ez_fitted, label='fitted')
     plt.legend()
+
+    flt = (Ezdata[:, 0] > 6) & (Ezdata[:, 0] < 20)
+
+    newEzdata = Ezdata.copy()
+    newEzdata[:, 0] *= 1e-3
+
+    # newEzdata[:,0] -= 13.60
+    cell = RectangularWaveCell.from_true_Ez(newEzdata[flt], 9.3e9, numpy.pi)
+    cellchain = RectangularCellChain(
+        [RectangularWaveCell.from_true_Ez(newEzdata[(Ezdata[:, 0] > 0) & (Ezdata[:, 0] < 20)], 9.3e9, numpy.pi),
+         RectangularWaveCell.from_true_Ez(newEzdata[(Ezdata[:, 0] > 20) & (Ezdata[:, 0] < 31)], 9.3e9, numpy.pi),
+         RectangularWaveCell.from_true_Ez(newEzdata[(Ezdata[:, 0] > 31) & (Ezdata[:, 0] < 46)], 9.3e9, numpy.pi),
+         RectangularWaveCell.from_true_Ez(newEzdata[(Ezdata[:, 0] > 46) & (Ezdata[:, 0] < 62)], 9.3e9, numpy.pi),
+         RectangularWaveCell.from_true_Ez(newEzdata[(Ezdata[:, 0] > 62) & (Ezdata[:, 0] < 77)], 9.3e9, numpy.pi),
+         RectangularWaveCell.from_true_Ez(newEzdata[(Ezdata[:, 0] > 77) & (Ezdata[:, 0] < 93)], 9.3e9, numpy.pi),
+         RectangularWaveCell.from_true_Ez(newEzdata[(Ezdata[:, 0] > 93) & (Ezdata[:, 0] < 109)], 9.3e9, numpy.pi),
+         RectangularWaveCell.from_true_Ez(newEzdata[(Ezdata[:, 0] > 109) & (Ezdata[:, 0] < 126)], 9.3e9, numpy.pi),
+         ])
+    plt.figure()
+    plt.plot(*newEzdata.T, label='CST')
+    zs = newEzdata[:, 0]
+    Ez_equivalent = cellchain.Ez(zs)
+    plt.plot(newEzdata[:, 0], Ez_equivalent, label='equivalent')
+
+    plt.legend()
+    from simulation.task_manager.simulator import df_to_gdf
+    # Ez_equivalent = Ezdata[:,1]
+    df_to_gdf(pandas.DataFrame({
+        'zs': zs,
+        'Ez': Ez_equivalent / max(Ez_equivalent.max(), -Ez_equivalent.min())
+    }), 'Ez1D.gdf')
+    from high_capture_efficiency_Ez import GPTEzCaptureSimulator, HighCaptureEffEzTask
+
+    GPTEzCaptureSimulator().run_bat('test_acc.bat')
+    res = HighCaptureEffEzTask().get_res('')
+    logger.info('\n%s'%res)

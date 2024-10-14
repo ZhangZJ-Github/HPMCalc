@@ -6,8 +6,5 @@
 # @Software: PyCharm
 
 from simulation.task_manager.initialize import Initializer
-from simulation.task_manager.simulator import MagicTemplate
 
-initializer = Initializer.make_new_initial_csv(
-    'initial.csv',
-    MagicTemplate(r'template.m2d', '.').get_variables())
+Initializer.make_new_initial_csv_from_template('initial.csv', r'template.m2d')

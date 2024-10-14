@@ -1,1 +1,4 @@
 *.cst.results
+*.csv
+*.png
+*.eps

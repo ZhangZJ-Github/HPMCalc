@@ -62,7 +62,7 @@ class RingShapedCathode(Distribution):
         particles_df['GBx'] = 0 + gb_3d[0]
         particles_df['GBy'] = 0 + gb_3d[1]
         particles_df['GBz'] = gamma0 * beta0 + +gb_3d[2]
-        particles_df['z'] = z_emit
+        particles_df['zs'] = z_emit
         particles_df['q'] = self.m
         particles_df['nmacro'] = numpy.abs(I * dt_emit / self.q / nps)
         df_to_gdf(particles_df, filename)

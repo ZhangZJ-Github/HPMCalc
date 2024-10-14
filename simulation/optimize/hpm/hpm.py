@@ -84,14 +84,14 @@ class HPMSim(MAGICTaskBase):
         # 以下各项得分最高为1
         weights = {
             self.colname_power_eff_score: 2,
-            # self.colname_out_power_score: 1,
-            self.colname_freq_accuracy_score: 2,  # 频率准确度，如，12.5 GHz的设备输出功率谱的两个主峰应为0和25 GHz，且幅值接近1:1
+            self.colname_out_power_score: 1,
+            self.colname_freq_accuracy_score: 2,  # 频率准确度，如，12.5 GHz的设备输出两个主峰应为0和25 GHz，且幅值接近1:1
             self.colname_freq_purity_score: 1  # 频率纯度，如，12.5 GHz的设备除了上述两个主峰外，其他频率成分应趋于0
         }
         freq_peaks = numpy.array(json.loads(res[self.ResKeys.freq_peaks]))
 
-        # res[self.colname_out_power_score] = avg_power_score = self.avg_power_score(res[self.ResKeys.avg_power_out],
-        #                                                                            self.desired_mean_power)
+        res[self.colname_out_power_score] = avg_power_score = self.avg_power_score(res[self.ResKeys.avg_power_out],
+                                                                                   self.desired_mean_power)
         res[self.colname_freq_accuracy_score] = freq_accuracy_score = self.freq_accuracy_score(freq_peaks,
                                                                                                self.desired_frequency,
                                                                                                .5e9)
@@ -99,8 +99,10 @@ class HPMSim(MAGICTaskBase):
         res[self.colname_power_eff_score] = power_eff_score = self.power_efficiency_score(
             res[self.colname_avg_power_in], res[self.colname_avg_power_out])
         score = (
-                numpy.abs(power_eff_score) ** weights[self.colname_power_eff_score]
-                # * avg_power_score ** weights[self.colname_out_power_score]
+                numpy.abs(power_eff_score
+                          ) **
+                weights[self.colname_power_eff_score] *
+                avg_power_score ** weights[self.colname_out_power_score]
                 * freq_accuracy_score ** weights[self.colname_freq_accuracy_score]
                 * freq_purity_score ** weights[self.colname_freq_purity_score]
         )

@@ -53,7 +53,7 @@ class CellBase:
             z_boundary_2) -> typing.Callable[
         [sympy.Symbol], sympy.Expr]:
         """
-        衰减边界：形如exp(-k z)
+        衰减边界：形如exp(-k zs)
         :param base_func:
 
         :param z_boundary_1:
@@ -61,7 +61,7 @@ class CellBase:
         :return:
         """
         k1, k2 = sympy.symbols('k1,k2', positive=True)
-        A1, A2, z = sympy.symbols('A1,A2,z',  # positive = True
+        A1, A2, z = sympy.symbols('A1,A2,zs',  # positive = True
                                   )
 
         exp1 = lambda z: A1 * sympy.exp(+k1 * (z - z_boundary_1))
@@ -85,7 +85,7 @@ class CellBase:
             (base_func(z), True)).subs(sol_dict)
 
 
-z, k, z_coupling1, z_coupling2, L = sympy.symbols('z,k,z_coupling1,z_coupling2,L')
+z, k, z_coupling1, z_coupling2, L = sympy.symbols('zs,k,z_coupling1,z_coupling2,L')
 cosexp = sympy.lambdify((z, k, z_coupling1, z_coupling2, L),
                         CellBase.base_function_with_attenuation_boundary(lambda z_:
                                                                          sympy.cos(2 * sympy.pi * k * z_ / L),
@@ -111,7 +111,7 @@ class Cell(CellBase):
         # self.F2k = lambda k:self.F2(L,coupling_z1,coupling_z2,k)
         # self.F1s =[self.EzGenerator.cosexp.subs({})]# self.get_F1s(L, coupling_z1, coupling_z2, self.N)
         # self.F2s = self.get_F2s(L, coupling_z1, coupling_z2, self.N)
-        # self.F2s[0] = lambda z: numpy.zeros(z.shape)
+        # self.F2s[0] = lambda zs: numpy.zeros(zs.shape)
 
     def Ez(self, z: numpy.ndarray, ax: plt.Axes = None):
         ret = 0
@@ -131,7 +131,7 @@ class Cell(CellBase):
             d_ret = self.A[k] * cos + self.B[k] * sin
             ret += d_ret
             if ax:
-                # ax.plot(z, d_ret, label="%d" % k)
+                # ax.plot(zs, d_ret, label="%d" % k)
                 ax.plot(z, self.A[k] * cos * I, label="F1_%d" % k)
                 ax.plot(z, self.B[k] * sin * I, label="F2_%d" % k)
         return ret
@@ -157,7 +157,7 @@ class Cell(CellBase):
         E1 = lambda z: numpy.cos((2 * n + 1) * numpy.pi / L2 * z)
         dE1_dz = lambda z: -(2 * n + 1) * numpy.pi / L2 * numpy.sin((2 * n + 1) * numpy.pi / L2 * z)
         E2 = lambda z: E1(half_dz_acc) * numpy.exp(+ dE1_dz(half_dz_acc) / (E1(half_dz_acc)) * (z - half_dz_acc))
-        # if z <0:return 0
+        # if zs <0:return 0
         zabs = numpy.abs(z)
         if zabs < half_dz_acc:
             return E1(zabs)
@@ -167,7 +167,7 @@ class Cell(CellBase):
     @staticmethod
     def asymmetric_cell_Ez_base_normalized(z, Dz_cos, half_dz_acc1, half_dz_acc2, n=0):
         """
-        z = 0处仍未电场幅值最大位置
+        zs = 0处仍未电场幅值最大位置
         :param z:
         :param Dz_cos:
 
@@ -182,7 +182,7 @@ class CellChain:
                      typing.Tuple[Cell, float], ...
                  ]):
         cells_and_z = numpy.array(cells)
-        self.cells = cells_and_z[:, 0]
+        self.cells: typing.List[Cell] = cells_and_z[:, 0]
         self.Ncells = len(self.cells)
         self.z_cells = cells_and_z[:, 1]  # 每个cell的原点在WCS下的位置
 
@@ -195,7 +195,7 @@ class CellChain:
     def __str__(self):
         cells_str = ""
         for i, cell in enumerate(self.cells):
-            cells_str += '(%s,\t%s)\n' % (str(cell), self.z_cells[i])
+            cells_str += '(%s,\t%s),\n' % (str(cell), self.z_cells[i])
         return """%s((\n%s\n))
         """ % (self.__class__.__name__, cells_str)
 

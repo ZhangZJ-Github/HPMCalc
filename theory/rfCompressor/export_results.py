@@ -74,12 +74,12 @@ def load_data(path) -> dict:
 
 data = load_data(r"F:\changeworld\HPMCalc\theory\rfCompressor\test_SES_switch01.1.cst.results")
 aaaa
-cst_proj_path = r"E:\CSTprojects\rfCompressor\test_SES_switch01.1.paramsweep.cst"
+cst_proj_path = r"E:\CSTprojects\rfCompressor\test_SES_switch01.1.shortESWG.cst"
 # cst_proj_path = r"E:\CSTprojects\GeneratorAccelerator\test_SES_switch01.1.cst"
 proj: cst.results.ProjectFile = cst.results.ProjectFile(cst_proj_path,
                                                         allow_interactive=True)
 
-# proj :cst.results.ProjectFile = cst.results.ProjectFile(r"E:\CSTprojects\GeneratorAccelerator\test_SES_switch02.cst",
+# proj_discharging :cst.results.ProjectFile = cst.results.ProjectFile(r"E:\CSTprojects\GeneratorAccelerator\test_SES_switch02.cst",
 #                                                         allow_interactive=True)
 # proj_3D_charging :cst.results.ProjectFile = cst.results.ProjectFile(r"E:\CSTprojects\GeneratorAccelerator\test_SES_switch02.1.cst",
 #                                                         allow_interactive=True)

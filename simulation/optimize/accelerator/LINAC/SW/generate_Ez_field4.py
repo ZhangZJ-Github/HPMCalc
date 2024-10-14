@@ -4,352 +4,109 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : generate_Ez_field.py
 # @Software: PyCharm
-import typing
+"""
+假设耦合腔中电场分布是固定的
+"""
 
+import cst.results
 import matplotlib
-import pandas
+import numpy
 
 matplotlib.use('tkagg')
-import matplotlib.pyplot as plt
-import numpy
-import sympy
-from simulation.optimize.hpm.hpm import OptimizeJob
-from _logging import logger
-from scipy.optimize import curve_fit
 
-np = numpy
+from generate_Ez_field3 import *
 
 
-def _Fourier_series(x, L, *a):
-    """
-    傅里叶级数
-    :param x:
-    :return:
-    """
-    ret = a[0] * np.cos(np.pi / L * x)
-    for deg in range(1, len(a)):
-        ret += a[deg] * np.cos((deg + 1) * np.pi / L * x)
-    return ret
+def get_cell_Ez(z, *args, info=False):
+    args = [1.11293430e+08, 0.00000000e+00, 9.08860255e+06,
+            4.30402940e+06, 2.46703919e+06, 6.14129388e+06,
+            -1.65585753e+08, 0.00000000e+00, -6.88394607e+05,
+            0.00000000e+00, -2.39555098e+06, 0.00000000e+00,
+            2.07058005e+08, 0.00000000e+00, -2.01528712e+07,
+            0.00000000e+00, -8.38582691e+05, 6.11815022e+06,
+            -2.43730909e+08, 0.00000000e+00, 3.79018870e+07,
+            0.00000000e+00, 4.90472588e+04, -1.73606683e+06,
+
+            6.43860468e+07,
+            1.21940308e+01, 1.53274266e+01, 1.92477255e+01, 2.24145041e+01,
+            -7.69452913e-02, -1.18405994e-01, 5.16428385e-02, 2.21121438e-02,
+            1.32450836e+01,
+            6.82870171e+00]
+    AB_ = [[[0, *args[6 * i:6 * i + 3]], [0, *args[6 * i + 3:6 * i + 3 + 3]]] for i in range(4)]
+    AB_ += [list(numpy.array(AB_[-1]) * (-1) ** i) for i in range(1, 5)]
+    AB = numpy.array(AB_)
+    # AB = numpy.array([
+    #     numpy.array(
+    #         [[0, 1.07760157e+08, 0.00000000e+00, 9.08860255e+06],
+    #          [0., 4304029.4, 15149124.45472458, -3620861.27077519]]),
+    #     numpy.array([[ 0, -1.66565974e+08, 0.00000000e+00, 5.91480536e+05],
+    #                  [0., 0., -2114746.85415662, 0.]]),
+    #     numpy.array([
+    #         [ 0, 2.06270470e+08, 0.00000000e+00, -1.80950890e+07],
+    #         [0., 0., -3096882.96679501, 6118150.22]]),
+    #     *[((-1) ** i *
+    #        numpy.array([[ 0, -2.43732818e+08, 0.00000000e+00, 3.79395934e+07],
+    #                     [0., 0., -100533.54918419, -1736066.83]])) for i in
+    #       range(5)]
+    # ])
+    Ezmax_coupling = args[24]  # 60e6
+    # L = [12.837850613347923, 15.172960345156897, 19.441775000094744, *([22.42171383466281] * 5)]
+    L = numpy.array([*args[25:28], *([args[28]] * 5)])
+    L[:2] *=2
+    # zc1 = [-1.954252491983956,-2.9264465635777133,-3.835622311999435,*([-4.629696622892495]*5)]
+    # zc2 =[ 2.1396514036262646,2.857096300881434,3.797384188092191, 4.662991196222726]
+    zc2 = numpy.arccos(Ezmax_coupling / numpy.abs(AB[:, 0, 1])) / (2 * numpy.pi) * numpy.array(L)
+    zc1 = -zc2 + (list(args[29:33]) + [args[32]] * 4)
 
 
-def sigmoid(x):
-    return 1 / (1 + numpy.exp(-x))
+    cells = [
+        Cell(L[i] , zc1[i], zc2[i], *AB[i])
+        for i in range(len(AB))
+    ]
 
+    z_cells = [args[33]]  # [13.026595942982336]
+    for i in range(1, len(cells)):
+        z_cells.append(z_cells[i - 1] - cells[i].coupling_z1 + cells[i - 1].coupling_z2 + args[34]  # 6.81828404
+                       )
 
-def convergent_exp(x: sympy.Expr):
-    """
-    :param x:
-    :return:
-    """
-    return sympy.Piecewise([sympy.exp(x), x <= 0], [x + 1, True])
-
-
-class CellBase:
-
-    @staticmethod
-    def base_function_with_attenuation_boundary(
-            base_func: typing.Callable[[sympy.Symbol], sympy.Expr],
-            z_boundary_1,
-            z_boundary_2) -> typing.Callable[
-        [sympy.Symbol], sympy.Expr]:
-        """
-        衰减边界：形如exp(-k z)
-        :param base_func:
-
-        :param z_boundary_1:
-        :param z_boundary_2:
-        :return:
-        """
-        k1, k2 = sympy.symbols('k1,k2', positive=True)
-        A1, A2, z = sympy.symbols('A1,A2,z',  # positive = True
-                                  )
-
-        exp1 = lambda z: A1 * sympy.exp(+k1 * (z - z_boundary_1))
-        exp2 = lambda z: A2 * sympy.exp(-k2 * (z - z_boundary_2))
-        var_to_be_solve = [k1, k2, A1, A2]
-        sol = sympy.solve([
-            *[f(z_boundary_1) for f in [
-                lambda z: exp1(z) - base_func(z),
-                lambda z_: sympy.diff(exp1(z) - base_func(z), z).subs({z: z_})]],
-            *[f(z_boundary_2) for f in [
-                lambda z: exp2(z) - base_func(z),
-                lambda z_: sympy.diff(exp2(z) - base_func(z), z).subs({z: z_})]], ],
-            var_to_be_solve)
-        sol_dict = {var: sol[0][i] for i, var in enumerate(var_to_be_solve)}
-        # for k_ in [k1, k2]:
-        #     sol_dict[k_] = sympy.Abs(sol_dict[k_])
-
-        return lambda z: sympy.Piecewise(
-            (A1 * convergent_exp(+k1 * (z - z_boundary_1)), z < z_boundary_1),
-            (A2 * convergent_exp(-k2 * (z - z_boundary_2)), z > z_boundary_2),
-            (base_func(z), True)).subs(sol_dict)
-
-
-z, k, z_coupling1, z_coupling2, L = sympy.symbols('z,k,z_coupling1,z_coupling2,L')
-cosexp = sympy.lambdify((z, k, z_coupling1, z_coupling2, L),
-                        CellBase.base_function_with_attenuation_boundary(lambda z_:
-                                                                         sympy.cos(2 * sympy.pi * k * z_ / L),
-                                                                         z_coupling1, z_coupling2)(z), numpy)
-sinexp = sympy.lambdify((z, k, z_coupling1, z_coupling2, L),
-                        CellBase.base_function_with_attenuation_boundary(lambda z_:
-                                                                         sympy.sin(2 * sympy.pi * k * z_ / L),
-                                                                         z_coupling1, z_coupling2)(z), numpy)
-
-
-class Cell(CellBase):
-
-    def __init__(self, L, coupling_z1, coupling_z2, A: numpy.ndarray, B: numpy.ndarray):
-        self.coupling_z1 = min(coupling_z1, coupling_z2)
-        self.coupling_z2 = max(coupling_z1, coupling_z2)
-        self.L = max(L, (coupling_z2 - coupling_z1) * 2)
-
-        self.A = numpy.array(A)
-        self.B = numpy.array(B)
-
-        self.N = len(self.A)
-        # self.F1k = lambda k:self.F1(L,coupling_z1,coupling_z2,k)
-        # self.F2k = lambda k:self.F2(L,coupling_z1,coupling_z2,k)
-        # self.F1s =[self.EzGenerator.cosexp.subs({})]# self.get_F1s(L, coupling_z1, coupling_z2, self.N)
-        # self.F2s = self.get_F2s(L, coupling_z1, coupling_z2, self.N)
-        # self.F2s[0] = lambda z: numpy.zeros(z.shape)
-
-    def Ez(self, z: numpy.ndarray, ax: plt.Axes = None):
-        ret = 0
-        self.B[0] = 0
-        I = numpy.ones(z.shape)
-        for k in range(self.N):
-            # F1k = self.F1k(k)
-            cos: numpy.ndarray = cosexp(z, k, self.coupling_z1, self.coupling_z2, self.L)
-            sin = (sinexp(z, k, self.coupling_z1, self.coupling_z2, self.L) if k > 0 else 0.)
-            if numpy.any(numpy.isnan(cos) | numpy.isinf(cos) | (cos > 1.1) | (cos < -1.1)):
-                self.A[k] = 0
-                cos = 0
-
-            if numpy.any(numpy.isnan(sin) | numpy.isinf(sin) | (sin > 1.1) | (sin < -1.1)):
-                self.B[k] = 0
-                sin = 0
-            d_ret = self.A[k] * cos + self.B[k] * sin
-            ret += d_ret
-            if ax:
-                # ax.plot(z, d_ret, label="%d" % k)
-                ax.plot(z, self.A[k] * cos * I, label="F1_%d" % k)
-                ax.plot(z, self.B[k] * sin * I, label="F2_%d" % k)
-        return ret
-
-    def __str__(self):
-        return "%s(%s,%s,%s,%s,%s)" % (
-            self.__class__.__name__, self.L, self.coupling_z1, self.coupling_z2,
-            numpy.array2string(self.A, separator=',', prefix='array'),
-            numpy.array2string(self.B, separator=',', prefix='array'))
-
-    @staticmethod
-    def symmetric_cell_Ez_base_normalized(z, L, half_dz_acc, n=0):
-        """
-        关于z = 0对称的腔体
-        :param z:
-        :param L:
-        :param half_dz_acc:
-        :param n:
-        :return:
-        """
-
-        L2 = L * 2
-        E1 = lambda z: numpy.cos((2 * n + 1) * numpy.pi / L2 * z)
-        dE1_dz = lambda z: -(2 * n + 1) * numpy.pi / L2 * numpy.sin((2 * n + 1) * numpy.pi / L2 * z)
-        E2 = lambda z: E1(half_dz_acc) * numpy.exp(+ dE1_dz(half_dz_acc) / (E1(half_dz_acc)) * (z - half_dz_acc))
-        # if z <0:return 0
-        zabs = numpy.abs(z)
-        if zabs < half_dz_acc:
-            return E1(zabs)
-        else:
-            return E2(zabs)
-
-    @staticmethod
-    def asymmetric_cell_Ez_base_normalized(z, Dz_cos, half_dz_acc1, half_dz_acc2, n=0):
-        """
-        z = 0处仍未电场幅值最大位置
-        :param z:
-        :param Dz_cos:
-
-        :param n:
-        :return:
-        """
-
-
-class CellChain:
-    def __init__(self,
-                 cells: typing.Tuple[
-                     typing.Tuple[Cell, float], ...
-                 ]):
-        cells_and_z = numpy.array(cells)
-        self.cells: typing.List[Cell] = cells_and_z[:, 0]
-        self.Ncells = len(self.cells)
-        self.z_cells = cells_and_z[:, 1]  # 每个cell的原点在WCS下的位置
-
-    def Ez(self, z: numpy.ndarray):
-        E = 0
-        for i, cell in enumerate(self.cells):
-            E += cell.Ez(z - self.z_cells[i])
-        return E
-
-    def __str__(self):
-        cells_str = ""
-        for i, cell in enumerate(self.cells):
-            cells_str += '(%s,\t%s),\n' % (str(cell), self.z_cells[i])
-        return """%s((\n%s\n))
-        """ % (self.__class__.__name__, cells_str)
-
-    def __getitem__(self, item):
-        return self.cells[item]
-
-
-from simulation.task_manager.task import LoggedTask, Initializer
-
-initializer = Initializer('curve_fit_initializer.csv')
-
-
-class CurveFitTask(LoggedTask):
-    def __init__(self, xdata, ydata):
-        super(CurveFitTask, self).__init__(initializer=initializer)
-        self.xdata = xdata
-        self.ydata = ydata
-        self.temp_file_to_save_score = 'CurveFitTask.temp.csv'
-
-    def run(self, param_set: dict) -> str:
-        cols = self.initializer.init_params_df.columns
-        args = [param_set[k] for k in cols]
-        L, coupling_z1, coupling_z2 = args[:3]
-        A, B = numpy.array(args[3:]).reshape((2, -1))
-
-        A[1] = numpy.sign(A[1]) * max(numpy.abs(args[3:]))
-
-        cell = Cell(L, coupling_z1, coupling_z2, A, B)
-        Ez_pred = cell.Ez(self.xdata)
-        AB = (*cell.A, *cell.B)
-        for i, k in enumerate(cols[3:]):
-            param_set[k] = AB[i]
-        score = -((self.ydata - Ez_pred) ** 2).mean() ** 0.5
-        pandas.DataFrame({
-            self.Colname.score: score
-        }, index=[0]).to_csv(self.temp_file_to_save_score,
-                             index=False)
-        return self.temp_file_to_save_score
-
-    def get_res(self, res_path: str) -> dict:
-        df = pandas.read_csv(self.temp_file_to_save_score).astype(float)
-        return {k: df[k][0] for k in df.columns}
-
-    def evaluate(self, res: dict) -> float:
-        return res[self.Colname.score]
+    cc = CellChain(tuple((cells[i], z_cells[i]) for i in range(len(cells))))
+    if info: logger.info(cc)
+    return cc.Ez(z)
 
 
 if __name__ == '__main__':
     plt.ion()
-    L = 15e-3
-    zs = numpy.linspace(-L / 2, L / 2, 100)
-    # Es = numpy.zeros(zs.shape)
+    cst._check_supported_python_version()
+    cst.results.print_version_info()
+    proj: cst.results.ProjectFile = cst.results.ProjectFile(
+        r'E:\CSTprojects\GeneratorAccelerator\StandingWaveAccelerator_EigenSolver.cst', allow_interactive=True)
+    res3d: cst.results.ResultModule = proj.get_3d()
+    Ez: cst.results.ResultItem = res3d.get_result_item(r'Tables\1D Results\e_Z (Z)')
+    Ezdata = numpy.array(Ez.get_data())
+    # zs= numpy.linspace(-10, 200, 1000)
+    popt = [1.07760157e+08, 0.00000000e+00, 9.08860255e+06,
+            4304029.4, 15149124.45472458, -3620861.27077519,
+            -1.66565974e+08, 0.00000000e+00, 5.91480536e+05,
+            0., -2114746.85415662, 0.,
+            2.06270470e+08, 0.00000000e+00, -1.80950890e+07,
+            0., -3096882.96679501, 6118150.22,
+            -2.43732818e+08, 0.00000000e+00, 3.79395934e+07,
+            0., -100533.54918419, -1736066.83,
 
-    cell = Cell(12e-3, -2.5e-3, 2.8e-3, numpy.array([0, 1, 0]), numpy.array([0, 0, 0]))
-    Es = cell.Ez(zs)
-    plt.plot(zs, Es, '.-', label='$\sum{E_k}$')
-    plt.legend()
+            60e6,
+            12.837850613347923, 15.172960345156897, 19.441775000094744, 22.42171383466281,
+            0, 0, 0, 0,
+            13.026595942982336,
+            6.81828404
+            ]
+    # _bounds = numpy.array(p0 * 0.9, p0 * 1.1)
+    # bounds = _bounds.max()
+    # popt, pcov = curve_fit(get_cell_Ez, Ezdata[:, 0], Ezdata[:, 1],
+    #                        p0=popt,  # bounds=numpy.array(p0*0.9,p0*1.1)
+    #                        )
 
-    df = pandas.read_csv(r'E:\GeneratorAccelerator\Genac\BiPeriodicSWLINAC\BiPeriodicSWEz.txt', sep=r'\s+', skiprows=3,
-                         header=None)
-
-    flt = (df[0] <= 19.3) & (df[0] > 7)
-    new_df = df[flt]
-    # new_df[0] -= 13.59
-
-    task = CurveFitTask(*new_df.values.T, )
-
-    job = OptimizeJob(initializer, lambda: task, )
-
-
-    # job.run(1, False)
-
-    # aaaa
-
-    def get_cell_Ez(z, *args, ax=None):
-        L, coupling_z1, coupling_z2 = args[:3]
-        A, B = numpy.array(args[3:]).reshape((2, -1))
-        logger.info("\n%s\n%s\n%s" % ((L, coupling_z1, coupling_z2), A, B))
-        if ax:
-            z0 = (coupling_z1 + coupling_z2) / 2
-            ax.axvspan(z0 - L / 4, z0 + L / 4, alpha=0.1)
-            ax.axvline(coupling_z1, )
-            ax.axvline(coupling_z2, )
-        return Cell(L, coupling_z1, coupling_z2, A, B).Ez(z, ax=ax)
-
-
-    # zs_ = numpy.linspace(-5, 5, 200)
-
-    # from scipy.interpolate import interp1d
-
-    # Ezs_ = interp1d(*new_df.values.T, )(zs_)
-    # plt.plot(zs_, Ezs_, label='interpolated')
-    params, cov = curve_fit(get_cell_Ez, *new_df.values.T,
-                            p0=[18, 10, 16,
-                                *[0, 1.2e8, 0, 0],
-                                *[0, 1.2e8, 0, 0]
-                                ], )
-    log_df = pandas.read_csv(r"F:\changeworld\HPMCalc\simulation\optimize\accelerator\LINAC\SW\default.log.csv")
-    # params = log_df.sort_values(LoggedTask.Colname.score).iloc[-1].values[:11]
-    plt.plot(new_df[0], get_cell_Ez(new_df[0], *params), label='fitted')
-    get_cell_Ez(new_df[0], *params, ax=plt.gca())
-
-    plt.legend()
-    plt.grid()
-
-    fig, axs = plt.subplots(3, 1, sharex=True, sharey=True, tight_layout=True, figsize=(3, 3))
-    N = (len(params) - 3) // 2
-    A, B = params[3:].reshape((2, -1))
-
-    axs[0].bar(range(N), A)
-    axs[1].bar(range(N), B)
-    axs[2].bar(range(N), (A ** 2 + B ** 2) ** 0.5)
-
-
-    def f(z, *args3):
-        cellchain = CellChain((
-            (Cell(12.08586909640892, -1.9523060192089308, 1.8263431856963257,
-                  [9.11741273e+05, 1.10459803e+08, 0.00000000e+00, 9.08860255e+06],
-                  [0., 4304029.4, -11610223.7, 7113797.14]), 13.5768109),
-            (Cell(15.3311419, -3.10459576, 2.80805095,
-                  [-7.50448234e+05, -1.64417513e+08, 0.00000000e+00, -6.65995909e+05], [0., 0., -3704039.15, 0.]),
-             24.8868042),
-            (Cell(18.4720593, -3.57991678, 3.41642168,
-                  [6.60759432e+05, 2.10158722e+08, 0.00000000e+00, -2.40525880e+07],
-                  [0., 0., 724220.283, 6118150.22]), 38.3195474),
-            (Cell(22.4135098, -4.57685464, 4.66466162,
-                  [-7.03753575e+05, -2.43759463e+08, 0.00000000e+00, 3.79578840e+07],
-                  [0., 0., 270146.915, -1736066.83]), 53.6723866),
-            (Cell(22.4135098, -4.57685464, 4.66466162,
-                  [7.03753575e+05, 2.43759463e+08, -0.00000000e+00, -3.79578840e+07],
-                  [-0., -0., -270146.915, 1736066.83]), 69.7984713),
-            (Cell(22.4135098, -4.57685464, 4.66466162,
-                  [-7.03753575e+05, -2.43759463e+08, 0.00000000e+00, 3.79578840e+07],
-                  [0., 0., 270146.915, -1736066.83]), 85.9024438),
-            (Cell(22.4135098, -4.57685464, 4.66466162,
-                  [7.03753575e+05, 2.43759463e+08, -0.00000000e+00, -3.79578840e+07],
-                  [-0., -0., -270146.915, 1736066.83]), 102.006876),
-            (Cell(22.4135098, -4.57685464, 4.66466162,
-                  [-7.03753575e+05, -2.43759463e+08, 0.00000000e+00, 3.79578840e+07],
-                  [0., 0., 270146.915, -1736066.83]), 118.119191),
-        ))
-
-        logger.info(cellchain)
-        logger.info(cellchain[1])
-        return cellchain.Ez(z)
-
-
-    flt = (df[0] > -20)
-    # args, cov = curve_fit(f, *(df[flt].values.T),
-    #                       p0=[18,-4,4, *[0,1e8,0,0],*([0]*4),38.7],
-    #                       # bounds=[[10, -20, 1, 51, 67, *(8 * [-5e8])], [40, 1, 20, 56, 72, *(8 * [+5e8])]]
-    #                       )
-    args = [1]
+    Ez_fitted = get_cell_Ez(Ezdata[:, 0], *popt, info=True)
     plt.figure()
-    plt.plot(*df.values.T, label='original')
-    plt.plot(df[0], f(df[0], *args), label='fitted')
+    plt.plot(*Ezdata.T, label='CST')
+    plt.plot(Ezdata[:, 0], Ez_fitted, label='fitted')
     plt.legend()

@@ -17,15 +17,15 @@ if __name__ == '__main__':
         df=df._append(par.phasespaces[particles_energy_title][-i-1]['data'])
     df = df.sort_values(by=0) #排序
     df=df.dropna(axis=0, how='any') #去掉nan
-    df.columns = ['z', 'e']
-    zmin=min(df['z'])
-    zmax=max(df['z'])
+    df.columns = ['zs', 'e']
+    zmin=min(df['zs'])
+    zmax=max(df['zs'])
     zlength=zmax-zmin
     for i in range(n):
         left=zmin+i*zlength/n
         right=zmin+(i+1)*zlength/n
-        zmean.append(np.mean((df.query('z>=@left&z<=@right'))['z']))
-        emean.append(np.mean((df.query('z>=@left&z<=@right'))['e']))
+        zmean.append(np.mean((df.query('zs>=@left&zs<=@right'))['zs']))
+        emean.append(np.mean((df.query('zs>=@left&zs<=@right'))['e']))
 
     # for i in range(n):
     #     zmean.append(np.mean(df[i*len(df)//n:(i+1)*len(df)//n][0]))

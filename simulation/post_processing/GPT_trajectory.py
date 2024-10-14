@@ -12,6 +12,7 @@ Ref: 2021 Pushing the capture limit of thermionic gun linacs Sadiq Setiniyaz Phy
 import enum
 import time
 import typing
+from enum import auto
 
 import matplotlib
 import numpy
@@ -21,7 +22,6 @@ import shapely
 from shapely.geometry import LineString
 
 import pygpt
-from enum import auto
 
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
@@ -30,11 +30,11 @@ from _logging import logger
 plt.ion()
 
 
-
 class GPTTraj:
     """
     General Particle Tracer轨迹数据
     """
+
     class NeededFields_d(enum.Enum):
         """
         traj_gdf['d']中必须存在的字段
@@ -52,14 +52,12 @@ class GPTTraj:
         """
         ID = auto()
 
-    def __init__(self, traj_gdf, f, phi0=0.0):
+    def __init__(self, traj_gdf, ):
         """
         :param traj_gdf: type of pygpt.gdftomemory(r"traj.gdf")
         :param phi0: gdf中记录的首个时刻的射频相位
         """
         self.traj_gdf = traj_gdf
-        self.phi0 = phi0
-        self.f = f
         self.dfs = self.analysis()
         self.particle_ids = list(self.dfs.keys())
 
@@ -84,12 +82,12 @@ class GPTTraj:
                 _data_dict = {
                     key: data['d'][key] for key in data['d']
                 }
-                _data_dict.update({
-                    'phi':
-                        (data['d'][self.NeededFields_d.time.name] / (1 / self.f))  # % 1
-                        * 2 * numpy.pi + self.phi0,
-
-                })
+                # _data_dict.update({
+                #     'phi':
+                #         (data['d'][self.NeededFields_d.time.name] / (1 / self.f))  # % 1
+                #         * 2 * numpy.pi + self.phi0,
+                #
+                # })
                 dfs[_id] = pandas.DataFrame(_data_dict)
                 _df = dfs[_id]
                 _df[self.__column_for_particle_counting] = 1
@@ -104,55 +102,54 @@ class GPTTraj:
         )[keys]
 
     def plot_AppleGate_diagram(self, ax: plt.Axes):
-        for id in self.dfs:
-            ax.plot(*self.dfs[id][['z', 'phi']].values.T, label=id)
 
+        for id in self.dfs:
+            ax.plot(*self.dfs[id][['zs', 'time']].values.T, label=id)
 
     def time_across_screen(self, z_screen) -> typing.Dict[int, typing.List[float]]:
         # bounds = []
         across_ts: typing.Dict[int, typing.List[float]] = {}
 
         for id in self.dfs:
-            try:
-                curve_z_time = LineString(self.dfs[id][[self.NeededFields_d.z.name, self.NeededFields_d.time.name]].values)
-                # plt.plot(*curve_phi_z.xy)
-                line = LineString(numpy.array(((z_screen,) * 2, curve_z_time.bounds[1::2]), ).T)
-                intersections = curve_z_time.intersection(line)
-                if isinstance(intersections, shapely.geometry.Point):
-                    across_ts[id] = [intersections.y]
+            curve_z_time = LineString(self.dfs[id][[self.NeededFields_d.z.name, self.NeededFields_d.time.name]].values)
+            # plt.plot(*curve_phi_z.xy)
+            line = LineString(numpy.array(((z_screen,) * 2, curve_z_time.bounds[1::2]), ).T)
+            intersections = curve_z_time.intersection(line)
+            if isinstance(intersections, shapely.geometry.Point):
+                across_ts[id] = [intersections.y]
 
-                elif isinstance(intersections, shapely.geometry.MultiPoint):
-                    across_ts[id] = [intersection.y for intersection in intersections]
-            except shapely.errors.GEOSException as e:
-                logger.warning("忽略了id = %d的粒子轨迹，因为这条轨迹只包含一个点，可能是刚发射的粒子。"%id)
+            elif isinstance(intersections, shapely.geometry.MultiPoint):
+                across_ts[id] = [intersection.ys for intersection in intersections]
+
         return across_ts
 
-    def interpolate_at_screen(self, z_screen):
+    def interpolate_at_screen(self, z_screen, get_filter: typing.Callable[[pandas.DataFrame], pandas.Series] = None):
         ts = self.time_across_screen(z_screen)
         columns = self.dfs[list(self.dfs.keys())[0]].columns
         df = pandas.DataFrame(columns=[self.NeededFields_p.ID.name, *self.dfs[list(self.dfs.keys())[0]].columns])
         for parid in ts:
             for t in ts[parid]:
                 df.loc[len(df)] = [parid, *self.get_time_interpolator(parid, columns)(t)]
+        if get_filter:
+            df = df[get_filter(df)]
         return df
 
-    def average_at_screen(self, z_screen, key: typing.Union[str, typing.List[str]]):
-        interpolated_data_at_screen = self.interpolate_at_screen(z_screen)
+    def average_at_screen(self, z_screen, key: typing.Union[str, typing.List[str]],
+                          get_filter: typing.Callable[[pandas.DataFrame], pandas.Series] = None):
+        interpolated_data_at_screen = self.interpolate_at_screen(z_screen, get_filter)
         return numpy.average(interpolated_data_at_screen[key],
                              weights=interpolated_data_at_screen[self.NeededFields_d.nmacro.name], axis=0)
 
-    def std_at_screen(self, z_screen, key: typing.Union[str, typing.List[str]]):
-        interpolated_data_at_screen = self.interpolate_at_screen(z_screen)
-
+    def std_at_screen(self, z_screen, key: typing.Union[str, typing.List[str]],
+                      get_filter: typing.Callable[[pandas.DataFrame], pandas.Series] = None):
+        interpolated_data_at_screen = self.interpolate_at_screen(z_screen, get_filter)
         avg = numpy.average(interpolated_data_at_screen[key],
                             weights=interpolated_data_at_screen[self.NeededFields_d.nmacro.name], axis=0)
         return numpy.average((interpolated_data_at_screen[key] - avg) ** 2,
                              weights=interpolated_data_at_screen[self.NeededFields_d.nmacro.name], axis=0) ** 0.5
 
-    def flux_at_screen(self, z_screen, key: str):
-        interpolated_data_at_screen = self.interpolate_at_screen(z_screen)
-
-        pass
+    def flux_at_screen(self, z_screen, key: str, get_filter: typing.Callable[[pandas.DataFrame], pandas.Series] = None):
+        interpolated_data_at_screen = self.interpolate_at_screen(z_screen, get_filter)
 
         def _flux(_filter):
             return numpy.sum(
@@ -165,12 +162,12 @@ class GPTTraj:
         flux_net = flux_positive - flux_negative
         return flux_net, flux_positive, flux_negative
 
-    def captured_cnt(self, z):
+    def captured_cnt(self, z, get_filter: typing.Callable[[pandas.DataFrame], pandas.Series] = None):
         """
         俘获的粒子个数
         :return:
         """
-        return self.flux_at_screen(z, self.__column_for_particle_counting)
+        return self.flux_at_screen(z, self.__column_for_particle_counting, get_filter)
 
         # cnt_net = 0
         # cnt_pos = 0  # 沿着+z方向通过探测平面的粒子个数
@@ -178,9 +175,9 @@ class GPTTraj:
         # # bounds = []
         #
         # for id in self.dfs:
-        #     curve_phi_z = LineString(self.dfs[id][['z', 'time']].values)
+        #     curve_phi_z = LineString(self.dfs[id][['zs', 'time']].values)
         #
-        #     line = LineString(numpy.array(((z,) * 2, curve_phi_z.bounds[1::2]), ).T)
+        #     line = LineString(numpy.array(((zs,) * 2, curve_phi_z.bounds[1::2]), ).T)
         #     intersections = curve_phi_z.intersection(line)
         #     if isinstance(intersections, shapely.geometry.Point):
         #         cnt_net += 1
@@ -194,16 +191,38 @@ class GPTTraj:
         #         cnt_neg += len(intersections) - dcnt_pos
         # return cnt_net, cnt_pos, cnt_neg
 
-    def capture_efficiency(self,z=0):
-        # z = self.dfs[self.particle_ids[0]][self.NeededFields_d.z.name][0]
-        captured_net, captured_pos, captured_neg = self.captured_cnt(z)
+    def default_capture_efficiency(self, z_screen=0.,
+                                   get_filter: typing.Callable[[pandas.DataFrame], pandas.Series] = None):
+        """
+        假设z<z_screen处无电场，因此向左越过z=z_screen平面的粒子将永远丢失
+        :param z_screen:
+        :param get_filter:
+        :return:
+        """
+        # zs = self.dfs[self.particle_ids[0]][self.NeededFields_d.zs.name][0]
+        captured_net, captured_pos, captured_neg = self.captured_cnt(z_screen, get_filter)
         return captured_net / captured_pos
+
+    def capture_efficiency(self, zin: float, zout: float,
+                           get_filter: typing.Callable[[pandas.DataFrame], pandas.Series] = None):
+        """
+
+        :param zin: 入口屏幕的位置，用于统计通过入口的净粒子数
+        :param zout: 出口屏幕的位置，用于统计通过出口的净粒子数
+        :param get_filter:
+        :return:
+        """
+
+        flux_net_in, flux_positive_in, flux_negative_in = self.captured_cnt(zin)
+        flux_net_out, flux_positive_out, flux_negative_out = self.captured_cnt(zout, get_filter)
+        capture_eff = flux_net_out / flux_net_in
+        return capture_eff
 
 
 if __name__ == '__main__':
     # trajgdf = pygpt.gdftomemory(r"E:\GeneratorAccelerator\Genac\BiPeriodicSWLINAC\traj.gdf")
     trajgdf = pygpt.gdftomemory(r"F:\changeworld\HPMCalc\simulation\optimize\accelerator\LINAC\SW\traj.gdf")
-    traj = GPTTraj(trajgdf, 9.3e9, 0)
+    traj = GPTTraj(trajgdf, )
     # G, = agdata.get_time_interpolator(1, ['G'])(0.1)
     t1 = time.time()
     avgG, avgBz = traj.average_at_screen(0., ['G', 'Bz'])
@@ -220,13 +239,12 @@ if __name__ == '__main__':
     traj.plot_AppleGate_diagram(ax)
     ax.set_xlim(0, 0.15)
     ax.xaxis.set_major_formatter(lambda z, pos: "%d" % (z / 1e-3))
-    ax.set_xlabel('z / mm')
+    ax.set_xlabel('zs / mm')
     ax.yaxis.set_major_formatter(lambda phi, pos: "%d" % (phi / numpy.pi * 180))
     ax.set_ylabel(r'particle phase / degree')
     z = 0.02  # 0.15
     cnt_net, cnt_pos, cnt_neg = traj.captured_cnt(z)
-    capture_eff = traj.capture_efficiency()
-
+    capture_eff = traj.default_capture_efficiency()
 
     zs = numpy.linspace(0, 0.15, 10)
     t1 = time.time()
@@ -240,4 +258,4 @@ if __name__ == '__main__':
              label="capture eff., net (%.2f)" % ((cnt_net_arr / cnt_pos_arr[0])[0]))
     plt.legend()
     plt.gca().xaxis.set_major_formatter(lambda z, pos: "%d" % (z / 1e-3))
-    plt.gca().set_xlabel('z / mm')
+    plt.gca().set_xlabel('zs / mm')

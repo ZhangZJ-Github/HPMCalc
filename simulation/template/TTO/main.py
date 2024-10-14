@@ -18,4 +18,4 @@ def get_HPMSimWithInitializer():
 
 if __name__ == '__main__':
     job = OptimizeJob(initializer, get_HPMSimWithInitializer)
-    job.run()
+    job.run(,

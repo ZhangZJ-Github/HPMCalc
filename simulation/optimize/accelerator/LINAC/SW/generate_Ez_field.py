@@ -80,7 +80,7 @@ class CellEzGenerator(EzGeneratorBase):
 
     def _Ez(self, z):
         """
-        :param z: z = 0处为电场高原中央
+        :param z: zs = 0处为电场高原中央
         :return:
         """
         return self.Ezmax * self._Ez_normalized(z)
@@ -171,7 +171,7 @@ class CavChainEzGenerator(EzGeneratorBase):
     def _Ez(self, z):
         i = numpy.digitize(z, self.zends)
         return self.cell_chain[i]._Ez(z - self.zmids[i])
-        # return self.cell_chain[i].Ez_Fourier_approx(z - self.zmids[i])
+        # return self.cell_chain[i].Ez_Fourier_approx(zs - self.zmids[i])
 
     @staticmethod
     def from_1D_array(args_to_build_cells: numpy.ndarray, z_1st_cell_Ez_peak: float = None):
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     zs = numpy.linspace(cells.zmids[0] - 2 * cells.cell_chain[0].L, cells.zmids[-1] + cells.cell_chain[-1].L, 1000)
     Ez = cells.Ez(zs)
     # Ez /= Ez.max()
-    df = pandas.DataFrame({'z': zs, 'Ez': Ez})
+    df = pandas.DataFrame({'zs': zs, 'Ez': Ez})
     df_to_gdf(df, 'Ez1D.gdf')
 
     CST_data = pandas.read_csv(r"E:\GeneratorAccelerator\Genac\BiPeriodicSWLINAC\BiPeriodicSWEz.txt", sep=r'\s+',
@@ -278,7 +278,7 @@ if __name__ == '__main__':
         {key: [arr[i]] for i, key in enumerate(cells.param_names_1D_to_build_cell_chain())}
     ).to_csv('initial.temp.csv', index=False)
     # aaaaaa
-    CST_data.columns = ['z', 'Ez']
+    CST_data.columns = ['zs', 'Ez']
 
     plt.figure()
     plt.plot(zs, Ez, label='Assumed')

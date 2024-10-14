@@ -1,13 +1,13 @@
-f = 9.30e9;
+f = 9.46e9;
 E0 = 50e3;
 gamma = 1+|qe|*E0 /(me*c^2);
 beta = sqrt(1 - 1/gamma^2);
-nps = 360;
+nps = 3600;
 # zend = 500e-3;
 zend = 1/f * beta*c;
 Qtot = -100e-3 * 200e-3 / c;
-# rout = 1e-3;
-rout = 0;
+rout = 1e-3;
+# rout = 0;
 # setFile("beam", "electrons.gdf");
 
 
@@ -18,17 +18,17 @@ setzdist("beam","u",(0-zend)/2,zend);
 setGdist("beam","u", gamma, 0);
 
 
-map1D_TM("wcs","I","F:\changeworld\HPMCalc\simulation\optimize\accelerator\LINAC\SW\Ez1D.gdf","z","Ez",100e6,0,2*PI*f);
-solenoid_z0 = -50e-3;
+map1D_TM("wcs","I","Ez1D.gdf","z","Ez",60e6,0,2*PI*f);
+solenoid_z0 =10e-3;# -50e-3;
 solenoid_zend = 200e-3;
-# bzsolenoid("wcs","z", (solenoid_z0+solenoid_zend)/2,40e-3,(solenoid_zend-solenoid_z0),5e5);
+bzsolenoid("wcs","z", (solenoid_z0+solenoid_zend)/2,40e-3,(solenoid_zend-solenoid_z0),5e5/0.6*0.35);
 # bzsolenoid("wcs","z", 125e-3,40e-3,(solenoid_zend-solenoid_z0),5e5);
 
 setrmacro("beam", 0.1e-6);
 # 几乎无区别
 # spacecharge3Dmesh() ; 
 
-tend = 2e-9;
+tend = 2.5e-9;
 # TMAX = 10E-9;
 tout(0, tend, tend / 500);
 # snapshot(0, tend, tend / 500);

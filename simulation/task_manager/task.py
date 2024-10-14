@@ -7,7 +7,6 @@
 
 import os.path
 import os.path
-# import typing_extensions
 
 import matplotlib
 import numpy
@@ -16,7 +15,6 @@ matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import pandas
 from deprecated.sphinx import deprecated
-# from typing_extensions import deprecated
 from simulation.task_manager.simulator import *
 from simulation.task_manager._base import CSV_ENCODING
 from simulation.task_manager.initialize import Initializer
@@ -28,9 +26,9 @@ cfg = Config.read_json_file()
 class LoggedTask(ABC):
     class Colname:
         score = "score"
-        path = "m2d_path"
+        path = "m2d_path" # 任何能让使用者明确找到/还原原始模拟文件的字符串
         timestamp = 'timestamp'
-        comment = 'comment'
+        comment = 'comment' # 备注信息
 
     def __init__(self,
                  lock: Lock = Lock(),
@@ -186,7 +184,7 @@ class LoggedTask(ABC):
     @abstractmethod
     def get_res(self, m2d_path: str) -> dict:
         """
-        获取用户关心的数据
+        获取所有需要记录的中间结果
         :param m2d_path:
         :return:
         """
@@ -360,7 +358,7 @@ class MAGICTaskBase(CachedTask):
 class ManualTask:
     MAGIC_SOLVER_PATH = MAGICTaskBase.MAGIC_SOLVER_PATH
 
-    # @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
+    @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
     def __init__(self, children_sldprt_name, m2d_template_name,
                  replace_marker: str, folder_and_prefix, parent_sldprt_name,
                  description):
@@ -372,7 +370,7 @@ class ManualTask:
         self.description = description
         self.replace_marker = replace_marker
 
-    # @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
+    @deprecated(version="since20240109", reason="暂无将solidworks模型导入MAGIC的需求，因此不再维护此功能")
     def run(self, ax=plt.gca()):
         import sw_to_MAGIC_commands
         os.makedirs(self.folder, exist_ok=True)
