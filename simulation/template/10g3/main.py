@@ -15,7 +15,7 @@ from filenametool import ExtTool
 from scipy.signal import argrelextrema
 
 import simulation.optimize.hpm
-from simulation.optimize.hpm import HPMSimWithInitializer
+from simulation.optimize.hpm.hpm import HPMSimWithInitializer
 from simulation.task_manager.initialize import Initializer
 
 initialize_csv = r'initialize.csv'
@@ -89,4 +89,4 @@ if __name__ == '__main__':
     #     sampling=simulation.optimize.hpm.SamplingWithGoodEnoughValues(optjob.initializer),  # LHS(),
     #     # ref_dirs=ref_dirs
     # )
-    optjob.run(,
+    optjob.run()

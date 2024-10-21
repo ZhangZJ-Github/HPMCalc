@@ -5,7 +5,7 @@
 # @File    : main.py
 # @Software: PyCharm
 
-import simulation.optimize.hpm as hpm
+import simulation.optimize.hpm.hpm as hpm
 import simulation.task_manager.initialize
 
 from simulation.template.Coax40GHz.main import Coax40GHzSim
@@ -27,4 +27,4 @@ if __name__ == '__main__':
     # res = coax40GHz_sim.get_res(r"E:\HPM\40GHz\optimize\40_ghz-2.m2d")
     # logger.info(coax40GHz_sim.evaluate(res))
     manualjob = hpm.MaunualJOb(initializer, get_coax40GHzsim)
-    manualjob.run(,
+    manualjob.run()

@@ -4,7 +4,7 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : main.py
 # @Software: PyCharm
-from simulation.optimize.hpm import HPMSimWithInitializer, OptimizeJob, lock
+from simulation.optimize.hpm.hpm import HPMSimWithInitializer, OptimizeJob, lock
 import simulation.task_manager.initialize
 
 initial_csv = r"F:\changeworld\HPMCalc\simulation\template\TTO\Initialize.csv"
@@ -18,4 +18,4 @@ def get_HPMSimWithInitializer():
 
 if __name__ == '__main__':
     job = OptimizeJob(initializer, get_HPMSimWithInitializer)
-    job.run(,
+    job.run()

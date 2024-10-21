@@ -13,6 +13,8 @@ import numpy
 
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
+from pymoo.core .algorithm import  Algorithm
+from pymoo.algorithms.soo.nonconvex.pso import PSO
 import pandas
 from deprecated.sphinx import deprecated
 from simulation.task_manager.simulator import *
@@ -77,22 +79,25 @@ class LoggedTask(ABC):
     #         self.log_df = pandas.merge(pandas.read_csv(self.log_file_name, encoding=CSV_ENCODING), self.log_df,
     #                                    on=None, how='outer')#.drop_duplicates()
 
-    def log(self, params: dict, m2d_path: str):
+    def log(self, params: dict, m2d_path: str,other_information:dict  =None):
         """
         将修改的参数和主要结果记录到文件中
         :return:
         """
         newdata = params.copy()
-
-        res = self.get_res(m2d_path)
-        res[self.Colname.timestamp] = time.time()
+        if other_information is None:other_information = {}
+        res  = {self.Colname.timestamp:time.time(),}
+        res .update( self.get_res(m2d_path))
         res[self.Colname.score] = self.evaluate(res)
         res[self.Colname.path] = m2d_path
 
+        res.update(other_information)
         newdata.update(res)
         # self.load_log_csv()
+
         self.log_df = pandas.DataFrame(
-            newdata,index = [0])
+            [newdata],#index = [0]
+        )
         # self.log_df.loc[len(self.log_df)] = numpy.nan
         # for key in newdata:
         #     if key not in self.log_df.columns:
@@ -110,7 +115,7 @@ class LoggedTask(ABC):
         计算res的得分
         请在子类中实现此方法。
         :param res:
-        :return:
+        :return: 需要最大化的目标
         """
         return 1.0
 
@@ -135,9 +140,9 @@ class LoggedTask(ABC):
 
 
 
-    def log_and_info(self, param_set, m2d_path):
+    def log_and_info(self, param_set, m2d_path,other_information:dict = None):
         try:
-            log_df = self.log(param_set, m2d_path)
+            log_df = self.log(param_set, m2d_path,other_information)
             last_logged_data = log_df.iloc[len(log_df) - 1]
             logger.info("\n%s" % str(last_logged_data))
             score = last_logged_data[self.Colname.score]
@@ -157,13 +162,12 @@ class LoggedTask(ABC):
         """
         pass
 
-    def update(self, param_set: dict, comment: str = ''):
+    def update(self, param_set: dict, comment: str = '',other_information:dict=None):
         """
         按照给定的参数运行模拟，自动获取结果，更新log
         :param param_set:
         :return: 评分
         """
-        param_set[self.Colname.comment] = comment
         params_check_status = self.params_check(param_set)
         if not params_check_status:
             logger.warning("无效参数：%s" % (param_set))
@@ -179,7 +183,9 @@ class LoggedTask(ABC):
         # logger.info("当前参数：%s" % InputFileTemplateBase.FileGenerationRecord(param_set, m2d_path))
         # self.simulation_executor.run(m2d_path)
         path = self.run(param_set)
-        return self.log_and_info(param_set, path)
+        ret = self.log_and_info(param_set, path,other_information)
+        param_set[self.Colname.comment] = comment
+        return ret
 
     @abstractmethod
     def get_res(self, m2d_path: str) -> dict:

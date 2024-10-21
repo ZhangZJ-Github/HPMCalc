@@ -10,7 +10,7 @@ import os.path
 import grd_parser
 import total_parser
 
-import simulation.optimize.hpm as hpm
+import simulation.optimize.hpm.hpm as hpm
 import simulation.task_manager.initialize
 
 
@@ -68,4 +68,4 @@ if __name__ == '__main__':
     # aaa
 
     manualjob = hpm.MaunualJOb(initializer, get_simobj)
-    manualjob.run(,
+    manualjob.run()

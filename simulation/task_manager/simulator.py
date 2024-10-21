@@ -71,7 +71,6 @@ class MAGICSim(SimulationExecutor):
             big_files_to_delete.append(filename)
         logger.info("已经删除的文件：\n%s" % big_files_to_delete)
 
-
 class GeneralParticleTracerSim(SimulationExecutor):
     # TODO
     def __init__(self,

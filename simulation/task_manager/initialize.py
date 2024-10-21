@@ -42,7 +42,14 @@ class Initializer:
         self.upper_bound = self.initial_df.iloc[self.N_initial + 1].fillna(default_bound_df.max(axis=0)).values  # 上边界
         self.precision_df = self.initial_df.iloc[self.N_initial + 2]  # .fillna(0) # 为NaN表示不做截断
         self.precision = self.precision_df.values  # shape (N_params,)
+    def to_dict(self,x):
+        """
 
+        :param x: shape (N_params, )
+        :return:
+        """
+        return {self.index_to_param_name(i): x[i] for i in
+                                   range(len(self.initial_df.columns))}
     def update(self):
         self.__init__(self.filename)
 

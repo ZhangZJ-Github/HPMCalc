@@ -68,4 +68,4 @@ if __name__ == '__main__':
     aaa
 
     manualjob = hpm.MaunualJOb(initializer, get_simobj)
-    manualjob.run(,
+    manualjob.run_solver(),

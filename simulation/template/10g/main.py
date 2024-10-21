@@ -15,7 +15,7 @@ from filenametool import ExtTool
 from scipy.signal import argrelextrema
 
 import simulation.optimize.hpm
-from simulation.optimize.hpm import OptimizeJob, HPMSimWithInitializer
+from simulation.optimize.hpm.hpm import OptimizeJob, HPMSimWithInitializer
 from simulation.task_manager.initialize import Initializer
 
 initialize_csv = r'initialize.csv'
@@ -81,5 +81,5 @@ if __name__ == '__main__':
     # genac.evaluate(res)
     # aaa
     optjob = simulation.optimize.hpm.hpm.OptimizeJob(initializer, get_genac)
-    optjob.run(,
+    optjob.run()
     pass
