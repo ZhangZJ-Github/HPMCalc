@@ -42,7 +42,7 @@ def run_cst_history(cst_proj_de: cst.interface.DesignEnvironment, history_list_i
                          # 'RebuildOnParametricChange(False, True)',
                          'End Sub'])
     logger.info(command)
-    return cst_proj_de.schematic.execute_vba_code(command)
+    return cst_proj_de.schematic.execute_vba_code(command, timeout=10)
 
 
 def set_parameter(cst_proj_de: cst.interface.DesignEnvironment, parameters: dict):
@@ -61,17 +61,17 @@ class CST_Handler:
 
     def build_paramcombination_df(cst_handler):
 
-        run_ids :list= cst_handler.cst_proj_result.get_3d().get_all_run_ids()
+        run_ids: list = cst_handler.cst_proj_result.get_3d().get_all_run_ids()
         run_ids.remove(0)
-        d =  {}
-        key_runid ="run_id"
+        d = {}
+        key_runid = "run_id"
         for run_id in run_ids:
-            d[ key_runid] = d.get(key_runid,[])+[run_id]
-            paramcomb =cst_handler.cst_proj_result.get_3d().get_parameter_combination(run_id)
+            d[key_runid] = d.get(key_runid, []) + [run_id]
+            paramcomb = cst_handler.cst_proj_result.get_3d().get_parameter_combination(run_id)
             for key in paramcomb:
                 d[key] = d.get(key, []) + [paramcomb[key]]
         df = pandas.DataFrame(d)
-        return  df
+        return df
 
     def run_cst_history(self, history_list_item: str):
         return run_cst_history(self.cst_proj_de, history_list_item)
@@ -80,10 +80,10 @@ class CST_Handler:
         return set_parameter(self.cst_proj_de, parameters)
 
     def run_solver(self):
-        return self.cst_proj_de.modeler.run_solver()
+        return self.cst_proj_de.modeler.run_solver(timeout=10)
 
     def start_solver(self):
-        return self.cst_proj_de.modeler.start_solver()
+        return self.cst_proj_de.modeler.start_solver(timeout=10)
 
     def start_de(self,  # mode = cst.interface.DesignEnvironment.StartMode.New
                  ):
@@ -98,15 +98,11 @@ class CST_Handler:
         self.cst_proj_result: cst.results.ProjectFile = cst.results.ProjectFile(self.cst_proj_path,
                                                                                 allow_interactive=True)
         self.restart_count += 1
+
     def solver_is_running(self):
         logger.info("check solver_is_running")
-        try:
-            ret =          self.cst_proj_de.modeler.is_solver_running(timeout = 3)
-            return ret
-        except TimeoutError as e:
-            logger.warning(e)
-            # raise e
-            return False
+        ret = self.cst_proj_de.modeler.is_solver_running(timeout=3)
+        return ret
 
 
 initialize_csv = r'initialize.csv'
@@ -145,9 +141,9 @@ class RfCompressorOptimizationTask(LoggedTask):
                  initializer: Initializer = None, log_file_name='RF_Compressor.log.csv'):
         # super().__init__(lock, initializer, log_file_name)
         super().__init__(lock, initializer, log_file_name)
-        self.cst_handler_with_GDT:CST_Handler = cst_handler_with_GDT  # CST_Handler(project_path_with_GDT)
+        self.cst_handler_with_GDT: CST_Handler = cst_handler_with_GDT  # CST_Handler(project_path_with_GDT)
         # if not project_path_without_GDT: project_path_without_GDT = project_path_with_GDT[:-len(".cst")] + '.ES.cst'
-        self.cst_handler_without_GDT:CST_Handler = cst_handler_without_GDT  # CST_Handler(project_path_without_GDT)
+        self.cst_handler_without_GDT: CST_Handler = cst_handler_without_GDT  # CST_Handler(project_path_without_GDT)
         self.old_result: dict = None
         self.restart_de_count = -1
 
@@ -156,24 +152,22 @@ class RfCompressorOptimizationTask(LoggedTask):
     def evaluate(self, res: dict):
         return [res["TMPG"], -res["Eabs_max_inside_GDT"]]
 
-    def __find_parameter_in_paramcombination_df(self,params_df:pandas.DataFrame,CST_paramcomb_df:pandas.DataFrame):
-        index =numpy.abs( CST_paramcomb_df[params_df.columns] - params_df.values)<self.initializer.precision_df[params_df.columns]
+    def __find_parameter_in_paramcombination_df(self, params_df: pandas.DataFrame, CST_paramcomb_df: pandas.DataFrame):
+        index = numpy.abs(CST_paramcomb_df[params_df.columns] - params_df.values) < self.initializer.precision_df[
+            params_df.columns]
         data = CST_paramcomb_df[numpy.all(index, axis=1)].iloc[0]
-        logger.info("最接近的记录：\n%s"%(data))
+        logger.info("最接近的记录：\n%s" % (data))
 
         return data
-    def find_run_id(rfc,params:dict):
+
+    def find_run_id(rfc, params: dict):
         CST_paramcomb_df_withGDT = rfc.cst_handler_with_GDT.build_paramcombination_df()
         CST_paramcomb_df_withoutGDT = rfc.cst_handler_without_GDT.build_paramcombination_df()
         param_df = pandas.DataFrame([params])
-        data_with_GDT = rfc.__find_parameter_in_paramcombination_df(param_df,CST_paramcomb_df_withGDT)
-        data_without_GDT = rfc.__find_parameter_in_paramcombination_df(param_df,CST_paramcomb_df_withoutGDT)
+        data_with_GDT = rfc.__find_parameter_in_paramcombination_df(param_df, CST_paramcomb_df_withGDT)
+        data_without_GDT = rfc.__find_parameter_in_paramcombination_df(param_df, CST_paramcomb_df_withoutGDT)
         key_runid = "run_id"
-        return data_with_GDT[key_runid],data_without_GDT[key_runid]
-
-
-
-
+        return data_with_GDT[key_runid], data_without_GDT[key_runid]
 
     def run(self, param_set: dict) -> str:
         self.find_old_res(param_set)
@@ -196,7 +190,7 @@ class RfCompressorOptimizationTask(LoggedTask):
             logger.info("CST simulations done")
             return TwoCSTSimulationAddress(self.cst_handler_with_GDT.cst_proj_path, 0,
                                            self.cst_handler_without_GDT.cst_proj_path, 0).to_string()
-        except RuntimeError as e:
+        except (RuntimeError, TimeoutError) as e:
             # self.rerun_count += 1
             logger.warning(e)
             logger.info("re-run count = %d" % (self.restart_de_count))
@@ -205,7 +199,6 @@ class RfCompressorOptimizationTask(LoggedTask):
 
             self.cst_handler_without_GDT.start_de()
             logger.info("here4")
-
 
             return self.run(param_set)
 
@@ -260,7 +253,13 @@ class RfCompressorOptimizationTask(LoggedTask):
         # plt.scatter(*pts_to_calc_tube_max.T)
         return Eabs_max_inside_GDT, Eabs_max,
 
-    def find_old_res(self, params: dict):
+    def find_old_res(self, params: dict) -> pandas.DataFrame:
+        """
+
+        :param params:
+        :return: 若没找到，则返回None
+        """
+        if not os.path.exists(self.log_file_name): return
         log_df = self.load_log()
         columns = self.initializer.init_params_df.columns
         delta = log_df[columns] - pandas.DataFrame([params], )[columns].values
