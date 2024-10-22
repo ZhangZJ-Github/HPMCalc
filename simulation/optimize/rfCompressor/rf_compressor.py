@@ -59,6 +59,20 @@ class CST_Handler:
         self.restart_count = -1
         self.start_de()
 
+    def build_paramcombination_df(cst_handler):
+
+        run_ids :list= cst_handler.cst_proj_result.get_3d().get_all_run_ids()
+        run_ids.remove(0)
+        d =  {}
+        key_runid ="run_id"
+        for run_id in run_ids:
+            d[ key_runid] = d.get(key_runid,[])+[run_id]
+            paramcomb =cst_handler.cst_proj_result.get_3d().get_parameter_combination(run_id)
+            for key in paramcomb:
+                d[key] = d.get(key, []) + [paramcomb[key]]
+        df = pandas.DataFrame(d)
+        return  df
+
     def run_cst_history(self, history_list_item: str):
         return run_cst_history(self.cst_proj_de, history_list_item)
 
@@ -84,6 +98,15 @@ class CST_Handler:
         self.cst_proj_result: cst.results.ProjectFile = cst.results.ProjectFile(self.cst_proj_path,
                                                                                 allow_interactive=True)
         self.restart_count += 1
+    def solver_is_running(self):
+        logger.info("check solver_is_running")
+        try:
+            ret =          self.cst_proj_de.modeler.is_solver_running(timeout = 3)
+            return ret
+        except TimeoutError as e:
+            logger.warning(e)
+            # raise e
+            return False
 
 
 initialize_csv = r'initialize.csv'
@@ -122,9 +145,9 @@ class RfCompressorOptimizationTask(LoggedTask):
                  initializer: Initializer = None, log_file_name='RF_Compressor.log.csv'):
         # super().__init__(lock, initializer, log_file_name)
         super().__init__(lock, initializer, log_file_name)
-        self.cst_handler_with_GDT = cst_handler_with_GDT  # CST_Handler(project_path_with_GDT)
+        self.cst_handler_with_GDT:CST_Handler = cst_handler_with_GDT  # CST_Handler(project_path_with_GDT)
         # if not project_path_without_GDT: project_path_without_GDT = project_path_with_GDT[:-len(".cst")] + '.ES.cst'
-        self.cst_handler_without_GDT = cst_handler_without_GDT  # CST_Handler(project_path_without_GDT)
+        self.cst_handler_without_GDT:CST_Handler = cst_handler_without_GDT  # CST_Handler(project_path_without_GDT)
         self.old_result: dict = None
         self.restart_de_count = -1
 
@@ -132,6 +155,25 @@ class RfCompressorOptimizationTask(LoggedTask):
 
     def evaluate(self, res: dict):
         return [res["TMPG"], -res["Eabs_max_inside_GDT"]]
+
+    def __find_parameter_in_paramcombination_df(self,params_df:pandas.DataFrame,CST_paramcomb_df:pandas.DataFrame):
+        index =numpy.abs( CST_paramcomb_df[params_df.columns] - params_df.values)<self.initializer.precision_df[params_df.columns]
+        data = CST_paramcomb_df[numpy.all(index, axis=1)].iloc[0]
+        logger.info("最接近的记录：\n%s"%(data))
+
+        return data
+    def find_run_id(rfc,params:dict):
+        CST_paramcomb_df_withGDT = rfc.cst_handler_with_GDT.build_paramcombination_df()
+        CST_paramcomb_df_withoutGDT = rfc.cst_handler_without_GDT.build_paramcombination_df()
+        param_df = pandas.DataFrame([params])
+        data_with_GDT = rfc.__find_parameter_in_paramcombination_df(param_df,CST_paramcomb_df_withGDT)
+        data_without_GDT = rfc.__find_parameter_in_paramcombination_df(param_df,CST_paramcomb_df_withoutGDT)
+        key_runid = "run_id"
+        return data_with_GDT[key_runid],data_without_GDT[key_runid]
+
+
+
+
 
     def run(self, param_set: dict) -> str:
         self.find_old_res(param_set)
@@ -143,13 +185,15 @@ class RfCompressorOptimizationTask(LoggedTask):
                 return ""
             self.cst_handler_with_GDT.set_parameter(param_set)
             self.cst_handler_without_GDT.set_parameter(param_set)
-
+            logger.info("here1")
             self.cst_handler_with_GDT.start_solver()
             self.cst_handler_without_GDT.start_solver()
-            time.sleep(10)
-            while self.cst_handler_with_GDT.cst_proj_de.modeler.is_solver_running() or self.cst_handler_without_GDT.cst_proj_de.modeler.is_solver_running():
-                time.sleep(2)
+            logger.info("here2")
 
+            time.sleep(10)
+            while self.cst_handler_with_GDT.solver_is_running() or self.cst_handler_without_GDT.solver_is_running():
+                time.sleep(2)
+            logger.info("CST simulations done")
             return TwoCSTSimulationAddress(self.cst_handler_with_GDT.cst_proj_path, 0,
                                            self.cst_handler_without_GDT.cst_proj_path, 0).to_string()
         except RuntimeError as e:
@@ -157,7 +201,11 @@ class RfCompressorOptimizationTask(LoggedTask):
             logger.warning(e)
             logger.info("re-run count = %d" % (self.restart_de_count))
             self.cst_handler_with_GDT.start_de()
+            logger.info("here3")
+
             self.cst_handler_without_GDT.start_de()
+            logger.info("here4")
+
 
             return self.run(param_set)
 
@@ -392,4 +440,7 @@ if __name__ == '__main__':
     job = OptimizeJob(Initializer(initialize_csv), lambda: RfCompressorOptimizationTask(
         cst_handler_with_GDT, cst_handler_without_GDT,
         initializer=Initializer(initialize_csv), log_file_name="RF_Compressor.log.csv"))
+    # rfc :RfCompressorOptimizationTask= job.method_to_get_HPMSimWithInitializer_object()
+    # rfc.find_run_id(pandas.DataFrame(data =[ numpy.fromstring("285.8	22.5	18.71	20	17.9	27.9	17.4",sep = ' ')],columns =  rfc.initializer.init_params_df.columns ).iloc[0].to_dict())
+
     job.run(1, False)
