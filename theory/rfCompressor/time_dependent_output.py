@@ -124,10 +124,12 @@ class Compressor:
 
         self.cache_impulse_responses()
 
-    def embed_with(self, network: Network):
-        return Compressor(
-            network ** self.nw_discharging,
-            network ** self.nw_charging, )
+    def embed_with(self, network: Network, port_id_of_network=1, port_id_of_self=0, num=1):
+        return Compressor(skrf.connect(network, port_id_of_network, self.nw_discharging, port_id_of_self, num),
+                          skrf.connect(network, port_id_of_network, self.nw_charging, port_id_of_self, num),
+                          # network ** self.nw_discharging,
+                          # network ** self.nw_charging,
+                          )
 
     def embed_with_waveguide(self, CST_gamma_data_of_the_waveguide, L,  # ignore_attenuation
                              ):
@@ -255,23 +257,34 @@ class Compressor:
                 # logger.info("else")
             # if  _get_ts(i3_discharging,) > tend :break
             t = numpy.arange(t[0], t[-1] + Dt_MESS, self.dt)
+        index_of_outs = list(range(1,self.nw_discharging.nports))# 0端口为输入
+        oi1_charging =  {i:self.calculate_response_time_seq_ij(
+            self.get_impulse_response_time_seq_ij(i, 0, self.Regime.charging.name), initial_input_time_seq)[1].real for i in index_of_outs}
+        oi1_discharging = {i:self.calculate_response_time_seq_ij(
+            self.get_impulse_response_time_seq_ij(i, 0, self.Regime.discharging.name),
+            (_get_ts(i1_discharging), i1_discharging))[1].real for i in index_of_outs}
+        oi1 = {i:self._add_signals_with_the_same_start_time(oi1_charging[i], oi1_discharging[i]).real for i in index_of_outs}
 
-        o21_charging = self.calculate_response_time_seq_ij(
-            self.get_impulse_response_time_seq_ij(1, 0, self.Regime.charging.name), initial_input_time_seq)[1].real
-        # convolve(i1_charging, self.ts_and_impulse_response_charging[1][:, 1, 0])
-        # o21_discharging =  convolve(i1_discharging, self.ts_and_impulse_response_discharging[1][:, 1, 0])
 
-        o21_discharging = self.calculate_response_time_seq_ij(
-            self.get_impulse_response_time_seq_ij(1, 0, self.Regime.discharging.name),
-            (_get_ts(i1_discharging), i1_discharging))[1].real
-        o21 = self._add_signals_with_the_same_start_time(o21_charging, o21_discharging).real
+        # o21_charging = self.calculate_response_time_seq_ij(
+        #     self.get_impulse_response_time_seq_ij(1, 0, self.Regime.charging.name), initial_input_time_seq)[1].real
+        # # convolve(i1_charging, self.ts_and_impulse_response_charging[1][:, 1, 0])
+        # # o21_discharging =  convolve(i1_discharging, self.ts_and_impulse_response_discharging[1][:, 1, 0])
+        #
+        # o21_discharging = self.calculate_response_time_seq_ij(
+        #     self.get_impulse_response_time_seq_ij(1, 0, self.Regime.discharging.name),
+        #     (_get_ts(i1_discharging), i1_discharging))[1].real
+        # o21 = self._add_signals_with_the_same_start_time(o21_charging, o21_discharging).real
         trusted_df = lambda df: df[df[0] <= tend]
         df_i1_charging = trusted_df(to_df(numpy.vstack((_get_ts(i1_charging), i1_charging)).T, 2 / self.f_ref))
         df_i1_discharging = trusted_df(to_df(numpy.vstack((_get_ts(i1_discharging), i1_discharging)).T, 2 / self.f_ref))
         df_o11 = trusted_df(to_df(numpy.vstack((_get_ts(o11, ), o11)).T, 2 / self.f_ref))
-        df_o21 = trusted_df(to_df(numpy.vstack((_get_ts(o21, ), o21)).T, 2 / self.f_ref))
+        df_oi1 ={i: trusted_df(to_df(numpy.vstack((_get_ts(oi1[i], ), oi1[i])).T, 2 / self.f_ref)) for  i in index_of_outs}
+        df_oi1.update({0: df_o11})
 
-        return df_i1_charging, df_i1_discharging, df_o11, df_o21
+
+
+        return df_i1_charging, df_i1_discharging, df_oi1
 
 
 def get_S_parameter_from_CST_proj(cst_proj: cst.results.ProjectFile, S_parameter_name: str, run_id=0):
@@ -291,7 +304,7 @@ def build_network_from_CST_S_data(S11: numpy.ndarray, S21: numpy.ndarray, *args,
                                        [S21[:, 1], S11[:, 1]]]).transpose((2, 0, 1)),
                         # name = "Network_charging"
                         #        z0 =numpy.array( [ S33_charging[:, 2], 50*numpy.ones(( S33_charging[:, 2].shape)), ]).T
-                        *args, **kwargs).extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2)))
+                        *args, **kwargs)#.extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2)))
 
 
 def build_network_from_CST_S_data_1inNout(Si1s: typing.List[numpy.ndarray], *args, **kwargs):
@@ -305,7 +318,8 @@ def build_network_from_CST_S_data_1inNout(Si1s: typing.List[numpy.ndarray], *arg
                         s=S.transpose((2, 0, 1)),
                         # name = "Network_charging"
                         #        z0 =numpy.array( [ S33_charging[:, 2], 50*numpy.ones(( S33_charging[:, 2].shape)), ]).T
-                        *args, **kwargs).extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((total_ports,total_ports)))
+                        *args, **kwargs)#.extrapolate_to_dc(kind="zero",
+                                                        #   dc_sparam=numpy.zeros((total_ports, total_ports)))
 
 
 def build_network_of_waveguide(gamma_data_from_CST: numpy.ndarray, resampled_freq_unit_in_GHz=None,
@@ -322,7 +336,7 @@ def build_network_of_waveguide(gamma_data_from_CST: numpy.ndarray, resampled_fre
         -gamma_3_interpolator(resampled_freq_unit_in_GHz) * L_tranline_port3)
     return skrf.Network(frequency=skrf.Frequency.from_f(resampled_freq_unit_in_GHz, unit="GHz"), s=S_tranline_port3,
                         # z0=numpy.interp(resamped_f,S33_charging[:,0].real,S33_charging[:,2],)
-                        ).extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2)))
+                        )#.extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2)))
 
 
 if __name__ == '__main__':
@@ -331,7 +345,9 @@ if __name__ == '__main__':
     # cst_proj_path = r"E:\CSTprojects\rfCompressor\cascadedHT\SES_MPC_mode_converter.cst"
     # cst_proj_path = r"E:\CSTprojects\rfCompressor\cascadedHT\SES_MPC_mode_converter.comparison.cst"
     # cst_proj_path = r"E:\CSTprojects\rfCompressor\cascadedHT\SES_MPC_TE10.cst"
-    cst_proj_path = r"E:\CSTprojects\rfCompressor\cascadedHT\SES_MPC_multiway_coupler2.cst"
+    # cst_proj_path = r"E:\CSTprojects\rfCompressor\cascadedHT\SES_MPC_multiway_coupler2.cst"
+    # cst_proj_path = r"E:\CSTprojects\rfCompressor\cascadedHT\SES_MPC_15.cst"
+    cst_proj_path = r"E:\CSTprojects\rfCompressor\cascadedHT\SES_MPC_2_way.lower_Efield_when_ES.cst"
     # cst_proj_path = r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch.TapperedSwitchCav.2.paramsweep.cst"
     # cst_proj_path =         r"E:\CSTprojects\rfCompressor\cascadedHT\SES_allCST.cst"
     proj_discharging: cst.results.ProjectFile = cst.results.ProjectFile(cst_proj_path,
@@ -349,6 +365,8 @@ if __name__ == '__main__':
 
     gamma_3 = numpy.array(
         proj_charging.get_3d().get_result_item('1D Results\\Port Information\\Gamma\\3(1)', run_id_charging).get_data())
+    import scipy.constants as C
+    v_g =C.c**2/(2*numpy.pi*f_ref /  interp1d(gamma_3[:, 0],gamma_3[:,1],)(f_ref /1e9).imag)
     # gamma_3[:,1] = gamma_3[:,1] .imag*1j# Ignoring attenuation
 
     S33_discharging = get_S_parameter_from_CST_proj(proj_discharging, "S3,3", run_id)
@@ -363,26 +381,35 @@ if __name__ == '__main__':
     # S23_charging[:, 1] += S43_charging[:, 1]
     # S23_charging [:,1] = 1-S33_charging[:,1]
 
-    dt = 1 / f_ref / 5.  # 1/f_target / 10
+    dt = 1 / f_ref / 15.  # 1/f_target / 10
     ts = numpy.arange(-20e-9, 0, dt)
     # ts = ts[:(len(ts)//2)*2]
     # resampled_f = numpy.arange(9e9, 9.6e9,0.0006000000000000015e9)
     # resampled_f = numpy.arange(9e9, 9.6e9,0.0006e9)
     resampled_f = numpy.arange(8e9, 10.5e9, 0.0006e9)
+    # resampled_f = numpy.arange(8.5e9, 10e9, 0.0006e9)
     # resampled_f = numpy.arange(0e9, 12e9,0.1e9)
     # resampled_f = numpy.arange(9e9, 9.6e9,0.0006100000000000015e9)
     # compressor.nw_charging = compressor.nw_charging.interpolate(resampled_f)#
     # compressor.nw_discharging = compressor.nw_discharging.interpolate(resampled_f)#[band]
     compressor = Compressor(
-        build_network_from_CST_S_data_1inNout([S33_discharging, S23_discharging, S43_discharging]).interpolate(
-            resampled_f) ,
-        build_network_from_CST_S_data_1inNout([S33_charging, S23_charging, S43_charging]).interpolate(
-            resampled_f) ,
-        )
+        build_network_from_CST_S_data_1inNout([S33_discharging, S23_discharging, S43_discharging
+                                               ]).interpolate(
+            resampled_f)
+        #   .extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2)))
+        ,
+        build_network_from_CST_S_data_1inNout([S33_charging, S23_charging, S43_charging
+                                               ]).interpolate(
+            resampled_f)
+         #  .extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2)))
+        ,
+    )
 
     ts_for_caching_impulse_response = numpy.arange(-400e-9, 0, dt)
 
-    compressor_deembedded = compressor.embed_with_waveguide(gamma_3, -((300 - 40 - 20 * 0)) * 1e-3)
+    compressor_deembedded = compressor.embed_with_waveguide(gamma_3, -((300 - 40 - 20 * 0)*0+186) * 1e-3)
+    # compressor_deembedded = compressor.embed_with_waveguide(gamma_3, -((300 - 40 - 20 * 0)) * 1e-3)
+    G_cav_deembedded = (1-numpy.abs (compressor_deembedded.nw_charging.interpolate([f_ref]).s[0,0,0])**2)**-1
 
     # band = "9-9.6GHz"
     # resampled_f = numpy.arange(9e9, 9.6e9,0.0006000000000000015e9)
@@ -395,11 +422,17 @@ if __name__ == '__main__':
 
     sin = numpy.sin(2 * numpy.pi * f_ref * ts)
 
-    df_i3_charging, df_i3_discharging, df_o33, df_o23 = compressor.run((ts, sin), 10e-9,
+    # df_i3_charging, df_i3_discharging, df_o33, df_o23 = compressor.run((ts, sin), 10e-9,
+    #                                                                    compressor.correct_Dt_MESS(
+    #                                                                        f_ref, 15e-9))
+    df_i1_charging, df_i1_discharging,df_outs = compressor.run((ts, sin), 10e-9,
                                                                        compressor.correct_Dt_MESS(
                                                                            f_ref, 15e-9))
+    df_o33, df_o23, df_o43 = [ df_outs[i] for i in range(compressor.nw_charging.nports)]
     plt.figure()
     plt.plot(df_o23[0], df_o23[1])
+
+
 
     plt.figure()
 
@@ -411,11 +444,19 @@ if __name__ == '__main__':
                                ):
         fixed_Dt_MESS = compressor_deembedded.correct_Dt_MESS(
             f_ref, Dt_MESS)
-        df_i3_charging, df_i3_discharging, df_o33, df_o23 = compressor_deembedded.run((ts, sin), 50e-9,
+        df_i1_charging, df_i1_discharging,df_outs  = compressor_deembedded.run((ts, sin), 50e-9,
                                                                                       fixed_Dt_MESS, )
-        plt.plot(df_o23[0] / 1e-9, df_o23[key_complex].abs() ** 2, label="Dt_MESS = %.2f ns" % (fixed_Dt_MESS / 1e-9))
+        df_o33, df_o23, df_o43 = [df_outs[i] for i in range(compressor.nw_charging.nports)]
+        index_of_outs=list(range( 1,compressor.nw_charging.nports))
+        plt.plot(df_o23[0] / 1e-9,
+                 # 1- df_o33[key_complex].abs() ** 2 ,
+                 numpy.array( [df_outs[i][key_complex].abs() ** 2 for i in index_of_outs] ).sum(axis= 0) ,
+                 label="Dt_MESS = %.2f ns" % (fixed_Dt_MESS / 1e-9))
 
     plt.legend()
+    plt.xlabel("time (ns)")
+    plt.ylabel("output power gain")
+    plt.savefig("power_gain_vs_time.svg")
 
     plt.figure()
     convolved = compressor.calculate_response_time_seq_ij(

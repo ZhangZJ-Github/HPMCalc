@@ -4,8 +4,13 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : rf_compressor.py
 # @Software: PyCharm
+import shutil
+from multiprocessing.pool import ThreadPool
+
 import matplotlib
 import matplotlib.pyplot as plt
+import skrf
+from pymoo.optimize import minimize
 
 matplotlib.use('tkagg')
 import theory.rfCompressor.time_dependent_output as tdo
@@ -14,15 +19,12 @@ import pandas
 import os
 import time
 import typing
-from multiprocessing.pool import ThreadPool
 from threading import Lock
 
 import numpy
 from pymoo.algorithms.moo.nsga2 import NSGA2
-from pymoo.core.problem import StarmapParallelization, ElementwiseProblem
+from pymoo.core.problem import ElementwiseProblem, StarmapParallelization
 from pymoo.operators.sampling.lhs import LHS
-
-from pymoo.optimize import minimize
 
 import simulation
 from simulation.task_manager.initialize import Initializer
@@ -32,6 +34,7 @@ import cst.interface
 import cst.results
 from scipy.interpolate import LinearNDInterpolator
 from _logging import logger
+from simulation.task_manager.simulator import InputFileTemplateBase
 
 plt.ion()
 
@@ -42,7 +45,7 @@ def run_cst_history(cst_proj_de: cst.interface.DesignEnvironment, history_list_i
                          # 'RebuildOnParametricChange(False, True)',
                          'End Sub'])
     logger.info(command)
-    return cst_proj_de.schematic.execute_vba_code(command, timeout=10)
+    return cst_proj_de.schematic.execute_vba_code(command, timeout=20)
 
 
 def set_parameter(cst_proj_de: cst.interface.DesignEnvironment, parameters: dict):
@@ -88,16 +91,34 @@ class CST_Handler:
     def start_de(self,  # mode = cst.interface.DesignEnvironment.StartMode.New
                  ):
         logger.info("connect to CST")
+        # try:
+        #     logger.info("Connect to Existing")
+        #     de = cst.interface.DesignEnvironment(mode=cst.interface.DesignEnvironment.StartMode.Existing,
+        #                                          # options={"timeout": 60}
+        #                                          )
+        #     logger.info("Connect to Existing OK")
+        #
+        # except RuntimeError as e:
+        #     logger.warning(e)
+        #     logger.info("Connect to New")
+        #     de = cst.interface.DesignEnvironment(mode=cst.interface.DesignEnvironment.StartMode.New,
+        #                                          # options={"timeout": 60}
+        #                                          )
+        #     logger.info("Connect to New OK")
         try:
-            de = cst.interface.DesignEnvironment(mode=cst.interface.DesignEnvironment.StartMode.Existing)
+
+            self.de = de = cst.interface.DesignEnvironment.connect_to_any_or_new()
+            logger.info("connect_to_any_or_new done")
+            self.cst_proj_de = de.open_project(self.cst_proj_path)
+            logger.info('de.open_project("%s") done' % self.cst_proj_path)
+            self.cst_proj_result: cst.results.ProjectFile = cst.results.ProjectFile(self.cst_proj_path,
+                                                                                    allow_interactive=True)
+            logger.info('cst.results.ProjectFile("%s", allow_interactive=True) done' % self.cst_proj_path)
+
+            self.restart_count += 1
+            logger.info("self.restart_count = %d" % self.restart_count)
         except RuntimeError as e:
-            logger.warning(e)
-            de = cst.interface.DesignEnvironment(mode=cst.interface.DesignEnvironment.StartMode.New)
-        self.de = de
-        self.cst_proj_de = de.open_project(self.cst_proj_path)
-        self.cst_proj_result: cst.results.ProjectFile = cst.results.ProjectFile(self.cst_proj_path,
-                                                                                allow_interactive=True)
-        self.restart_count += 1
+            logger.warning("启动CST DE失败，即将自动重启...")
 
     def solver_is_running(self):
         logger.info("check solver_is_running")
@@ -145,12 +166,24 @@ class RfCompressorOptimizationTask(LoggedTask):
         # if not project_path_without_GDT: project_path_without_GDT = project_path_with_GDT[:-len(".cst")] + '.ES.cst'
         self.cst_handler_without_GDT: CST_Handler = cst_handler_without_GDT  # CST_Handler(project_path_without_GDT)
         self.old_result: dict = None
-        self.restart_de_count = -1
+        self.__reset_restart_de_count()
+        self.__initialize_backup_dir()
+
+    def __initialize_backup_dir(self):
+        self.__backup_dir = os.path.splitext(self.cst_handler_with_GDT.cst_proj_path)[
+                                0] + ".backup/%s" % InputFileTemplateBase.unique_str()
+        os.makedirs(self.__backup_dir, exist_ok=True)
+        logger.info('Backup_dir = "%s"' % self.__backup_dir)
+        return self.__backup_dir
 
         # self.rerun_count = 0
 
+    def __reset_restart_de_count(self):
+        self.restart_de_count = -1
+
     def evaluate(self, res: dict):
         return [res["TMPG"], -res["Eabs_max_inside_GDT"]]
+        # return res["TMPG"] / 120 - res["Eabs_max_inside_GDT"] / 3000
 
     def __find_parameter_in_paramcombination_df(self, params_df: pandas.DataFrame, CST_paramcomb_df: pandas.DataFrame):
         index = numpy.abs(CST_paramcomb_df[params_df.columns] - params_df.values) < self.initializer.precision_df[
@@ -170,8 +203,8 @@ class RfCompressorOptimizationTask(LoggedTask):
         return data_with_GDT[key_runid], data_without_GDT[key_runid]
 
     def run(self, param_set: dict) -> str:
-        self.find_old_res(param_set)
-        if self.old_result: return ""
+        old_path = self.find_old_res(param_set)
+        if old_path: return old_path
         try:
             # if 1 :return ""
             if self.restart_de_count > 3:
@@ -188,8 +221,12 @@ class RfCompressorOptimizationTask(LoggedTask):
             while self.cst_handler_with_GDT.solver_is_running() or self.cst_handler_without_GDT.solver_is_running():
                 time.sleep(2)
             logger.info("CST simulations done")
-            return TwoCSTSimulationAddress(self.cst_handler_with_GDT.cst_proj_path, 0,
-                                           self.cst_handler_without_GDT.cst_proj_path, 0).to_string()
+            self.__reset_restart_de_count()
+
+            return self.__backup_main_results()
+
+            # return TwoCSTSimulationAddress(self.cst_handler_with_GDT.cst_proj_path, 0,
+            #                                self.cst_handler_without_GDT.cst_proj_path, 0).to_string()
         except (RuntimeError, TimeoutError) as e:
             # self.rerun_count += 1
             logger.warning(e)
@@ -202,7 +239,30 @@ class RfCompressorOptimizationTask(LoggedTask):
 
             return self.run(param_set)
 
-    def __get_Eabs_max(self, run_id_withoutGDT):
+    def __backup_main_results(self):
+        bak_dir = self.__initialize_backup_dir()
+        txt_path = os.path.join(os.path.splitext(self.cst_handler_without_GDT.cst_proj_result.filename)[0],
+                                r'Export\3d\e-field (f=f0) [3].txt')
+        new_file_path = os.path.join(bak_dir, os.path.split(txt_path)[1])
+        shutil.copy(txt_path, new_file_path)
+        run_id_withGDT = 0
+        run_id_withoutGDT = 0
+        nw_discharging = tdo.build_network_from_CST_S_data(
+            tdo.get_S_parameter_from_CST_proj(self.cst_handler_with_GDT.cst_proj_result, "S3,3", run_id_withGDT),
+            tdo.get_S_parameter_from_CST_proj(self.cst_handler_with_GDT.cst_proj_result, "S2,3", run_id_withGDT),
+        )
+        nw_charging = tdo.build_network_from_CST_S_data(
+            tdo.get_S_parameter_from_CST_proj(self.cst_handler_without_GDT.cst_proj_result, "S3,3",
+                                              run_id_withoutGDT),
+            tdo.get_S_parameter_from_CST_proj(self.cst_handler_without_GDT.cst_proj_result, "S2,3",
+                                              run_id_withoutGDT),
+        )
+        nw_discharging.write_touchstone(os.path.join(self.__backup_dir, "nw_discharging.s2p"))
+        nw_charging.write_touchstone(os.path.join(self.__backup_dir, "nw_charging.s2p"))
+
+        return bak_dir
+
+    def __get_Eabs_max(self, E_field_data_txt_path: str):
         """
 
         :param df_Eabs: CST export 3D field,
@@ -213,13 +273,12 @@ class RfCompressorOptimizationTask(LoggedTask):
 2       0  -6.248   0.434  ...    1.015808    2.993860   -2.582654
         :return:
         """
-        # run_id_withoutGDT = 0
-        df_E_filed = pandas.read_csv(
-            os.path.join(os.path.splitext(self.cst_handler_without_GDT.cst_proj_result.filename)[0],
-                         r'Export\3d\e-field (f=f0) [3].txt'),
-            sep=r'\s\s+',
-            skiprows=lambda
-                idx: idx == 1, engine='python')
+        logger.info('Read E_field_data_txt_path = "%s"' % E_field_data_txt_path)
+        run_id_withoutGDT = 0
+        df_E_filed = pandas.read_csv(E_field_data_txt_path,
+                                     sep=r'\s\s+',
+                                     skiprows=lambda
+                                         idx: idx == 1, engine='python')
         colname_z = 'z [mm]'
         colname_y = 'y [mm]'
         colname_Eabs = '|E|'
@@ -253,13 +312,15 @@ class RfCompressorOptimizationTask(LoggedTask):
         # plt.scatter(*pts_to_calc_tube_max.T)
         return Eabs_max_inside_GDT, Eabs_max,
 
-    def find_old_res(self, params: dict) -> pandas.DataFrame:
+    def find_old_res(self, params: dict) -> str:
         """
 
         :param params:
-        :return: 若没找到，则返回None
+        :return: 若没找到，则返回None; 否则返回存放主要结果的文件夹的路径
         """
-        if not os.path.exists(self.log_file_name): return
+        RET_VALUE_WHEN_NOTHING_FOUND = ""
+        self.old_result = None
+        if not os.path.exists(self.log_file_name): return RET_VALUE_WHEN_NOTHING_FOUND
         log_df = self.load_log()
         columns = self.initializer.init_params_df.columns
         delta = log_df[columns] - pandas.DataFrame([params], )[columns].values
@@ -267,8 +328,10 @@ class RfCompressorOptimizationTask(LoggedTask):
         if len(old_result):
             logger.info("Old result found:\n%s" % (old_result.iloc[0]))
             self.old_result = old_result.iloc[0].to_dict()
+            return self.old_result[self.Colname.path]
+        return RET_VALUE_WHEN_NOTHING_FOUND
 
-    def get_res(self, address_of_cst_simulation: str, **kwargs) -> dict:
+    def get_res(self, path_of_backup_dir: str, **kwargs) -> dict:
         """
 
         :param address_of_cst_simulation: like "path/to/cst/file.cst*1\npath/to/cst/file.ES.cst*4",
@@ -276,43 +339,43 @@ class RfCompressorOptimizationTask(LoggedTask):
         and the simulation without GDT is simulation with run_id = 4 of the cst project file "path/to/cst/file.ES.cst",
         :return:
         """
-        if self.old_result is not None:
-            old_result = self.old_result
-            self.old_result = None
-            return old_result
-        address = TwoCSTSimulationAddress.from_string(address_of_cst_simulation)
+        # if self.old_result is not None:
+        #     old_result = self.old_result
+        #     # self.old_result = None
+        #     return old_result
+
+        # address = TwoCSTSimulationAddress.from_string(address_of_cst_simulation)
         # res =  MyObjectives(TwoCSTSimulationAddress.from_string(address_of_cst_simulation)).to_dict()
-        resampled_f = numpy.arange(9e9, 9.6e9, 0.01e9)
-        run_id_withGDT = address.run_id_of_simulation_with_GDT
-        run_id_withoutGDT = address.run_id_of_simulation_without_GDT
+        f_ref = 9.3e9
+        resampled_f = numpy.arange(f_ref - 0.3e9, f_ref + 0.3e9, 0.01e9)
+        run_id_withGDT = 0  # address.run_id_of_simulation_with_GDT
+        run_id_withoutGDT = 0  # address.run_id_of_simulation_without_GDT
         compressor = tdo.Compressor(
-            tdo.build_network_from_CST_S_data(
-                tdo.get_S_parameter_from_CST_proj(self.cst_handler_with_GDT.cst_proj_result, "S3,3", run_id_withGDT),
-                tdo.get_S_parameter_from_CST_proj(self.cst_handler_with_GDT.cst_proj_result, "S2,3", run_id_withGDT),
-            ).interpolate(resampled_f).extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2))),
-            tdo.build_network_from_CST_S_data(
-                tdo.get_S_parameter_from_CST_proj(self.cst_handler_without_GDT.cst_proj_result, "S3,3",
-                                                  run_id_withoutGDT),
-                tdo.get_S_parameter_from_CST_proj(self.cst_handler_without_GDT.cst_proj_result, "S2,3",
-                                                  run_id_withoutGDT),
-            ).interpolate(resampled_f).extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2))),
+            skrf.Network(os.path.join(path_of_backup_dir, "nw_discharging.s2p")).interpolate(
+                resampled_f).extrapolate_to_dc(kind="zero", dc_sparam=numpy.zeros((2, 2))),
+            skrf.Network(os.path.join(path_of_backup_dir, "nw_charging.s2p")).interpolate(
+                resampled_f).extrapolate_to_dc(
+                kind="zero", dc_sparam=numpy.zeros((2, 2))),
         )
 
-        f_ref = 9.3e9
         dt = 1 / f_ref / 5.
         ts_to_calculate_TD_response = numpy.arange(-20e-9, 0, dt)
         initial_signal = (ts_to_calculate_TD_response, numpy.sin(2 * numpy.pi * f_ref * ts_to_calculate_TD_response))
-
+        # TODO: 目前，储能波导横截面尺寸是不变的，因此gamma3不必存储
         gamma_3 = numpy.array(self.cst_handler_with_GDT.cst_proj_result.get_3d().get_result_item(
-            '1D Results\\Port Information\\Gamma\\3(1)', run_id_withGDT).get_data())
-        compressor_deembedded = compressor.embed_with_waveguide(gamma_3, -((300 - 40 - 20)) * 1e-3)
-        Dt_MESS = compressor_deembedded.correct_Dt_MESS(f_ref, 10e-9)
+            '1D Results\\Port Information\\Gamma\\3(1)', 1).get_data())
+        compressor_deembedded = compressor.embed_with_waveguide(gamma_3, -((300 - 40 - 20 * 0) * 0) * 1e-3)
+        Dt_MESS = compressor_deembedded.correct_Dt_MESS(f_ref, 0e-9)
         df_i3_charging, df_i3_discharging, df_o33, df_o23 = compressor_deembedded.run(initial_signal, 10e-9, Dt_MESS)
         power_extraction_efficiency_of_minimum_compressor = (df_o23[tdo.key_complex][df_o23[0] > 0].abs() ** 2).max()
         G_cav = 1 / (1 - numpy.abs(compressor_deembedded.nw_charging.interpolate([f_ref]).s[0, 0, 0]) ** 2)
         TMPG = G_cav * power_extraction_efficiency_of_minimum_compressor
         S23_abs_withGDT = numpy.abs(compressor.nw_discharging.interpolate([f_ref]).s[0, 1, 0])
-        Eabs_max_inside_GDT, Eabs_max = self.__get_Eabs_max(run_id_withoutGDT)
+        new_file_path = os.path.join(
+            path_of_backup_dir,
+            os.path.split(os.path.join(os.path.splitext(self.cst_handler_without_GDT.cst_proj_result.filename)[0],
+                                       r'e-field (f=f0) [3].txt'))[1])
+        Eabs_max_inside_GDT, Eabs_max = self.__get_Eabs_max(new_file_path)
         return {
             "power_extraction_efficiency_of_minimum_compressor": power_extraction_efficiency_of_minimum_compressor,
             "G_cav": G_cav,
@@ -322,6 +385,7 @@ class RfCompressorOptimizationTask(LoggedTask):
             "Eabs_max": Eabs_max,
             "I_PC": (Eabs_max / Eabs_max_inside_GDT) ** 2,
             # self.Colname.score: (TMPG , -Eabs_max_inside_GDT)
+            # "backup_dir":self.__backup_dir
         }
 
 
@@ -415,12 +479,23 @@ class OptimizeJob(JobBase):
                       # copy_template_and_initialize_csv_to_working_dir=copy_template_and_initialize_csv_to_working_dir
                       ),
             self.algorithm,
-            seed=1,
-            termination=('n_gen', 100),
+            seed=2,
+            # termination=('n_gen', 100),
             verbose=True,
             # callback =log_iter,#save_history=True
         )
         return res
+
+        # from scipy.optimize import minimize as sominize
+        # def func(x: numpy.ndarray):
+        #     rfc = self.method_to_get_HPMSimWithInitializer_object()
+        #     score = rfc.update(self.initializer.to_dict(x))
+        #     logger.info("score = %s" % (score))
+        #     return - score
+        #
+        # res = sominize(func, x0=self.initializer.init_params_df.values[-1], method="Nelder-Mead",
+        #                bounds=numpy.array((self.initializer.lower_bound, self.initializer.upper_bound), ).T,)
+        # return res
 
 
 if __name__ == '__main__':
@@ -438,8 +513,9 @@ if __name__ == '__main__':
 
     job = OptimizeJob(Initializer(initialize_csv), lambda: RfCompressorOptimizationTask(
         cst_handler_with_GDT, cst_handler_without_GDT,
-        initializer=Initializer(initialize_csv), log_file_name="RF_Compressor.log.csv"))
+        initializer=Initializer(initialize_csv), log_file_name="RF_Compressor.NSGA-II.log.csv"))
     # rfc :RfCompressorOptimizationTask= job.method_to_get_HPMSimWithInitializer_object()
     # rfc.find_run_id(pandas.DataFrame(data =[ numpy.fromstring("285.8	22.5	18.71	20	17.9	27.9	17.4",sep = ' ')],columns =  rfc.initializer.init_params_df.columns ).iloc[0].to_dict())
-
+    # job.method_to_get_HPMSimWithInitializer_object().re_evaluate()
+    # aaa
     job.run(1, False)

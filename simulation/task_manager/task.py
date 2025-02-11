@@ -13,8 +13,6 @@ import numpy
 
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
-from pymoo.core .algorithm import  Algorithm
-from pymoo.algorithms.soo.nonconvex.pso import PSO
 import pandas
 from deprecated.sphinx import deprecated
 from simulation.task_manager.simulator import *
@@ -28,9 +26,9 @@ cfg = Config.read_json_file()
 class LoggedTask(ABC):
     class Colname:
         score = "score"
-        path = "m2d_path" # 任何能让使用者明确找到/还原原始模拟文件的字符串
+        path = "m2d_path"  # 任何能让使用者明确找到/还原原始模拟文件的字符串
         timestamp = 'timestamp'
-        comment = 'comment' # 备注信息
+        comment = 'comment'  # 备注信息
 
     def __init__(self,
                  lock: Lock = Lock(),
@@ -79,15 +77,15 @@ class LoggedTask(ABC):
     #         self.log_df = pandas.merge(pandas.read_csv(self.log_file_name, encoding=CSV_ENCODING), self.log_df,
     #                                    on=None, how='outer')#.drop_duplicates()
 
-    def log(self, params: dict, m2d_path: str,other_information:dict  =None):
+    def log(self, params: dict, m2d_path: str, other_information: dict = None):
         """
         将修改的参数和主要结果记录到文件中
         :return:
         """
         newdata = params.copy()
-        if other_information is None:other_information = {}
-        res  = {self.Colname.timestamp:time.time(),}
-        res .update( self.get_res(m2d_path))
+        if other_information is None: other_information = {}
+        res = {self.Colname.timestamp: time.time(), }
+        res.update(self.get_res(m2d_path))
         res[self.Colname.score] = self.evaluate(res)
         res[self.Colname.path] = m2d_path
 
@@ -96,7 +94,7 @@ class LoggedTask(ABC):
         # self.load_log_csv()
 
         self.log_df = pandas.DataFrame(
-            [newdata],#index = [0]
+            [newdata],  # index = [0]
         )
         # self.log_df.loc[len(self.log_df)] = numpy.nan
         # for key in newdata:
@@ -138,15 +136,14 @@ class LoggedTask(ABC):
                 if numpy.isnan(params[key]): raise RuntimeError
         return True
 
-
-
-    def log_and_info(self, param_set, m2d_path,other_information:dict = None):
+    def log_and_info(self, param_set, m2d_path, other_information: dict = None):
         try:
-            log_df = self.log(param_set, m2d_path,other_information)
+            log_df = self.log(param_set, m2d_path, other_information)
             last_logged_data = log_df.iloc[len(log_df) - 1]
             logger.info("\n%s" % str(last_logged_data))
             score = last_logged_data[self.Colname.score]
-            logger.info('%s\nscore = %s' % (InputFileTemplateBase.FileGenerationRecord(param_set,last_logged_data[self.Colname.path]), score))
+            logger.info('%s\nscore = %s' % (
+                InputFileTemplateBase.FileGenerationRecord(param_set, last_logged_data[self.Colname.path]), score))
             return score
         except (KeyError, FileNotFoundError, TypeError, IndexError,
                 pandas.errors.ParserError, PermissionError) as e:
@@ -162,7 +159,7 @@ class LoggedTask(ABC):
         """
         pass
 
-    def update(self, param_set: dict, comment: str = '',other_information:dict=None):
+    def update(self, param_set: dict, comment: str = '', other_information: dict = None):
         """
         按照给定的参数运行模拟，自动获取结果，更新log
         :param param_set:
@@ -183,7 +180,7 @@ class LoggedTask(ABC):
         # logger.info("当前参数：%s" % InputFileTemplateBase.FileGenerationRecord(param_set, m2d_path))
         # self.simulation_executor.run(m2d_path)
         path = self.run(param_set)
-        ret = self.log_and_info(param_set, path,other_information)
+        ret = self.log_and_info(param_set, path, other_information)
         param_set[self.Colname.comment] = comment
         return ret
 
@@ -205,18 +202,18 @@ class LoggedTask(ABC):
         log_df = self.load_log()
         for i in range(len(log_df)):
             path = log_df[self.Colname.path][i]
-
             res = self.get_res(path)
-            score = self.evaluate(res)
             # log_df[self.colname_score] [i]= score
-            res[self.Colname.score] = score
+            res[self.Colname.score] = self.evaluate(res)
             for key in res:
                 if key not in log_df.columns:
                     log_df[key] = pandas.NA
-                log_df[key][i] = res[key]
+                v = res[key]
+                if isinstance(v, list):
+                    log_df[key].astype(object, False)
+                log_df.at[i, key,] = v
 
         self.rewrite_log_csv(log_df)
-
 
     def recorver_log_df_from_log_text(self, text: str):
         """
@@ -267,7 +264,6 @@ class CachedTask(LoggedTask):
         #     self.log_df = pandas.read_csv(self.log_file_name,encoding='gbk')
         logger.info("使用模板：%s" % self.template)
 
-
     def find_old_res(self, params: dict, precisions: dict = {}) -> str:
         # TODO: 检查有效性
         if os.path.exists(self.log_file_name):
@@ -307,6 +303,7 @@ class CachedTask(LoggedTask):
                 pandas.errors.ParserError, PermissionError) as e:
             logger.warning("记录结果时报错，已忽略：\n%s" % e)
             return 0.
+
     def run(self, param_set: dict) -> str:
         m2d_path = self.template.generate_and_to_disk(param_set)
         self.last_generated_m2d_path = m2d_path
@@ -333,7 +330,6 @@ class CachedTask(LoggedTask):
             return self.log_and_info(param_set, old_m2d_path)
         m2d_path = self.run(param_set)
         return self.log_and_info(param_set, m2d_path)
-
 
     def clean_working_dir(self, score_threshold):
         """

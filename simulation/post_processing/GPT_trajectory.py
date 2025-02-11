@@ -44,6 +44,8 @@ class GPTTraj:
         nmacro = auto()
         time = auto()
         G = auto()
+        Bx = auto()  # means beta_x
+        By = auto()  # means beta_y
         Bz = auto()  # means beta_z
 
     class NeededFields_p(enum.Enum):

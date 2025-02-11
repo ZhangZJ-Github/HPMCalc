@@ -12,11 +12,13 @@ import scipy.constants as C
 from scipy.stats import maxwell
 def gammabeta_to_gamma(gammabeta,):
     return (1+gammabeta**2)**0.5
-
+def gamma_to_beta(gamma,):
+    return Ek_to_beta((gamma-1)*C.m_e *C.c **2/ C.eV,C.m_e)
 def Ek_to_beta(Ek_eV, mass=C.m_e):
     return (1 - 1 / (1 + Ek_eV / (mass * C.c ** 2 / C.eV)) ** 2) ** .5
 
-
+def p_to_v(p, mass_kg= C.m_e):
+    return p*C.c / (p**2 + (mass_kg*C.c)**2)**0.5
 def Ek_to_gamma(Ek_eV, mass=C.m_e):
     return (1 + Ek_eV / ((mass * C.c ** 2 / C.eV)))
 
@@ -54,3 +56,5 @@ def thermal_velocity_3D(T, m, nps):
         numpy.sin(theta) * numpy.sin(phi),
         numpy.cos(phi)
     ))
+def Gaussian(z, z0, sigma):
+    return 1 / ((2 * numpy.pi) ** 0.5 * sigma) * numpy.exp(-(z - z0) ** 2 / (2 * sigma ** 2))
