@@ -13,7 +13,7 @@ from scipy.stats import maxwell
 def gammabeta_to_gamma(gammabeta,):
     return (1+gammabeta**2)**0.5
 def gamma_to_beta(gamma,):
-    return Ek_to_beta((gamma-1)*C.m_e *C.c **2/ C.eV,C.m_e)
+    return (1-1/gamma**2) **0.5
 def Ek_to_beta(Ek_eV, mass=C.m_e):
     return (1 - 1 / (1 + Ek_eV / (mass * C.c ** 2 / C.eV)) ** 2) ** .5
 
@@ -58,3 +58,13 @@ def thermal_velocity_3D(T, m, nps):
     ))
 def Gaussian(z, z0, sigma):
     return 1 / ((2 * numpy.pi) ** 0.5 * sigma) * numpy.exp(-(z - z0) ** 2 / (2 * sigma ** 2))
+
+def skin_depth(f,  sigma,mu= C.mu_0,):
+    """
+    趋肤深度
+    :param f:
+    :param mu: 磁导率
+    :param sigma: 电导率
+    :return:
+    """
+    return (2/(2*numpy.pi *f * mu * sigma))**0.5
