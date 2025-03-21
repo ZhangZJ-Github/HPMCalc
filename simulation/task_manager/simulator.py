@@ -19,6 +19,7 @@ import typing
 from collections import OrderedDict
 
 import matplotlib
+import pandas
 
 matplotlib.use('tkagg')
 from _logging import logger
@@ -168,7 +169,15 @@ def csv_to_gdf(csv_name: str, ):
     return gdf_name
 
 
-def df_to_gdf(df, gdf_name: str, delete_temp_file=True):
+def df_to_gdf(df: pandas.DataFrame, gdf_name: str, delete_temp_file=True):
+    """
+    Convert pandas.DataFrame to General Particle Tracer database file (.gdf).
+
+    @param df:
+    @param gdf_name:
+    @param delete_temp_file: if True，将删除转化过程中产生的临时文件
+    @return:
+    """
     csv_name = os.path.splitext(gdf_name)[0] + '.txt'
     df.to_csv(csv_name, index=False, sep='\t')
     csv_to_gdf(csv_name)
@@ -268,7 +277,7 @@ class InputFileTemplateBase(ABC):
             timestamp_ns // 1e9).strftime("_%Y%m%d_%H%M%S_") + ("%02d" % (
                 (timestamp_ns % 1e9) // 1e7))
 
-    def generate_and_to_disk(self, _replace_rules: typing.Dict[str, typing.Any] ) -> str:
+    def generate_and_to_disk(self, _replace_rules: typing.Dict[str, typing.Any]) -> str:
         replace_rules = {key: str(_replace_rules[key]) for key in _replace_rules}
         file_path = self.new_file_name()
         with open(file_path, 'w', encoding=self.encoding) as f:
