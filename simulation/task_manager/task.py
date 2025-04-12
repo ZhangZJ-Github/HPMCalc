@@ -45,6 +45,7 @@ class LoggedTask(ABC):
         #                                )
 
         self.lock = lock
+        self.old_res = None
         # self.lock.acquire()
         # self.load_log_csv()
         # self.lock.release()
@@ -85,8 +86,12 @@ class LoggedTask(ABC):
         newdata = params.copy()
         if other_information is None: other_information = {}
         res = {self.Colname.timestamp: time.time(), }
-        res.update(self.get_res(m2d_path))
-        res[self.Colname.score] = self.evaluate(res)
+        if (self.old_res is not None) and  ( (m2d_path is None)or( m2d_path =="" )or numpy.isnan(m2d_path)):
+            """找不到最原始的文件，但能找到当时的记录"""
+            pass
+        else:
+            res.update(self.get_res(m2d_path))
+            res[self.Colname.score] = self.evaluate(res)
         res[self.Colname.path] = m2d_path
 
         res.update(other_information)
@@ -102,6 +107,7 @@ class LoggedTask(ABC):
         #         self.log_df[key] = numpy.nan
         #     self.log_df[key][len(self.log_df) - 1] = newdata[key]
         self.save_log_csv()
+        self.old_res = None
         return self.log_df
 
     def load_log(self) -> pandas.DataFrame:
@@ -230,6 +236,110 @@ class LoggedTask(ABC):
                     # time = datetime.datetime.strptime(line[:len("2024-01-11 13:50:59")], "%Y-%m-%d %H:%M:%S", )
                     self.log_and_info(record.replace_rules, record.file_path)
                     pass
+class TaskSupportingCheckingDuplicates(LoggedTask):
+
+    def __init__(self,
+                 # template: InputFileTemplateBase,
+                 # simulation_executor: SimulationExecutor = MAGICSim(),
+                 lock: Lock = Lock(),
+                 initializer: Initializer = None
+                 ,                 log_file_name='default.log.csv'
+
+                 ):
+        super(TaskSupportingCheckingDuplicates, self).__init__(lock, initializer, log_file_name)
+        self.old_res  = None
+        # self.template = template
+        # self.simulation_executor = simulation_executor
+        # if not os.path.exists(self.log_file_name):
+        # self.log_df = pandas.DataFrame(#columns=list(self.template.get_variables())
+        #                                # + [self.colname_path,self.colname_score]
+        #                                )
+
+        # self.lock = lock
+        # self.lock.acquire()
+        # self.load_log_csv()
+        # self.lock.release()
+
+        # else:
+        #     self.log_df = pandas.read_csv(self.log_file_name,encoding='gbk')
+        # logger.info("使用模板：%s" % self.template)
+
+    def find_old_res(self, params: dict, precisions: dict = {}) -> str:
+        # TODO: 检查有效性
+        if os.path.exists(self.log_file_name):
+            self.lock.acquire()
+            logger.info('self.lock.acquired')
+            df = self.load_log()
+            self.lock.release()
+            logger.info('self.lock.released')
+
+            numeric_params = {}
+            # for key in params:
+            for key in set(precisions.keys()).union(set(params.keys())):
+                # if key.startswith('%'):
+                v = params[key]
+                if numpy.isreal(v): numeric_params[key] = params[key]
+
+            df_this_numeric_params = pandas.DataFrame(numeric_params, index=df.index)
+            df_precision = pandas.DataFrame({key: precisions.get(key, 0) for key in df_this_numeric_params.columns},
+                                            index=df.index)
+            mask = (((df[df_this_numeric_params.columns] - df_this_numeric_params).abs() - df_precision) <= 0).all(
+                axis=1)
+            if mask.any():
+                self.old_res = df[mask].iloc[0]
+                m2d_paths = df[self.Colname.path][mask]
+                logger.info("找到了之前的记录！\n%s\n%s" % (InputFileTemplateBase.FileGenerationRecord(params, m2d_paths.values[0]),  self.old_res))
+                # logger.info("找到了之前的记录！%s" %   self.old_res)
+                return m2d_paths.values[0]
+            return ''
+
+    def log_and_info(self, param_set, m2d_path,other_information: dict = None):
+        # if (self.old_res is not None )and ((m2d_path == '') or (numpy.isnan(m2d_path )) ) :
+        #     super(TaskSupportingCheckingDuplicates, self).log_and_info(self.old_res.to_dict(),m2d_path,other_information)
+        #     return self.old_res[self.Colname.score]
+        return super(TaskSupportingCheckingDuplicates, self).log_and_info(param_set, m2d_path, other_information)
+
+    # def log(self, params: dict, m2d_path: str, other_information: dict = None):
+    #     super(TaskSupportingCheckingDuplicates, self).log()
+    # def run(self, param_set: dict) -> str:
+    #     m2d_path = self.template.generate_and_to_disk(param_set)
+    #     self.last_generated_m2d_path = m2d_path
+    #     logger.info("当前参数：%s" % InputFileTemplateBase.FileGenerationRecord(param_set, m2d_path))
+    #     self.simulation_executor.run(m2d_path)
+    #     return m2d_path
+
+    def update(self, param_set: dict, comment: str = '', other_information: dict = None):
+        """
+        按照给定的参数运行模拟，自动获取结果，更新log
+        :param param_set:
+        :return: 评分
+        """
+        param_set[self.Colname.comment] = comment
+        params_check_status = self.params_check(param_set)
+        if not params_check_status:
+            logger.warning("无效参数：%s" % (param_set))
+            return 0.
+        logger.info('Finding old result...')
+        old_m2d_path = self.find_old_res(param_set,precisions=self.initializer.precision_df.to_dict())
+        logger.info("old_m2d_path=%s" % old_m2d_path)
+
+        if self.old_res is not None:
+            return self.log_and_info(self.old_res.to_dict(), old_m2d_path)
+        m2d_path = self.run(param_set)
+        return self.log_and_info(param_set, m2d_path)
+
+    def clean_working_dir(self, score_threshold):
+        """
+        删除文件夹中不必要的（低分）结果
+        :return:
+        """
+        log_df = self.load_log()
+        # index_to_delete = [log_df[self.colname_score] < score_threshold ]
+        m2d_paths_to_delete = log_df[self.Colname.path][
+            log_df[self.Colname.score] < score_threshold]  # .tolist()
+
+        for m2d_path in m2d_paths_to_delete:
+            self.simulation_executor.delete_result(m2d_path)
 
 
 class CachedTask(LoggedTask):

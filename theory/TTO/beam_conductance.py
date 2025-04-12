@@ -87,6 +87,7 @@ def plot_Ge_G0(Ez_interp, Ek_eV, f0, length_unit=mm):
 if __name__ == '__main__':
     proj_3D: cst.results.ProjectFile = cst.results.ProjectFile(
         r"E:\CSTprojects\Genac2\CoaxialRFsource.buncher.Eigenmode.cst",
+        # r"E:\CSTprojects\Genac2\CoaxialRFSource.Extractor.single_cav.Eigenmode.cst",
         # r"E:\CSTprojects\Genac2\CoaxialRFsource.buncher.PIC.cold.cst",
 
         allow_interactive=True)
