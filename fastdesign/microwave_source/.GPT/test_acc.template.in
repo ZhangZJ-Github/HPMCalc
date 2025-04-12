@@ -1,0 +1,47 @@
+f = %f%;#9.4667e9;
+E0 = 50e3*0+ 10;
+gamma = 1+|qe|*E0 /(me*c^2);
+beta = sqrt(1 - 1/gamma^2);
+nps = 1000; #360;
+tend = 2e-9;
+
+# zend = 500e-3;
+zend = tend * c;#1/f * beta*c;
+Qtot = -120 * tend; #-100e-3 * 200e-3 / c;
+# rout = 1e-3;
+# rout = 0;
+# setFile("beam", "electrons.gdf");
+
+rbeam = 45e-3;
+drbeam = 2e-3;
+setparticles("beam",nps,me,qe,Qtot);
+# setrxydist("beam","u",rout/2,rout);
+setrxydist("beam","u",rbeam,2*drbeam);
+setphidist("beam","u", 0, 2*PI);
+setzdist("beam","u",-10e-3,0e-3);
+settdist("beam","u",tend/2,tend);
+setGdist("beam","u", gamma, 0);
+
+
+# map1D_TM("wcs","I","F:\changeworld\HPMCalc\simulation\optimize\accelerator\LINAC\SW\Ez1D.gdf","z","Ez",100e6,0,2*PI*f);
+map3D_E("wcs","I","E:\changeworld\hpmcalc\fastdesign\microwave_source\.GPT\Estatic.gdf","x", "y", "z","Ex","Ey","Ez",1.0);
+map3D_Ecomplex("wcs","I","E:\changeworld\hpmcalc\fastdesign\microwave_source\.GPT\Ecomplex1.gdf","x", "y", "z", "Exre", "Eyre", "Ezre", "Exim", "Eyim", "Ezim",%Efactor%,0,2*PI*f);
+map3D_Ecomplex("wcs","I","E:\changeworld\hpmcalc\fastdesign\microwave_source\.GPT\Ecomplex2.gdf","x", "y", "z", "Exre", "Eyre", "Ezre", "Exim", "Eyim", "Ezim",1,0,2*PI*2*f);
+solenoid_z0 = -2000e-3;
+solenoid_zend = 2000e-3;
+bzsolenoid("wcs","z", (solenoid_z0+solenoid_zend)/2,40e-3,(solenoid_zend-solenoid_z0),5e5/0.628*%B%);
+# bzsolenoid("wcs","z", 125e-3,40e-3,(solenoid_zend-solenoid_z0),5e5);
+
+setrmacro("beam", 1e-3);
+# 几乎无区别
+# spacecharge3Dmesh() ; 
+
+# TMAX = 10E-9;
+tout(0, tend, tend / 500);
+# snapshot(0, tend, tend / 500);
+# Gminmax("wcs","I",500e-3,1.01,10086111997) ;
+# rmax("wcs","I",30e-3) ;
+z_screen0 = -10e-3;
+z_lastscreen = 150e-3;
+# screen("wcs","I",z_screen0,z_lastscreen, (z_lastscreen-z_screen0) / 100);
+
