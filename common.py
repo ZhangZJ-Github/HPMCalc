@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 
 def gammabeta_to_gamma(gammabeta, ):
     return (1 + gammabeta ** 2) ** 0.5
-
+def gammabeta_to_beta(gammabeta, ):
+    return gammabeta / gammabeta_to_gamma(gammabeta)
 
 def gamma_to_beta(gamma, ):
     return (1 - 1 / gamma ** 2) ** 0.5
