@@ -58,10 +58,15 @@ def get_interpolator_on_dataset(cst_proj_path: str, indexing_parameter_names: ty
         indexing_parameters = [parameter_combination[key] for key in indexing_parameter_names]
         tree_items = proj_3D.get_3d().get_tree_items()
         S_param_items = []
+        gamma_item_names = []
 
         for tree_item in tree_items:
             if tree_item.startswith('1D Results\\S-Parameters\\'):
                 S_param_items.append(tree_item)
+            if tree_item.startswith('1D Results\\Port Information\\Gamma\\'):
+                gamma_item_names.append(tree_item)
+
+
         s_param_example = numpy.array(
             proj_3D.get_3d().get_result_item(S_param_items[0],
                                              run_id).get_data())
@@ -82,12 +87,21 @@ def get_interpolator_on_dataset(cst_proj_path: str, indexing_parameter_names: ty
                 s[:, i, j] = item[:, 1]
                 if i == j:
                     z0[:, i] = item[:, 2].real
+        port_gamma_data = {i:
+            numpy.array(
+                proj_3D.get_3d().get_result_item(gamma_item_names[i],
+                                                 run_id).get_data()) for i in range(N_ports)
+        }
         data_set[run_id] = {
             "parameter_combination": parameter_combination,
             "indexing_parameters": indexing_parameters,
             "f": f,
             "s": s,
-            "z0": z0
+            "z0": z0,
+            "gamma_interp":{i :
+                                interp1d(port_gamma_data[i][:,0].real,
+                                         port_gamma_data[i][:,1],)
+                            for i in port_gamma_data},
         }
     _indexing_parameters = numpy.array([data_set[run_id]["indexing_parameters"] for run_id in data_set.keys()])
     kwargs_for_interpolator = {}

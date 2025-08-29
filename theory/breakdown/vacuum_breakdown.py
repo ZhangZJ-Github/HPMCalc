@@ -16,6 +16,8 @@ def Kilpatrick(E_unit_in_MV_m):
 
     真空中随频率变化的最大微波击穿场强通常采用半经验公式 Kilpatrick 准则来预测
 
+    实际工程允许的表面电场强度通常取据此估计值的1.4倍
+
     :param E_unit_in_MV_m: 击穿场强，单位MV/m
     :return: f——击穿场强对应的频率，unit in MHz
     """
@@ -23,6 +25,8 @@ def Kilpatrick(E_unit_in_MV_m):
 if __name__ == '__main__':
     plt.ion()
     plt.figure()
-    Es = numpy.linspace(10,200, 200)
-    plt.plot(Es, Kilpatrick(Es))
+    Es = numpy.linspace(10,300, 200)
+    plt.plot(Es, Kilpatrick(Es)/1e3)
+    plt.xlabel("Surface E-field (Mv/m)")
+    plt.ylabel("Frequency (GHz)")
 

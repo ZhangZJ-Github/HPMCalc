@@ -214,12 +214,13 @@ if __name__ == '__main__':
     # 需包含放能阶段的S参数
     proj_discharging: cst.results.ProjectFile = cst.results.ProjectFile(
         # r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch_2-1.paramsweep.cst",
-        r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch.TapperedSwitchCav.2.paramsweep.cst",
+        # r"E:\CSTprojects\rfCompressor\cascadedHT\SES_switch.TapperedSwitchCav.2.paramsweep.cst",
+        r"E:\CSTprojects\rfCompressor\cascadedHT\why_2hole\SES_based_on_cross.paramsweep.cst",
         allow_interactive=True)
     proj_charging: cst.results.ProjectFile = cst.results.ProjectFile(
         proj_discharging.filename [:-len("paramsweep.cst")] + "ES.cst",
         allow_interactive=True)
-    run_id=9#212#89
+    run_id=0#9#212#89
     S33_discharging = numpy.array(proj_discharging.get_3d().get_result_item('1D Results\\S-Parameters\\S3,3', run_id).get_data())
     S23_discharging = numpy.array(proj_discharging.get_3d().get_result_item('1D Results\\S-Parameters\\S2,3', run_id).get_data())
 
@@ -238,12 +239,15 @@ if __name__ == '__main__':
 
     arr_Dt_MESS = compressor.correct_Dt_MESS(
         f_target / 1e9,
-        numpy.array((*numpy.arange(0.2, 1, 0.2), *numpy.arange(1, 10, 1), 20)))
+        numpy.array(#(*numpy.arange(0.2, 1, 0.2), *numpy.arange(1, 10, 1), 20)
+            [5#3.05
+             ]
+                    ))
     recorded_o23 = []
 
     t_charging_start = -2 * max(max(arr_Dt_MESS), impulse_duration)
     t_discharging_start = 0.0
-    tend = 40.0
+    tend = 100.0#40.0
     df_i3_charging, df_i3_discharging, df_o33, df_o23 = compressor.run_without_MESS(f_target / 1e9, t_charging_start, 0, tend, )
     # aaaaa
     for i, Dt_MESS in enumerate(arr_Dt_MESS):
@@ -288,7 +292,9 @@ if __name__ == '__main__':
         if i % 2 == 0 or False:
             # plt.plot(df_o23_[0],(numpy.abs(df_o23_[key_complex])**2),label = '$\Delta t$ = %.1f ns ($L_1$ = %.2f m)'%(Dt_lefts[i]/1e-9, Dt_lefts[i]*v_g/2))
             plt.plot(df_o23_[0], df_o23_[key_interpolated_periodic_avg_square] * 2,
-                     label='$\Delta t$ = %.2f ns ($L_1$ = %.2f m)' % (arr_Dt_MESS[i], arr_Dt_MESS[i] * 1e-9 * v_g / 2))
+                     # label='$\Delta t$ = %.2f ns ($L_1$ = %.2f m)' % (arr_Dt_MESS[i], arr_Dt_MESS[i] * 1e-9 * v_g / 2),
+                     label='$L_1$ = %.2f m' % ( arr_Dt_MESS[i] * 1e-9 * v_g / 2),
+                     )
             # plt.plot(df_o23_[0],(numpy.abs(df_o23_[key_complex])**2),label = '$L_1$ = %.2f m'%( Dt_lefts[i]*v_g/2))
     plt.xlabel('time (ns)')
     plt.ylabel(r'$\eta_{OM}(t)$')
@@ -304,11 +310,11 @@ if __name__ == '__main__':
     def func_G_cav_peak(Dt_lefts):
         return G_OM * 2 * L_OM / v_g / (Dt_lefts + 2 * L_OM / v_g)
 
+    alpha_ESWG =0.00152367
+    G_cav_peak = 1/(1-numpy.exp(-4 * alpha_ESWG * (arr_Dt_MESS *1e-9 * v_g /2+ 96.25e-3)))#func_G_cav_peak(arr_Dt_MESS * 1e-9)
 
-    G_cav_peak = func_G_cav_peak(arr_Dt_MESS * 1e-9)
-
-    df = pandas.read_csv(
-        r"F:\changeworld\HPMCalc\theory\rfCompressor\test_SES_switch01.1.cst.results\0218\signals\o23.csv")
+    # df = pandas.read_csv(
+    #     r"F:\changeworld\HPMCalc\theory\rfCompressor\test_SES_switch01.1.cst.results\0218\signals\o23.csv")
 
     t_ = numpy.arange(0.0, 40.0, compressor.dt)
     test_01 = scipy.signal.convolve(compressor.om_discharging.S21.impulse_response,
@@ -337,41 +343,41 @@ if __name__ == '__main__':
         # arr_intersected_pts.append(intersected_pts)
 
     out_pulse_duration = numpy.array(out_pulse_duration)
+    if 0:
+        (eta_inf, tau, Dt_right), cov = curve_fit(_func_eta_OM_peak, arr_Dt_MESS, eta_OM_max, p0=[0.88, 3, 0.5])
+        fig, axs = plt.subplots(4, 1, figsize=(4, 6), constrained_layout=True, sharex=True)
+        axs[0].plot(arr_Dt_MESS, out_pulse_duration, '.', label="output pulse duration")
+        axs[0].set_ylabel("duration (ns)")
+        _func_out_pulse_duration = lambda Dt_left, a, Dt_OM: a * Dt_left + Dt_OM
+        __filter = arr_Dt_MESS > 1.0
+        (a, Dt_OM2,), cov = curve_fit(_func_out_pulse_duration, arr_Dt_MESS[__filter], out_pulse_duration[__filter])
+        __Dt_MESSs = numpy.linspace(-0., max(arr_Dt_MESS), 1000)
+        axs[0].plot(__Dt_MESSs, _func_out_pulse_duration(__Dt_MESSs, a, Dt_OM2), '--',
+                    label=r"$%.2f (\Delta t + %.2f~\rm ns)$" % (a, Dt_OM2 / a))
+        axs[1].plot(arr_Dt_MESS, eta_OM_max, '.', label="$\eta_{OM, peak}$")
+        axs[1].plot(__Dt_MESSs, _func_eta_OM_peak(__Dt_MESSs, eta_inf, tau, Dt_right), '--',
+                    label=r"$%.3f [1-exp(-\frac{t+ %.2f\ \rm{ns}}{%.2f\ \rm{ns}})]^2$" % (eta_inf, Dt_right, tau,))
+        # axs[0].plot(df_test_01[0],df_test_01[key_interpolated_periodic_avg_square]*2 ,label = 'convolve')
 
-    (eta_inf, tau, Dt_right), cov = curve_fit(_func_eta_OM_peak, arr_Dt_MESS, eta_OM_max, p0=[0.88, 3, 0.5])
-    fig, axs = plt.subplots(4, 1, figsize=(4, 6), constrained_layout=True, sharex=True)
-    axs[0].plot(arr_Dt_MESS, out_pulse_duration, '.', label="output pulse duration")
-    axs[0].set_ylabel("duration (ns)")
-    _func_out_pulse_duration = lambda Dt_left, a, Dt_OM: a * Dt_left + Dt_OM
-    __filter = arr_Dt_MESS > 1.0
-    (a, Dt_OM2,), cov = curve_fit(_func_out_pulse_duration, arr_Dt_MESS[__filter], out_pulse_duration[__filter])
-    __Dt_MESSs = numpy.linspace(-0., max(arr_Dt_MESS), 1000)
-    axs[0].plot(__Dt_MESSs, _func_out_pulse_duration(__Dt_MESSs, a, Dt_OM2), '--',
-                label=r"$%.2f (\Delta t + %.2f~\rm ns)$" % (a, Dt_OM2 / a))
-    axs[1].plot(arr_Dt_MESS, eta_OM_max, '.', label="$\eta_{OM, peak}$")
-    axs[1].plot(__Dt_MESSs, _func_eta_OM_peak(__Dt_MESSs, eta_inf, tau, Dt_right), '--',
-                label=r"$%.3f [1-exp(-\frac{t+ %.2f\ \rm{ns}}{%.2f\ \rm{ns}})]^2$" % (eta_inf, Dt_right, tau,))
-    # axs[0].plot(df_test_01[0],df_test_01[key_interpolated_periodic_avg_square]*2 ,label = 'convolve')
+        (P23_inf, tau2, Dt_right2) = [0.7254, tau, -0.9]
+        # (P23, tau2, Dt_right2),cov = curve_fit(   _func_eta_OM_peak, df_test_01[0],df_test_01[key_interpolated_periodic_avg_square]*2,p0= (P23, tau2, Dt_right2) )
+        logger.info((P23_inf, tau2, Dt_right2))
+        # axs[0].plot(df_test_01[0], _func_eta_OM_peak(df_test_01[0].values, P23_inf, tau2, Dt_right2), label ='convolve, fitted')
+        _func_eta_OM_peak2 = lambda t, Dt: numpy.interp((t + Dt), df_test_01[0],
+                                                        2 * df_test_01[key_interpolated_periodic_avg_square])
+        (Dt_OM,), cov = curve_fit(_func_eta_OM_peak2, arr_Dt_MESS, eta_OM_max, p0=[1])
+        # Dt_OM = 1e-9
+        # axs[0].plot(1e9*Dt_lefts,_func_eta_OM_peak2(Dt_lefts,Dt_OM),label = "Dt_OM = %.2f ns"%(1e9*Dt_OM))
+        # axs[0].plot(df['time/ns'], df['signal']**2)
 
-    (P23_inf, tau2, Dt_right2) = [0.7254, tau, -0.9]
-    # (P23, tau2, Dt_right2),cov = curve_fit(   _func_eta_OM_peak, df_test_01[0],df_test_01[key_interpolated_periodic_avg_square]*2,p0= (P23, tau2, Dt_right2) )
-    logger.info((P23_inf, tau2, Dt_right2))
-    # axs[0].plot(df_test_01[0], _func_eta_OM_peak(df_test_01[0].values, P23_inf, tau2, Dt_right2), label ='convolve, fitted')
-    _func_eta_OM_peak2 = lambda t, Dt: numpy.interp((t + Dt), df_test_01[0],
-                                                    2 * df_test_01[key_interpolated_periodic_avg_square])
-    (Dt_OM,), cov = curve_fit(_func_eta_OM_peak2, arr_Dt_MESS, eta_OM_max, p0=[1])
-    # Dt_OM = 1e-9
-    # axs[0].plot(1e9*Dt_lefts,_func_eta_OM_peak2(Dt_lefts,Dt_OM),label = "Dt_OM = %.2f ns"%(1e9*Dt_OM))
-    # axs[0].plot(df['time/ns'], df['signal']**2)
+        axs[2].plot(__Dt_MESSs, func_G_cav_peak(__Dt_MESSs * 1e-9), label='$G_{cav,peak}$')
 
-    axs[2].plot(__Dt_MESSs, func_G_cav_peak(__Dt_MESSs * 1e-9), label='$G_{cav,peak}$')
+        axs[3].plot(arr_Dt_MESS, eta_OM_max * G_cav_peak, '.-', label="$G_{OM,peak}$")
+        # axs[3].plot(1e9*__Dt_lefts, _func_eta_OM_peak(__Dt_lefts,eta_inf, tau, Dt_right)*func_G_cav_peak(__Dt_lefts),'.-',label  = "$G_{OM,peak}$")
 
-    axs[3].plot(arr_Dt_MESS, eta_OM_max * G_cav_peak, '.-', label="$G_{OM,peak}$")
-    # axs[3].plot(1e9*__Dt_lefts, _func_eta_OM_peak(__Dt_lefts,eta_inf, tau, Dt_right)*func_G_cav_peak(__Dt_lefts),'.-',label  = "$G_{OM,peak}$")
-
-    for ax in axs: ax.legend()
-    plt.xlabel("$\Delta t$ (ns)")
-    plt.savefig("G_vs_Delta_t.eps")
+        for ax in axs: ax.legend()
+        plt.xlabel("$\Delta t$ (ns)")
+        plt.savefig("G_vs_Delta_t.eps")
 
     ts = numpy.arange(0, 100, compressor.dt)
     sin = numpy.sin(2 * numpy.pi * f_target / 1e9 * ts)
