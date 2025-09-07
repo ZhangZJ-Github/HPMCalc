@@ -8,3 +8,5 @@
 
 示例：给定某一直线上的磁场（左图），外推得到该直线附近区域的磁场。
 ![13f99046d3d8d1f34294d89f180df41e.png](./.md_attachments/13f99046d3d8d1f34294d89f180df41e.png)
+
+![3c811a2bc8771d852543e663e98c0f31.png](./.md_attachments/3c811a2bc8771d852543e663e98c0f31.png)

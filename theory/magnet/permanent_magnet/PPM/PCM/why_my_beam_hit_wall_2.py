@@ -17,7 +17,7 @@ import numpy
 from scipy.interpolate import interp1d
 from scipy.integrate import solve_ivp
 import scipy.constants as C
-
+# 使用R-Z平面的B field map，用于粒子追踪
 
 proj = cst.results.ProjectFile(r"E:\SharingDirOnIntranet\TTO_01\CST\Eguns\EGunForCoaxialSource\GyroLike\Magnet_PCM.cst",allow_interactive=True)
 B_data = pandas.read_csv(r"E:\SharingDirOnIntranet\TTO_01\CST\Eguns\EGunForCoaxialSource\GyroLike\Bdata.txt",
@@ -71,7 +71,7 @@ def _dr_dphi_dz_ddr_ddphi_ddz(t, r,theta,z,dr,dtheta,dz,q,m0,gamma,
     Bsphi =Bsphi_interp(t,r,theta,z)
     ddr = q/(gamma*m0) * (Esr - dz * Bsphi + (#dr * theta +
                                               dtheta * r ) * Bz)
-    ddphi =         q/(gamma*m0) * (dz*Br - dr * Bz)
+    # ddphi =         q/(gamma*m0) * (dz*Br - dr * Bz)
 
     return  numpy.array([
         dr,
@@ -114,7 +114,8 @@ Br_interp_t_r_phi_z,Bz_interp_t_r_phi_z,dummy_interp,dummy_interp
 plt.plot(sol.y[2,:] / mm, sol.y[0,:] / mm,)
 plt.axhspan(*numpy.array((r_beam_center - dr_channel /2  ,r_beam_center + dr_channel /2 )) / mm,alpha = 0.1)
 plt.ylim(0,None)
-
+plt.xlabel("z (mm)")
+plt.ylabel("r (mm)")
 plt.gca().set_aspect('equal')
 
 

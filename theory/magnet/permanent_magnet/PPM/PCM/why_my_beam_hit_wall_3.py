@@ -5,6 +5,7 @@
 # @File    : beam_dynamics.py
 # @Software: PyCharm
 import matplotlib
+import pandas
 
 import common
 
@@ -16,20 +17,56 @@ import numpy
 from scipy.interpolate import interp1d
 from scipy.integrate import solve_ivp
 import scipy.constants as C
+from scipy.interpolate import griddata,LinearNDInterpolator
 
+from theory.magnet.expand_near_a_line_for_axisymmetric_B_field_without_source import NoDivNoCurlNoAngularComponentAxisSymmetricFieldExtrapolator
+
+# 将一条线上的B field map外推，用于粒子追踪
 
 proj = cst.results.ProjectFile(r"E:\SharingDirOnIntranet\TTO_01\CST\Eguns\EGunForCoaxialSource\GyroLike\Magnet_PCM.cst",allow_interactive=True)
+B_data = pandas.read_csv(r"E:\SharingDirOnIntranet\TTO_01\CST\Eguns\EGunForCoaxialSource\GyroLike\Bdata.txt",
+                         header=None, skiprows=2,sep = r'\s+')
+len_y_data , len_z_data = len(B_data[1].unique()),len(B_data[2].unique())
+B_data_interp =LinearNDInterpolator(B_data[[1,2]].values, B_data[[4,5]].values,fill_value=0., )
+
+Ek = 50e3
+r_beam_center = 40e-3
+
+mm = 1e-3
+dr_channel = 6e-3
+
+
+ts= numpy.linspace(0,0.5e-9)
+# ts= numpy.linspace(0,1.5e-9)
+
+plt.figure()
+cf = plt.tricontourf(
+    B_data_interp.points[:,1],
+    B_data_interp.points[:,0],B_data_interp(B_data_interp.points)[:,1],cmap = plt.get_cmap('jet'),levels=  20)
+plt.colorbar(cf)
+plt.xlabel("z (mm)")
+plt.ylabel("r (mm)")
+plt.gca().set_aspect('equal')
+
+
 Bz_data = numpy.array(proj.get_3d().get_result_item('Tables\\1D Results\\B-Field (Ms)_Z (Z)').get_data())
 Br_data = numpy.array(proj.get_3d().get_result_item('Tables\\1D Results\\B-Field (Ms)_Y (Z)').get_data())
+# Br_data[:,1] = 0.
+B_extrapolator = NoDivNoCurlNoAngularComponentAxisSymmetricFieldExtrapolator(Bz_data,Br_data,r_beam_center,mm)
+
+
+
 
 def build_interpolator(Bz_data):
     return interp1d(Bz_data[:,0].real * 1e-3,Bz_data[:,1],fill_value=0.0,bounds_error=False)
-Bz_interp = build_interpolator(Bz_data)
-Br_interp = build_interpolator(Br_data)
-plt.figure()
-plt.plot(Bz_data[:,0],Bz_data[:,1],)
-plt.plot(Bz_data[:,0],Bz_interp(Bz_data[:,0]*1e-3),':')
-plt.plot(Bz_data[:,0],Br_data[:,1],)
+# Bz_interp = build_interpolator(Bz_data)
+# Br_interp = build_interpolator(Br_data)
+
+
+# plt.figure()
+# plt.plot(Bz_data[:,0],Bz_data[:,1],)
+# plt.plot(Bz_data[:,0],Bz_interp(Bz_data[:,0]*1e-3),':')
+# plt.plot(Bz_data[:,0],Br_data[:,1],)
 
 def _dr_dphi_dz_ddr_ddphi_ddz(t, r,theta,z,dr,dtheta,dz,q,m0,gamma,
                               Br_interp, Bz_interp,
@@ -43,7 +80,7 @@ def _dr_dphi_dz_ddr_ddphi_ddz(t, r,theta,z,dr,dtheta,dz,q,m0,gamma,
     Bsphi =Bsphi_interp(t,r,theta,z)
     ddr = q/(gamma*m0) * (Esr - dz * Bsphi + (#dr * theta +
                                               dtheta * r ) * Bz)
-    ddphi =         q/(gamma*m0) * (dz*Br - dr * Bz)
+    # ddphi =         q/(gamma*m0) * (dz*Br - dr * Bz)
 
     return  numpy.array([
         dr,
@@ -60,24 +97,21 @@ def _dr_dphi_dz_ddr_ddphi_ddz_wrap(t, arr_ ,q,m0,gamma,
     return _dr_dphi_dz_ddr_ddphi_ddz(t,*arr_,q,m0,gamma,
                               Br_interp, Bz_interp,
                               Esr_interp, Bsphi_interp )
-Ek = 50e3
-r_beam_center = 40e-3
 
-ts= numpy.linspace(0,0.5e-9)
 
 def dummy_interp(t,r,phi,z):
     return numpy.zeros(numpy.broadcast(t,r,phi,z).shape)
 
-Br_interp_t_r_phi_z = lambda t,r,phi,z: Br_interp(z)
-Bz_interp_t_r_phi_z = lambda t,r,phi,z: Bz_interp(z)
-mm = 1e-3
-dr_channel = 6e-3
+Br_interp_t_r_phi_z = lambda t,r,phi,z: B_extrapolator.Br_expand(r, z)
+Bz_interp_t_r_phi_z = lambda t,r,phi,z: B_extrapolator.Bz_expand(r , z )
+
 
 
 
 plt.figure()
 
-r_phi_z_dr_dphi_dz_initial = [r_beam_center,0, 0,0,0,common.Ek_to_beta(Ek)*C.c]
+r_phi_z_dr_dphi_dz_initial = [r_beam_center + 1e-3 *0 ,
+                              0, 0,0,0,common.Ek_to_beta(Ek)*C.c]
 
 sol = solve_ivp(_dr_dphi_dz_ddr_ddphi_ddz_wrap,y0 = r_phi_z_dr_dphi_dz_initial,
           t_eval= ts,t_span= [ts[0],ts[-1]],args=( - C.e,C.m_e,common.Ek_to_gamma(Ek),

@@ -5,7 +5,7 @@
 # @File    : expand_near_a_line_for_axisymmetric_B_field_without_source.py
 # @Software: PyCharm
 # 轴对称（且不含Bphi分量)的磁场在无散无旋区的展开
-
+import deprecated
 import matplotlib
 
 import common
@@ -87,6 +87,7 @@ class NoDivNoCurlNoAngularComponentAxisSymmetricFieldExtrapolator:
         Dr = r -self. r_center
         return self.Bz_interpolator(z) + self. pBr_pz_interpolator(z) * Dr + 1 / 2. * (- self.p2Bz_pz2_interpolator(z) - 2 / r * self. pBr_pz_interpolator(z)) * Dr ** 2
 
+    @deprecated.deprecated
     def Br_expand_old(self,r, z):
         Dr = r -self. r_center
         return (
