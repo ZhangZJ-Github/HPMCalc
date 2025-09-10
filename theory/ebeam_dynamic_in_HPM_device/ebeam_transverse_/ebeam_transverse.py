@@ -114,14 +114,15 @@ def dY_considering_thickness(
 if __name__ == '__main__':
     L_drift = 250e-3
     Ek_beam = 50e3
-    rb = 45e-3
-    drbeam = 4e-3
+    rb = 40e-3
+    drbeam = 1.8e-3
     rbin, rbout = rb - drbeam / 2, rb + drbeam / 2  # 电子束内外半径
-    I0 = 120
+    I0 = 300
     q = C.e
     m = C.m_e
-    rin = 36e-3
-    rout = 51e-3  # 48e-3
+    dr_channel = 6e-3
+    rin = rb - dr_channel /2
+    rout =rb + dr_channel /2
     Bz = 0.1
 
     vz = common.Ek_to_beta(Ek_beam) * C.c
@@ -133,9 +134,12 @@ if __name__ == '__main__':
     ab_wei = AnnularBeamInsideCoaxialDriftWeiYuanZhang(rout, rbout, rbin, rin)
     ab_ling = AnnularBeamInsideCoaxialDrift
     plt.figure(3)
-    plt.plot(__rs_for_plot, ab_wei.E_sc_r(__rs_for_plot, I0, vz), label="considering thickness")
-    plt.plot(__rs_for_plot, ab_ling.E_SC(__rs_for_plot, I0, rout, rb, rin, vz), label="0-thickness approximation")
+    mm = 1e-3
+    plt.plot(__rs_for_plot / mm, ab_wei.E_sc_r(__rs_for_plot, I0, vz) / 1e6, label="considering thickness")
+    plt.plot(__rs_for_plot / mm, ab_ling.E_SC(__rs_for_plot, I0, rout, rb, rin, vz)/ 1e6, label="0-thickness approximation")
     plt.legend()
+    plt.xlabel("r (mm)")
+    plt.ylabel("$E_{sc,r}$ (MV/m)")
 
     from theory.ebeam_dynamic_in_HPM_device.confine_e_beam import WeiYuanzhang2018
     from _logging import logger

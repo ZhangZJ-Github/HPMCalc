@@ -10,3 +10,7 @@
 ![13f99046d3d8d1f34294d89f180df41e.png](./.md_attachments/13f99046d3d8d1f34294d89f180df41e.png)
 
 ![3c811a2bc8771d852543e663e98c0f31.png](./.md_attachments/3c811a2bc8771d852543e663e98c0f31.png)
+
+示例：考虑空间电荷力（简化版）时，计算环形电子束在会切永磁磁场中的运动轨迹，结果如下。
+
+![a3c0efdbfbca70943cb42a3400e8c5d3.png](./.md_attachments/a3c0efdbfbca70943cb42a3400e8c5d3.png)

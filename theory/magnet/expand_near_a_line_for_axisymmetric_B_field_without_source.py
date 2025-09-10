@@ -119,7 +119,7 @@ if __name__ == '__main__':
     fig, axs = plt.subplots(2,1 ,sharex=True,sharey=True)
     plt.sca(axs[0])
     cf = plt.contourf(Z / mm,R / mm,  field_extrapolator.   Bz_expand(R,Z),cmap = plt.get_cmap('jet'),levels = 20)
-    plt.colorbar(cf,label = "$B_z$")
+    plt.colorbar(cf,label = "$B_z$ (T)")
     plt.xlabel("z (mm)")
     plt.ylabel("r (mm)")
     plt.gca().set_aspect('equal')
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
     plt.sca(axs[1])
     cf = plt.contourf(Z / mm,R / mm,    field_extrapolator.   Br_expand(R,Z),cmap = plt.get_cmap('jet'),levels = 20)
-    plt.colorbar(cf,label = "$B_r$")
+    plt.colorbar(cf,label = "$B_r$ (T)")
     plt.xlabel("z (mm)")
     plt.ylabel("r (mm)")
     plt.gca().set_aspect('equal')
