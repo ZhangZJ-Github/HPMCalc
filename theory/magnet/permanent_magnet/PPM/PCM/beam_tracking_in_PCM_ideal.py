@@ -4,8 +4,7 @@
 # @Email   : zijingzhang@mail.ustc.edu.cn
 # @File    : beam_dynamics.py
 # @Software: PyCharm
-# 将一条线上的B field map外推，用于粒子追踪，并考虑空间电荷效应
-
+# 利用理想磁场做粒子追踪，并考虑空间电荷效应
 import matplotlib
 
 import common
@@ -20,6 +19,7 @@ import scipy.constants as C
 
 from theory.magnet.expand_near_a_line_for_axisymmetric_B_field_without_source import \
     NoDivNoCurlNoAngularComponentAxisSymmetricFieldExtrapolator
+
 
 
 proj = cst.results.ProjectFile(r"E:\SharingDirOnIntranet\TTO_01\CST\Eguns\EGunForCoaxialSource\GyroLike\Magnet_PCM.cst",
@@ -48,16 +48,28 @@ dr_beam = 1.8e-3
 Ibeam = -300
 ve_ref = common.Ek_to_beta(Ek) * C.c
 mm = 1e-3
-
-ts = numpy.linspace(0, 1.5e-9, 500)
+L_simulation = 200e-3
+ts = numpy.linspace(0,
+                    L_simulation / ve_ref,
+                    # 1.5e-9,
+                    500)
 # ts= numpy.linspace(0,1.5e-9)
 
+if 0:
+    Bz_data = numpy.array(proj.get_3d().get_result_item('Tables\\1D Results\\B-Field (Ms)_Z (Z)').get_data())
+    Br_data = numpy.array(proj.get_3d().get_result_item('Tables\\1D Results\\B-Field (Ms)_Y (Z)').get_data())
+    if 1:
+        Bz_data[:, 1] =1
+        Br_data[:, 1] = 0.
+_z_in_m = numpy.linspace(0, 0+ L_simulation, 4000 )
+lambda_pm = 10e-3# 磁场的周期长度，unit in m
+Bpeak =  0.3# 参考线上的最大磁场
+_Bz = Bpeak * numpy.cos(2 * numpy.pi / lambda_pm * _z_in_m)
 
-Bz_data = numpy.array(proj.get_3d().get_result_item('Tables\\1D Results\\B-Field (Ms)_Z (Z)').get_data())
-Br_data = numpy.array(proj.get_3d().get_result_item('Tables\\1D Results\\B-Field (Ms)_Y (Z)').get_data())
-if 1:
-    Bz_data[:, 1] *=1
-    Br_data[:, 1] = 0.
+Bz_data = numpy.array([_z_in_m / mm, _Bz]).T
+Br_data = Bz_data.copy()
+Br_data[:, 1 ]=  0.
+
 
 plt.figure()
 plt.plot(Br_data[:, 0], Br_data[:, 1], label="$B_r$")
@@ -150,7 +162,7 @@ Esc_r_interp_t_r_phi_z = lambda t, r, phi, z: abwei.E_sc_r(r, Ibeam, ve_ref)
 
 N_macropar = 21
 r_phi_z_dr_dphi_dz_initial = [r_beam_center,
-                              0, 0, 0, 0, common.Ek_to_beta(Ek) * C.c] * numpy.ones((N_macropar, 1))
+                              0, 0-1e-3*0, 0, 0, common.Ek_to_beta(Ek) * C.c] * numpy.ones((N_macropar, 1))
 
 r_phi_z_dr_dphi_dz_initial[:, 0] += numpy.linspace(-dr_beam / 2, dr_beam / 2, N_macropar)
 r_phi_z_dr_dphi_dz_initial = r_phi_z_dr_dphi_dz_initial.reshape((-1,))
@@ -178,9 +190,9 @@ plt.axhspan(*numpy.array((r_beam_center - dr_channel / 2, r_beam_center + dr_cha
 plt.ylim(*(numpy.array([r_beam_center - 2 * dr_channel, r_beam_center + 2 * dr_channel, ]) / mm))
 plt.xlabel("z (mm)")
 plt.ylabel("r (mm)")
-plt.gca().set_aspect('equal')
+# plt.gca().set_aspect('equal')
 
-Z, R = numpy.meshgrid(numpy.linspace(-50e-3, 200e-3, 100), numpy.linspace(35e-3, 45e-3, 101))
+Z, R = numpy.meshgrid(numpy.linspace(-10e-3, 200e-3, 100), numpy.linspace(35e-3, 45e-3, 101))
 
 plt.sca(axs[1,])
 cf = plt.contourf(Z / mm, R / mm, B_extrapolator.Bz_expand(R, Z), cmap=plt.get_cmap('jet'), levels=20)
@@ -191,7 +203,7 @@ plt.colorbar(cf, label="$B_z$ (T)", ax=axs[1]
              )
 plt.xlabel("z (mm)")
 plt.ylabel("r (mm)")
-plt.gca().set_aspect('equal')
+# plt.gca().set_aspect('equal')
 
 plt.sca(axs[2,])
 cf = plt.contourf(Z / mm, R / mm, B_extrapolator.Br_expand(R, Z), cmap=plt.get_cmap('jet'), levels=20)
@@ -201,5 +213,8 @@ plt.colorbar(cf, label="$B_r$ (T)", ax=axs[2]
              )
 plt.xlabel("z (mm)")
 plt.ylabel("r (mm)")
-plt.gca().set_aspect('equal')
-plt.xlim(0, 120)
+# plt.gca().set_aspect('equal')
+# plt.xlim(0, 120)
+plt.ylim(35,45)
+
+plt.suptitle("$B_p$ = %.2f T, $L$ = %.2f mm"%(Bpeak, lambda_pm / mm ))
