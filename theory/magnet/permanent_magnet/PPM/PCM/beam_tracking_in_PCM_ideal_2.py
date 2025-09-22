@@ -6,8 +6,10 @@
 # @Software: PyCharm
 # 利用理想磁场做粒子追踪，并考虑空间电荷效应
 import matplotlib
+import pandas
 
 import common
+import re
 
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
@@ -280,3 +282,67 @@ plt.ylabel("r (mm)")
 plt.ylim(35,45)
 
 plt.suptitle("$B_p$ = %.2f T, $L$ = %.2f mm"%(Bpeak, lambda_pm / mm ))
+
+# Export to CST readable
+def export_to_CST_readable():
+    rmin_fine_mesh  =  30
+    # x=  mm * numpy.array([   1, (rmin_fine_mesh-1) / 2**0.5,*numpy.arange((rmin_fine_mesh) / 2**0.5,46,0.5),    ])
+    # x = numpy.hstack([-x[::-1],x])
+    x = numpy.arange(-45e-3, 45e-3,1e-3)
+    ZZZ,YYY,XXX  = numpy.meshgrid(
+        mm * numpy.array([   *numpy.linspace(0,200,200),    ]),
+        x,
+        x,
+
+        indexing='ij'
+    )
+    R= (XXX  **2 + YYY**2)**0.5
+    Br = B_extrapolator.Br_expand(R,ZZZ)
+    Bz = B_extrapolator.Bz_expand(R,ZZZ)
+    _filter = (R< 35e-3)|(R>45e-3)
+    Br[_filter] = 0.0
+    Bz[_filter] = 0.0
+
+    Bx = Br * XXX/ (XXX**2+YYY**2 ) **0.5
+    By = Br * YYY/ (XXX**2+YYY**2 ) **0.5
+
+    plt.figure()
+    i = 30
+    cf =plt.contourf(XXX[i],YYY[i],R[i],cmap = 'jet', levels = 20)
+    plt.scatter(XXX[i],YYY[i],s = 0.1)
+    plt.gca().set_aspect("equal")
+
+
+
+
+    plt.figure()
+    i = 30
+    cf =plt.contourf(XXX[i],YYY[i],((Br**2+Bz**2)**.5)[i],cmap = 'jet', levels = 20)
+    plt.scatter(XXX[i],YYY[i])
+    plt.colorbar(cf)
+    plt.gca().set_aspect("equal")
+
+
+    df = pandas.DataFrame({
+        "x":XXX.ravel()/mm,
+        "y":YYY.ravel()/mm,
+        "z":ZZZ.ravel()/mm,
+        "Bx":Bx.ravel(),
+        "By":By.ravel(),
+        "Bz":Bz.ravel(),
+    })
+    df.columns =re.split(r'\s{2,}',"x [mm]           y [mm]           z [mm]      x [V.s/m^2]      y [V.s/m^2]      z [V.s/m^2]" ,)
+    csv_path = "B_exported.txt"
+    df.to_csv(csv_path,index = False,
+#               header="""           x [mm]           y [mm]           z [mm]      x [V.s/m^2]      y [V.s/m^2]      z [V.s/m^2]
+# ------------------------------------------------------------------------------------------------------""",
+              sep = '\t',
+              # float_format = "%.12e"
+              )
+
+    with open(csv_path,'r') as f:
+        s = f.read()
+    new_s = s.replace('\t','     ')
+
+    with open(csv_path,'w') as f:
+        f.write(new_s)
