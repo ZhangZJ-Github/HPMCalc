@@ -14,6 +14,7 @@ import os.path
 import os.path
 import re
 import shutil
+import subprocess
 import time
 import typing
 from collections import OrderedDict
@@ -105,10 +106,35 @@ class GeneralParticleTracerSim(SimulationExecutor):
         :return:
         """
         return ("cd /d %s" % dir)
+    # def run_bat_2(self, batfilepath, workingdir: typing.Union[str, None] = None):
+    #     """
+    #             :param batfilepath:
+    #             :param workingdir: 工作目录
+    #             :return:
+    #             """
+    #     batfilepath = os.path.abspath(batfilepath)
+    #     if not workingdir:
+    #         workingdir = os.path.split(batfilepath)[0]
+    #     else:
+    #         workingdir = os.path.abspath(workingdir)
+    #     if os.path.exists(workingdir):
+    #         # cmd = self.command_to_set_env() + ("&& cd %s && %s && " % (workingdir,workingdir.split(':')[0]+':')) + self.bat_to_one_line(batfilepath)
+    #         # cmd = self.make_temporary_bat(workingdir, batfilepath)
+    #         # self.run_one_line_cmd_command(cmd)
+    #
+    #         logger.info("I am here")
+    #         # process = subprocess.Popen(batfilepath,env = os.environ.copy(),
+    #         # # stderr = subprocess.PIPE,
+    #         #                            text = True)
+    #         # output, error = process.communicate()
+    #         # process.communicate()
+    #         # process.wait()
+    #         os.system(#"start " +
+    #                   batfilepath)
 
     def run_bat(self, batfilepath, workingdir: typing.Union[str, None] = None):
         """
-        :param batfilepath: 要求：文件内容中不包含注释、空行
+        :param batfilepath: 要求：文件内容中不包含空行
         :param workingdir: 工作目录
         :return:
         """
