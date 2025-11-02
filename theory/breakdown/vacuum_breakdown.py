@@ -25,7 +25,7 @@ def Kilpatrick(E_unit_in_MV_m):
 if __name__ == '__main__':
     plt.ion()
     plt.figure()
-    Es = numpy.linspace(10,300, 200)
+    Es = numpy.linspace(1,300, 2000)
     plt.plot(Es, Kilpatrick(Es)/1e3)
     plt.xlabel("Surface E-field (Mv/m)")
     plt.ylabel("Frequency (GHz)")
