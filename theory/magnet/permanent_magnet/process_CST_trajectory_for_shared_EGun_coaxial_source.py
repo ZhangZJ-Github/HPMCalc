@@ -105,12 +105,13 @@ temp_df_par2dmonitors_gb_Z = df_par2dmonitors.groupby('posZ_unit_in_eps')
 posZ_unit_in_eps = list(temp_df_par2dmonitors_gb_Z.groups.keys())
 i = 5
 temp_df_par2dmonitors = temp_df_par2dmonitors_gb_Z.get_group(posZ_unit_in_eps[i])
-plt.figure()
-plt.scatter(temp_df_par2dmonitors['posX'] / mm,temp_df_par2dmonitors['posY'] / mm,s = 0.5)
-plt.title("z = %.2f mm"%(posZ_unit_in_eps[i] * len_eps/ mm))
-plt.figure()
-plt.scatter(temp_df_par2dmonitors['posX'] / mm,temp_df_par2dmonitors['momX'] / temp_df_par2dmonitors['momZ'],s = 0.5)
-plt.title("z = %.2f mm"%(posZ_unit_in_eps[i] * len_eps/ mm))
+if 0:
+    plt.figure()
+    plt.scatter(temp_df_par2dmonitors['posX'] / mm,temp_df_par2dmonitors['posY'] / mm,s = 0.5)
+    plt.title("z = %.2f mm"%(posZ_unit_in_eps[i] * len_eps/ mm))
+    plt.figure()
+    plt.scatter(temp_df_par2dmonitors['posX'] / mm,temp_df_par2dmonitors['momX'] / temp_df_par2dmonitors['momZ'],s = 0.5)
+    plt.title("z = %.2f mm"%(posZ_unit_in_eps[i] * len_eps/ mm))
 
 
 

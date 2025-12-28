@@ -74,8 +74,13 @@ def df_B_map_from_COMSOL_to_MAGIC_readable(df_B_map_from_COMSOL:pandas.DataFrame
 
     text = header + ''.join(csv_lines)
     # text = text.replace("\t"," ")
-    with open("OUTSF7.TXT", 'w') as f:
+    path = "OUTSF7.TXT"
+    with open(path, 'w') as f:
         f.write(text)
+    from  _logging import logger
+    logger.info("%s written. " % path)
+
+
 if __name__ == '__main__':
     df_B_map_from_COMSOL = pandas.read_csv(r"E:\SharingDirOnIntranet\TTO_01\COMSOL\B_export_outter.txt", skiprows=9,
                                            sep=r'\s+', header=None)

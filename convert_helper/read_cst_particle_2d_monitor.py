@@ -33,6 +33,7 @@ df = pandas.read_csv(
     header=None,
     skiprows=6
 )
+# df[2] = df[2].astype(float)
 df.columns = re.split(
     r'\s+',
     "posX             posY             posZ             momX             momY             momZ             mass     macro-charge             time       particleID         sourceID    SEEGeneration"
@@ -114,6 +115,11 @@ def particle_2d_data_to_MAGIC_EGUN_input(temp_df_par2dmonitors, N_samples=250,
     # N_samples = 100
     temp_df_par2dmonitors_filtered = temp_df_par2dmonitors_filtered_.sample(N_samples).reset_index()
     logger.info("total beam current = %.2f A" % (total_forward_beam_current))
+    temp_df_par2dmonitors_filtered['momZ']*= (53/48) **0.5
+    if 0:
+        temp_df_par2dmonitors_filtered['momX']*= 0
+        temp_df_par2dmonitors_filtered['momY']*= 0
+
 
     df_to_MAGIC_EGUN_input["n"] = numpy.array(range(temp_df_par2dmonitors_filtered.shape[0])) + 1
     df_to_MAGIC_EGUN_input['t'] = 0.
@@ -179,10 +185,11 @@ def particle_2d_data_to_MAGIC_EGUN_input(temp_df_par2dmonitors, N_samples=250,
     with open(EGUN_in_filename, 'w') as f:
         f.write(text, )
     logger.info("写入了%s" % EGUN_in_filename)
-    return text
+    return text,EGUN_in_filename
 
 
-_ = particle_2d_data_to_MAGIC_EGUN_input(temp_df_par2dmonitors, 350)
+text,EGUN_in_filename = particle_2d_data_to_MAGIC_EGUN_input(temp_df_par2dmonitors, 350)
+os.system("code %s"%EGUN_in_filename)
 
 plt.figure()
 plt.scatter(temp_df_par2dmonitors['posX'] / mm, temp_df_par2dmonitors['posY'] / mm, s=0.5)
@@ -194,9 +201,7 @@ plt.xlabel("x (mm)")
 plt.ylabel("x' (mrad)")
 plt.title("z = %.2f mm" % (posZ_unit_in_eps[i] * len_eps / mm))
 
-import par_parser
 
-par = par_parser.PAR
 df_par2dmonitor_export_to_GPT = pandas.DataFrame(
     temp_df_par2dmonitors[['posX', 'posY', 'posZ', 'momX', 'momY', 'momZ', "mass", "time"]].values,
     columns='x y z GBx GBy GBz m t'.split(' '))

@@ -22,10 +22,12 @@ from theory.magnet.expand_near_a_line_for_axisymmetric_B_field_without_source im
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 from scipy.interpolate import LinearNDInterpolator
+from _logging import logger
 
-r_beam_center = 65e-3  # 55e-3
+eps =1e-6
+r_beam_center = 65e-3-eps  # 55e-3
 dr_channel = 6e-3
-dr_beam = 0.5e-3 * 1 + 1.8e-3 * 0 + 6e-3 * 0
+dr_beam = 0.5e-3 * 0 + 1.8e-3 * 0 + 3e-3 * 1
 Ibeam = -300
 Ek = 50e3
 ve_ref = common.Ek_to_beta(Ek) * C.c
@@ -49,8 +51,9 @@ def build_B_interp(df: pandas.DataFrame):
 
 
 B_interp = build_B_interp(df)
+
 # 对称性
-if 1:
+if 0:
     z_sym_unit_in_m = 88.5e-3  # df[1].max()
     df_generated_by_symmetry = df.copy()
     df_generated_by_symmetry[1] = 2 * z_sym_unit_in_m / lenunit_in_COMSOL_exported - df[1][::-1].values
@@ -64,7 +67,7 @@ rs, zs = numpy.arange(0, 75e-3, 1e-3), numpy.arange(-60e-3, 270e-3, 2e-3)
 R, Z = numpy.meshgrid(rs, zs)
 
 # 强行消除束流中心位置上的Br分量
-Br_ = B_interp(r_beam_center / mm * numpy.ones(zs.shape), zs / mm, )[:, 0]*0#* 1e-1
+Br_ = B_interp(r_beam_center / mm * numpy.ones(zs.shape), zs / mm, )[:, 0]*1#* 1e-1
 # Br_[(zs > 0) #& (zs <182e-3)
 # ] *= 0.1
 B_extrapolator = NoDivNoCurlNoAngularComponentAxisSymmetricFieldExtrapolator(
@@ -76,7 +79,10 @@ B_extrapolator = NoDivNoCurlNoAngularComponentAxisSymmetricFieldExtrapolator(
 
 interpolated_B = B_interp(R / lenunit_in_COMSOL_exported, Z / lenunit_in_COMSOL_exported)
 plt.figure()
-cf = plt.contourf(Z / mm, R / mm, interpolated_B[:, :, 1], cmap='jet', levels=100)
+__Bmax = numpy.nanmax(numpy.abs(interpolated_B[:, :, 1]))
+__color_levels= numpy.linspace(-__Bmax,__Bmax,100)
+cf = plt.contourf(Z / mm, R / mm, interpolated_B[:, :, 1], cmap='jet', levels=__color_levels
+                  )
 plt.streamplot(Z.T / mm, R.T / mm, interpolated_B[:, :, 1].T, interpolated_B[:, :, 0].T,
                # cmap = 'jet',levels=  100
                )
@@ -88,6 +94,7 @@ plt.plot(zs / mm, B_interp(r_beam_center / mm * numpy.ones(zs.shape), zs / mm, )
 plt.plot(zs / mm, B_interp(r_beam_center / mm * numpy.ones(zs.shape), zs / mm, )[:, 0],label = "$B_r(r = %.1f~\mathrm{mm}, z)$"%(r_beam_center/mm))
 plt.xlabel("z (mm)")
 plt.ylabel("magnetic induction intensity (T)")
+plt.grid()
 # plt.plot(zs / mm, B_interp(0 * numpy.ones(zs.shape), zs / mm, )[:, 1],label = "$B_r(r = 0, z)$")
 plt.legend()
 abwei = AnnularBeamInsideCoaxialDriftWeiYuanZhang(
@@ -153,11 +160,12 @@ def _dr_dphi_dz_ddr_ddphi_ddz_wrap(t, arr_, q, m0, gamma,
         Br_interp, Bz_interp,
         Esr_interp, Bsphi_interp).T
 
-
-# Br_interp_t_r_phi_z = lambda t, r, phi, z: B_interp(r / mm, z/ mm)[...,0]
-# Bz_interp_t_r_phi_z = lambda t, r, phi, z: B_interp(r / mm, z/ mm)[...,1]
-Br_interp_t_r_phi_z = lambda t, r, phi, z: B_extrapolator.Br_expand(r, z)
-Bz_interp_t_r_phi_z = lambda t, r, phi, z: B_extrapolator.Bz_expand(r, z)
+if 1:
+    Br_interp_t_r_phi_z = lambda t, r, phi, z: B_interp(r / mm, z/ mm)[...,0]
+    Bz_interp_t_r_phi_z = lambda t, r, phi, z: B_interp(r / mm, z/ mm)[...,1]
+if 0:
+    Br_interp_t_r_phi_z = lambda t, r, phi, z: B_extrapolator.Br_expand(r, z)
+    Bz_interp_t_r_phi_z = lambda t, r, phi, z: B_extrapolator.Bz_expand(r, z)
 
 
 def dummy_interp(t, r, phi, z):
@@ -191,10 +199,15 @@ plt.xlabel("z (mm)")
 plt.ylabel("r (mm)")
 # plt.gca().set_aspect('equal')
 
-Z, R = numpy.meshgrid(numpy.linspace(-100e-3, 200e-3, 100), numpy.linspace(60e-3, 70e-3, 11))
+Z, R = numpy.meshgrid(numpy.linspace(-100e-3, 200e-3,
+                                     # 50e-3,
+                                     100), numpy.linspace(60e-3, 70e-3, 11))
 
 plt.sca(axs[1,])
-cf = plt.contourf(Z / mm, R / mm, B_extrapolator.Bz_expand(R, Z), cmap=plt.get_cmap('jet'), levels=20)
+__B = B_extrapolator.Bz_expand(R, Z)
+__Bmax = numpy.nanmax(numpy.abs(__B))
+__color_levels= numpy.linspace(-__Bmax,__Bmax,100)
+cf = plt.contourf(Z / mm, R / mm,__B , cmap=plt.get_cmap('jet'), levels=__color_levels)
 # plt.colorbar(cf, label="$B_z$ (T)",cax = axs[1,1])
 plt.colorbar(cf, label="$B_z$ (T)", ax=axs[1]
              , shrink=0.6, ticks=numpy.linspace(cf.zmin, cf.zmax, 3)
@@ -240,7 +253,8 @@ def export_to_CST_readable():
     rmin_fine_mesh = 30
     # x=  mm * numpy.array([   1, (rmin_fine_mesh-1) / 2**0.5,*numpy.arange((rmin_fine_mesh) / 2**0.5,46,0.5),    ])
     # x = numpy.hstack([-x[::-1],x])
-    x = numpy.arange(-70e-3, 70e-3, 1e-3)
+    r_max= 73e-3
+    x = numpy.arange(-r_max, r_max, 1e-3)
     ZZZ, YYY, XXX = numpy.meshgrid(
         mm * numpy.array([*numpy.arange(-60, 250, 2), ]),
         x,
@@ -249,16 +263,17 @@ def export_to_CST_readable():
         indexing='ij'
     )
     R = (XXX ** 2 + YYY ** 2) ** 0.5
-    if 0:  # Use true data
+    if 1:  # Use true data
         B_interpolated_res = B_interp(R / mm, ZZZ / mm)
         Br = B_interpolated_res[..., 0]
         Bz = B_interpolated_res[..., 1]
-    if 1:  # Use fake data
+    if 0:  # Use fake data
         Br = B_extrapolator.Br_expand(R, ZZZ)
         Bz = B_extrapolator.Bz_expand(R, ZZZ)
-    _filter = (R < 50e-3) | (R > 70e-3)
-    Br[_filter] = 0.0
-    Bz[_filter] = 0.0
+    if 0:
+        _filter = (R < 50e-3) | (R > 70e-3)
+        Br[_filter] = 0.0
+        Bz[_filter] = 0.0
 
     B_extrapolator2 = NoDivNoCurlNoAngularComponentAxisSymmetricFieldExtrapolator(
         numpy.array(
@@ -284,6 +299,7 @@ def export_to_CST_readable():
     plt.figure()
     i = 30
     cf = plt.contourf(XXX[i], YYY[i], R[i], cmap='jet', levels=20)
+    plt.colorbar(cf)
     plt.scatter(XXX[i], YYY[i], s=0.1)
     plt.gca().set_aspect("equal")
 
@@ -319,13 +335,14 @@ def export_to_CST_readable():
 
     with open(csv_path, 'w') as f:
         f.write(new_s)
+        logger.info("%s written. "%csv_path)
 
 
 if 0:
     export_to_CST_readable()
 
 
-if 1:
+if 0:
     from theory.magnet.to_MAGIC.COMSOL_B_map_to_MAGIC_readable import df_B_map_from_COMSOL_to_MAGIC_readable
     df_generated_B_data_in_COMSOL_style = pandas.DataFrame(
         numpy.array((    R.ravel(order = 'F')/  mm, Z.ravel(order = 'F') / mm,
