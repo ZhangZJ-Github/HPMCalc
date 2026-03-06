@@ -28,6 +28,16 @@ def Ek_to_beta(Ek_eV, mass=C.m_e):
 
 
 def p_to_v(p, mass_kg=C.m_e):
+    """
+    Ref:
+    1.7 Equations of motion
+    in
+    S. B. van der Geer和M. J. de Loos. 《General Particle Tracer User Manual (Version 3.38)》. 2008年.
+
+    :param p:
+    :param mass_kg:
+    :return:
+    """
     return p * C.c / (p ** 2 + (mass_kg * C.c) ** 2) ** 0.5
 
 

@@ -86,7 +86,7 @@ class GeneralParticleTracerSim(SimulationExecutor):
 
     def set_env(self):
         if self.GPT_bin_dir not in os.environ['PATH']:
-            os.environ['PATH'] += (self.GPT_bin_dir) + r'\;'
+            os.environ['PATH'] +=r'\;'+ (self.GPT_bin_dir) + r'\;'
         os.environ['GPTLICENSE'] = self.GPT_license
 
     def cmd_one_line_command_to_set_env(self):
