@@ -32,9 +32,9 @@ kA = 1e3
 
 plt.figure(figsize=(4, 3), constrained_layout=True)
 plt.plot(rbeam_out / mm, ZhangWei2022Doctor.I_SCL_solid_beam(gamma_0, rout, rbeam_out) / kA, label="solid")
-# plt.plot(rbeam_out / mm,
-#          ZhangWei2022Doctor.I_SCL_annular_beam_inside_hollow_drift(gamma_0, rout, rbeam_out, rbeam_in) / kA,
-#          label="ring, hollow")
+plt.plot(rbeam_out / mm,
+         ZhangWei2022Doctor.I_SCL_annular_beam_inside_hollow_drift(gamma_0, rout, rbeam_out, rbeam_in) / kA,
+         label="ring, hollow")
 plt.plot(rbeam_out / mm,
          ZhangWei2022Doctor.I_SCL_annular_beam_inside_coaxial_drift(gamma_0, rout, rbeam_out, rbeam_in, rin) / kA,
          label="coaxial")

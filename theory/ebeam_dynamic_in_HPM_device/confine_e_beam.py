@@ -93,7 +93,9 @@ class WeiYuanzhang2018:
     def B_Brillouin_annular_ebeam_inside_coaxial_drift(Ib,Ro,ro,ri,Ri,
                                                             v_z,q =C.e ,m = C.m_e,):
         """
+
         Eqn. (4-15)
+        在相对论条件下,电子束本身产生的磁场的作用不能忽略,相对论条件下布里  渊磁场的修正因子为XXXX,此时的布里渊磁场表述为
         :param Ib:
         :param Ro: 同轴外导体的内径
         :param ro:

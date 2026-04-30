@@ -12,17 +12,22 @@ class CoaxialTEMTransline:
 
     """
     @staticmethod
-    def Z0(mu_r,epsilon_r,D, d):
+    def Z0(D, d,
+        mu_r=1., epsilon_r=1.,
+           ):
         """
         特性阻抗
 
-        D是外导体（屏蔽层）的外径。
-        d是内导体的内径。
+        D是同轴通道外径。
+        d是同轴通道内径。
 
         Ref:
         https://www.bchrt.com/tools/coaxial-line-impedance-calculator/
 
         :return: 特性阻抗
+
+
+        关键词Keywords: line impedance of coaxial TEM mode, 同轴传输线特性阻抗
         """
         return (
                 (C.mu_0 /C.epsilon_0 * mu_r/epsilon_r)**0.5/(2* numpy.pi)
@@ -50,3 +55,6 @@ class RadialTEMTransline:
         """
         return (C.mu_0/C.epsilon_0 * mu_r / epsilon_r) **0.5 * d / (2* numpy.pi * r)
 
+if __name__ == '__main__':
+    from _logging import  logger
+    logger.info(CoaxialTEMTransline.Z0(68,62))

@@ -97,7 +97,16 @@ def basic_test():
     plot_amp(freqs1, ts1, Sxx1, 2)
     plot_fft_result(data.iloc[:, 0], data.iloc[:, 1].ravel())
 
-
+class PeakFinder:
+    @staticmethod
+    def find_peaks_ranking_by_height (x,*args,**kwargs):
+        peak_indexes,d = signal.find_peaks(x,*args,**kwargs)
+        sorted = numpy.argsort(-x[peak_indexes])
+        return peak_indexes[sorted],d
+    @staticmethod
+    def find_highest_N_peak_indexes_ranking_by_index(x,N_peaks,*args,**kwargs):
+        pidx,d= PeakFinder.find_peaks_ranking_by_height(x,*args,**kwargs)#[0][:N_peaks]
+        return numpy.sort (pidx[:N_peaks]), d
 if __name__ == '__main__':
     # basic_test()
 

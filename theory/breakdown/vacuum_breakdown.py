@@ -51,7 +51,7 @@ if __name__ == '__main__':
     data  = lines[0].get_data()
     ls_kilpatrick =LineString(numpy.array(data).T)
 
-    freq_to_query  = 476e6#9.3e9
+    freq_to_query  = 9.3e9#476e6#9.3e9
     ls_query= LineString([[data[0][0],freq_to_query/GHz],
                           [data[0][-1],freq_to_query/GHz]])
     intersection_pts = ls_query.intersection(ls_kilpatrick)

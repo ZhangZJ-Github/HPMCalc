@@ -305,7 +305,9 @@ class ZhangWei2022Doctor(LiuJing2012Doctor):
         rb0 = (rbeam_in+ rbeam_out) / 2
         D= ((rb0**2- rbeam_in **2 )
             + 2 * rbeam_in**2* ln(rbeam_in / rb0)
-            + ((rbeam_out **2 - rbeam_in **2 )*(2 * ln(Rout /  rbeam_out) +1)+2 *rbeam_in **2  * ln(rbeam_in / rbeam_out)) / ln(Rout / Rin) * ln(Rin / rb0))
+            + ((rbeam_out **2 - rbeam_in **2 )*(2 * ln(Rout /  #Rin
+                                                rbeam_out
+                                                       ) +1)+2 *rbeam_in **2  * ln(rbeam_in / rbeam_out)) / ln(Rout / Rin) * ln(Rin / rb0))
 
 
         return - LiuJing2012Doctor.IA * (rbeam_out **2 - rbeam_in **2 ) / D * LiuJing2012Doctor.gamma___(gamma_in)

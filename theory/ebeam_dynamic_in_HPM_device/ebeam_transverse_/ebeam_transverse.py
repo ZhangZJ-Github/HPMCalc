@@ -36,6 +36,13 @@ class AnnularBeamInsideCoaxialDriftWeiYuanZhang:
     def E_sc_r(self, r,
                Ib, vz,
                ):
+        """
+        魏元璋 Eqn. (3-19)
+        :param r:
+        :param Ib:
+        :param vz:
+        :return:
+        """
         return -Ib / (2 * numpy.pi * C.epsilon_0 * vz * r) * (
                 self.X - numpy.piecewise(r, [(r < self.ri), (r >= self.ri) & (r < self.ro)], [
             self.ri, lambda r: r, self.ro
