@@ -30,6 +30,19 @@ def attenuation_distance(f, omega_p ):
     :return:
     """
     return C.c /omega_p /(1- (2*numpy.pi *f / omega_p)**2) ** 0.5
+class LaserWakefieldAcceleration:
+    @staticmethod
+    def Ep(omega_p):
+        """
+        [1] 马跃. 全光逆康普顿散射源偏振特性与CT成像应用研究[D]. 清华大学, 2020.
+        1.3.1 基本原理与发展历程
+
+        根据等离子体波破极限,尾波场中加速梯度约为 Ep = mecωp/e
+
+        :param omega_p:
+        :return:
+        """
+        return  C.m_e *C.c *omega_p/C.e
 
 if __name__ == '__main__':
     ne = 1e13 * 1e6

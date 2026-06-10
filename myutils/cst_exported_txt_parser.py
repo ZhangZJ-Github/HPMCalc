@@ -8,13 +8,12 @@
 
 import io
 import os.path
+
 import matplotlib
+
 matplotlib.use('tkagg')
-import matplotlib.pyplot as plt
-import numpy
 import pandas
-from scipy import signal
-from scipy.fftpack import fft
+
 # plt.ion()
 
 DEFAULT_OUT_DIR = os.path.join(os.path.split(__file__)[0], ".out")
@@ -56,4 +55,3 @@ def parse(path: str, column_names=["t", "signal"]):
         df.columns = column_names
         dfs.append(df)
     return dfs, labels
-
