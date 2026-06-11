@@ -26,7 +26,7 @@ class DoseRateCalculator:
 
         :param Ek_MeV:
         :param I_avg_uA:
-        :return: unit in cCy/min
+        :return: unit in cGy/min
         """
         return 0.067 * I_avg_uA * Ek_MeV **self.n_interp(Ek_MeV)
 
