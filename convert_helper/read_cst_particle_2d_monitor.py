@@ -101,21 +101,43 @@ len_eps = 1e-9
 df_par2dmonitors["posZ_unit_in_eps"] = df_par2dmonitors['posZ'] // len_eps
 temp_df_par2dmonitors_gb_Z = df_par2dmonitors.groupby('posZ_unit_in_eps')
 posZ_unit_in_eps = list(temp_df_par2dmonitors_gb_Z.groups.keys())
-i = 3  # 0
+i = 4  # 0
 temp_df_par2dmonitors = temp_df_par2dmonitors_gb_Z.get_group(posZ_unit_in_eps[i])
 
 
 def particle_2d_data_to_MAGIC_EGUN_input(temp_df_par2dmonitors, N_samples=250,
                                          EGUN_in_filename="dfm_3.in"
                                          ):
+    """
+    将CST TRK 导出的2D monitor粒子数据转化为MAGIC可识别的输入文件
+    :param temp_df_par2dmonitors:
+    :param N_samples:
+    :param EGUN_in_filename:
+    :return:
+    """
     df_to_MAGIC_EGUN_input = pandas.DataFrame(  # dtype=float
     )
+    temp_df_par2dmonitors.loc[:, "posR"] = (temp_df_par2dmonitors['posX'] ** 2 + temp_df_par2dmonitors[
+        'posY'] ** 2) ** .5
+    # arr_er = numpy.column_stack([temp_df_par2dmonitors['posX'],temp_df_par2dmonitors['posY']],) / temp_df_par2dmonitors.loc[:,"posR"].values.reshape(-1,1)
+    arr_theta = numpy.arctan2(temp_df_par2dmonitors['posY'], temp_df_par2dmonitors['posX'], )
+    temp_df_par2dmonitors.loc[:, "momR"] = (
+                temp_df_par2dmonitors['momX'] * numpy.cos(arr_theta) + temp_df_par2dmonitors['momY'] * numpy.sin(
+            arr_theta))
+    temp_df_par2dmonitors.loc[:, "momTheta"] = (
+                -temp_df_par2dmonitors['momX'] * numpy.sin(arr_theta) + temp_df_par2dmonitors['momY'] * numpy.cos(
+            arr_theta))
+
     temp_df_par2dmonitors_filtered_ = temp_df_par2dmonitors[temp_df_par2dmonitors['momZ'] > 0].reset_index()  # 过滤掉逆流的粒子
     total_forward_beam_current = temp_df_par2dmonitors_filtered_['Current'].sum()
     # N_samples = 100
     temp_df_par2dmonitors_filtered = temp_df_par2dmonitors_filtered_.sample(N_samples).reset_index()
     logger.info("total beam current = %.2f A" % (total_forward_beam_current))
-    temp_df_par2dmonitors_filtered['momZ']*= (53/48) **0.5
+    if 1:temp_df_par2dmonitors_filtered['momZ']*= (
+                                                          # 53/48
+        53.5/53
+
+                                                              ) **0.5
     if 0:
         temp_df_par2dmonitors_filtered['momX']*= 0
         temp_df_par2dmonitors_filtered['momY']*= 0
@@ -125,7 +147,7 @@ def particle_2d_data_to_MAGIC_EGUN_input(temp_df_par2dmonitors, N_samples=250,
     df_to_MAGIC_EGUN_input['t'] = 0.
     UNIT_IN = 0.0053  # .in文件中的参数
     df_to_MAGIC_EGUN_input['grid_R'] = (
-            ((temp_df_par2dmonitors_filtered['posX'] ** 2 + temp_df_par2dmonitors_filtered["posY"] ** 2) ** 0.5) / (
+            temp_df_par2dmonitors_filtered['posR'] / (
             UNIT_IN * C.inch)).values
     df_to_MAGIC_EGUN_input['Z'] = (temp_df_par2dmonitors_filtered['posZ']).values
     logger.info("Export z = %.2f mm" % (temp_df_par2dmonitors_filtered['posZ'].mean() / mm))
@@ -134,12 +156,11 @@ def particle_2d_data_to_MAGIC_EGUN_input(temp_df_par2dmonitors, N_samples=250,
           temp_df_par2dmonitors_filtered['momZ'] ** 2) ** 0.5).values * C.c,
         1.0
     ) / C.c) - 1) * C.m_e * C.c ** 2 / C.eV
-    theta = numpy.arctan2(temp_df_par2dmonitors_filtered['posX'].values,
-                          temp_df_par2dmonitors_filtered['posY'].values, )
+    # theta = numpy.arctan2(temp_df_par2dmonitors_filtered['posX'].values,
+    #                       temp_df_par2dmonitors_filtered['posY'].values, )
 
     df_to_MAGIC_EGUN_input["RayPa"] = numpy.arctan2(
-        +temp_df_par2dmonitors_filtered["momX"] * numpy.cos(theta)
-        + temp_df_par2dmonitors_filtered["momY"] * numpy.sin(theta),
+    temp_df_par2dmonitors_filtered['momR'],
         temp_df_par2dmonitors_filtered['momZ']
     )
     total_forward_beam_current_of_sampled_traj = temp_df_par2dmonitors_filtered['Current'].sum()
@@ -152,11 +173,12 @@ def particle_2d_data_to_MAGIC_EGUN_input(temp_df_par2dmonitors, N_samples=250,
     logger.info("Beam current sum (after sampled) = %.4f A" % (
             df_to_MAGIC_EGUN_input[key_norm_rayI].sum() * beam_current_factor))
     df_to_MAGIC_EGUN_input["RayTa"] = numpy.arctan2(
-        +temp_df_par2dmonitors_filtered["momX"] * numpy.sin(theta)
-        - temp_df_par2dmonitors_filtered["momY"] * numpy.cos(theta),
+    temp_df_par2dmonitors_filtered['momTheta'],
         temp_df_par2dmonitors_filtered['momZ']
     )
     df_to_MAGIC_EGUN_input["Unknown"] = 1.0
+    plt.figure()
+    plt.scatter(numpy.zeros(len(temp_df_par2dmonitors_filtered)),temp_df_par2dmonitors_filtered['posR'])
 
     header = \
         """dfm_3 stage 3 of dfm of 5-21-99
@@ -201,6 +223,12 @@ plt.xlabel("x (mm)")
 plt.ylabel("x' (mrad)")
 plt.title("z = %.2f mm" % (posZ_unit_in_eps[i] * len_eps / mm))
 
+plt.figure()
+plt.scatter(temp_df_par2dmonitors['posR'] / mm, temp_df_par2dmonitors['momR']  *C.c,
+            s=0.5)
+plt.xlabel("r (mm)")
+plt.ylabel(r"$\gamma \beta_r c$ (m/s)")
+plt.title("z = %.2f mm" % (posZ_unit_in_eps[i] * len_eps / mm))
 
 df_par2dmonitor_export_to_GPT = pandas.DataFrame(
     temp_df_par2dmonitors[['posX', 'posY', 'posZ', 'momX', 'momY', 'momZ', "mass", "time"]].values,

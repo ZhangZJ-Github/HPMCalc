@@ -7,6 +7,11 @@
 import numpy
 from scipy.interpolate import interp1d
 
+class CommonUsedUnit:
+    def __init__(self):
+        self.Gy = 1 #J/kg
+        #  1rad是指1g受照射物质吸收任何一种射线100erg（尔格）辐射能时的剂量。 从1986年起用 SI导出单位 Gy（戈〔瑞〕）取代。 1rad=10-2Gy。
+        self.Rad = 1e-2* self.Gy
 
 class DoseRateCalculator:
     def __init__(self):
@@ -46,6 +51,7 @@ class DoseRateCalculator:
         k = 17
         a = 2.65 if a is None else a
         return k*Ek_MeV**a* I_avg_A *d**-2
+common_used_units = CommonUsedUnit()
 if __name__ == '__main__':
     from _logging import logger
     logger.info(DoseRateCalculator().n_interp(10))
@@ -56,4 +62,10 @@ if __name__ == '__main__':
         # [1] Liu F, Zhang L, Shi J, Zha H, Zhu Y, Gao Q, Zhang F, Hu A, Qiu R, Li J, Huang W, Tang C, Chen H, Yan Q, Liu G, Zhang X, He Y, Liu Y, Liu J, Qiu J, Han Y, Wang J, Wang C, Guo C, Men K, Zhu H, Deng X, Wang W, Hu K. MAX-FLASH: A compact multiangle x-ray system for clinical translation of FLASH radiotherapy[J]. Physical Review Applied, 2025, 24(5): 054015.
 
 
-        DoseRateCalculator().dose_rate_LiuFochengPRApp2025(10,1e-3,80e-2,))
+        DoseRateCalculator().dose_rate_LiuFochengPRApp2025(10,1e-3,80e-2,)
+    )
+    logger.info(
+        # 结果同
+        # Nagae D, Yoshida M, Ozaki K, Yamada T, Hasegawa D, Ishiwata J, Shiota Y, Nagase A, Kurihara T, Morishige A, Yamamoto M. Design of a 9-MeV electron linac for high-energy X-ray computed tomography[J]. Nuclear Instruments and Methods in Physics Research Section B: Beam Interactions with Materials and Atoms, 2026, 579: 166233.
+        # The X-ray dose rate at a distance of 1 m from the target was 0.1 Gy/min per 100 μA for the 0.95-MeV target and 8.5 Gy/min per 25 μA for the 9-MeV target, confirming that sufficient intensity for CT imaging can be achieved.
+        DoseRateCalculator().dose_rate_LiuFochengPRApp2025(9.,25e-6 ,1, )*60)

@@ -123,6 +123,22 @@ class HPMSim(MAGICTaskBase):
         """
         return HPMSim.get_mean(df,DeltaT)
     @staticmethod
+    def get_mean________(df,DeltaT):
+        """
+                    获取近周期的时间序列数据df在时间间隔DeltaT内的均值
+                    :param df: 第0列为时间，第1列为值
+                    :param DeltaT:
+                    :return: 每个DeltaT的平均值
+                    """
+        # import pandas
+
+        colname_period = 'period'
+
+        # df["abs"] = numpy.abs(df[1])
+        df[colname_period] = df[0] // (DeltaT)
+        return df.groupby(colname_period).mean()  # .iloc[-2][1]  # 倒数第二个周期的平均功率。倒数第一个周期可能不全，结果波动很大，故不取。
+
+    @staticmethod
     def get_mean(df: pandas.DataFrame, DeltaT):
         """
         获取近周期的时间序列数据df在时间间隔DeltaT内的均值

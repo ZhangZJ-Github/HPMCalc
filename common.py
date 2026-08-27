@@ -7,10 +7,11 @@
 # import matplotlib
 # matplotlib.use('TkAgg')
 
+import matplotlib
 import numpy
 import scipy.constants as C
 from scipy.stats import maxwell
-import matplotlib
+
 matplotlib.use("tkagg")
 import matplotlib.pyplot as plt
 
@@ -96,9 +97,13 @@ class ShapeFunctions:
         return numpy.piecewise(absz,  [absz<Dz],[lambda absz:
             (-1/(2*Dz**2 ) *absz  + 1/(2*Dz)),
                                        0.])
-def skin_depth(f, sigma, mu=C.mu_0, ):
+default_conductivity =5.8e7# 退火铜
+def skin_depth(f, sigma=default_conductivity, mu=C.mu_0, ):
     """
     趋肤深度
+    Ref: CST help
+    Material Properties: default - General
+    "For good (but not perfect) electric conductors, this type simulates the associated solids by use of a one-dimensional surface impedance model. It should be noted that this model is physically reasonable only when the conductivity is so high that the dielectric and polarization effects within the material could be deemed negligible. This condition is represented by the equation (), where sigma is the material conductivity."
     :param f:
     :param mu: 磁导率
     :param sigma: 电导率
@@ -106,6 +111,22 @@ def skin_depth(f, sigma, mu=C.mu_0, ):
     """
     return (2 / (2 * numpy.pi * f * mu * sigma)) ** 0.5
 
+
+def wire_resistance_estimate(L, d, f, sigma=default_conductivity):
+    """
+    导线电阻。
+    该函数主要用于数量级评估，并不准确。
+
+
+    :param L: 导线长度, unit in m
+    :param d: 导线直径, unit in m
+    :param f: 工作频率, unit in Hz
+    :param sigma: 导线材料的电导率，unit in S/m
+    :return:
+    """
+    skin_depth_ = skin_depth(f, sigma)
+    G = sigma * (numpy.pi * d * skin_depth_) / L
+    return 1 / G
 
 def complex_from_amp_and_phase(amp, phase_in_degree):
     return amp * numpy.exp(1j * numpy.deg2rad(phase_in_degree))

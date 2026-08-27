@@ -33,6 +33,14 @@ def frequency_of_resonator_TMnmp_cylindial(a, l, n=0, m=1, p=0):
 
 
 def radii_of_waveguide_for_TMnm(f, n=0, m=1):
+    """
+    TM_0mn模式的截止半径
+    :param f:
+    :param n:
+    :param m:
+    :return:
+    """
+
     return jn_zeros(n, m)[-1] * C.c / (2 * numpy.pi * f)
 
 
